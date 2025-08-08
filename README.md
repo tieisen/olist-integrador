@@ -18,7 +18,7 @@ A integração contempla as seguintes funcionalidades (adapte conforme necessár
 A estrutura de diretórios do projeto está organizada da seguinte forma:
 
 ```bash
-integrador_snk_olist/
+olist-integrador/
 ├── database/             # Contém a estrutura de banco de dados SQLite
 │   ├── backups/          # Backups do banco de dados
 │   ├── crud/             # Funções para interação com o banco de dados
