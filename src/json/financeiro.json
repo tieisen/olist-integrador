@@ -1,0 +1,15 @@
+{
+  "contaDestino": {
+    "id": 0
+  },
+  "data": "string",
+  "categoria": {
+    "id": 0
+  },
+  "historico": "string",
+  "taxa": "string",
+  "juros": "string",
+  "desconto": "string",
+  "valorPago": 0,
+  "acrescimo": "string"
+}

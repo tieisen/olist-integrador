@@ -1,0 +1,111 @@
+{
+  "get": {
+    "situacao": 1,
+    "tipo": "E",
+    "numero": "string",
+    "serie": "string",
+    "chaveAcesso": "string",
+    "dataEmissao": "string",
+    "cliente": {
+      "nome": "string",
+      "codigo": "string",
+      "fantasia": "string",
+      "tipoPessoa": "J",
+      "cpfCnpj": "string",
+      "inscricaoEstadual": "string",
+      "rg": "string",
+      "telefone": "string",
+      "celular": "string",
+      "email": "string",
+      "endereco": {
+        "endereco": "string",
+        "numero": "string",
+        "complemento": "string",
+        "bairro": "string",
+        "municipio": "string",
+        "cep": "string",
+        "uf": "string",
+        "pais": "string"
+      },
+      "id": 0
+    },
+    "enderecoEntrega": {
+      "endereco": "string",
+      "numero": "string",
+      "complemento": "string",
+      "bairro": "string",
+      "municipio": "string",
+      "cep": "string",
+      "uf": "string",
+      "pais": "string",
+      "nomeDestinatario": "string",
+      "cpfCnpj": "string",
+      "tipoPessoa": "string"
+    },
+    "valor": 0,
+    "valorProdutos": 0,
+    "valorFrete": 0,
+    "vendedor": {
+      "id": 0,
+      "nome": "string"
+    },
+    "idFormaEnvio": 0,
+    "idFormaFrete": 0,
+    "codigoRastreamento": "string",
+    "urlRastreamento": "string",
+    "fretePorConta": "string",
+    "qtdVolumes": 0,
+    "pesoBruto": 0,
+    "pesoLiquido": 0,
+    "id": 0,
+    "finalidade": 1,
+    "regimeTributario": 1,
+    "dataInclusao": "string",
+    "baseIcms": 0,
+    "valorIcms": 0,
+    "baseIcmsSt": 0,
+    "valorIcmsSt": 0,
+    "valorServicos": 0,
+    "valorSeguro": 0,
+    "valorOutras": 0,
+    "valorIpi": 0,
+    "valorIssqn": 0,
+    "valorDesconto": 0,
+    "valorFaturado": 0,
+    "idIntermediador": 0,
+    "idNaturezaOperacao": 0,
+    "idFormaPagamento": 0,
+    "idMeioPagamento": 0,
+    "observacoes": "string",
+    "condicaoPagamento": "string",
+    "itens": [
+      {
+        "idProduto": 0,
+        "codigo": "string",
+        "descricao": "string",
+        "unidade": "string",
+        "quantidade": 0,
+        "valorUnitario": 0,
+        "valorTotal": 0,
+        "cfop": "string"
+      }
+    ],
+    "parcelas": [
+      {
+        "dias": 0,
+        "data": "string",
+        "valor": 0,
+        "observacoes": "string",
+        "idFormaPagamento": "string",
+        "idMeioPagamento": "string"
+      }
+    ],
+    "ecommerce": {
+      "id": 0,
+      "nome": "string",
+      "numeroPedidoEcommerce": "string",
+      "numeroPedidoCanalVenda": "string",
+      "canalVenda": "string"
+    }
+  }
+}

@@ -1,0 +1,322 @@
+{
+  "get": {
+    "id": 0,
+    "sku": "string",
+    "descricao": "string",
+    "descricaoComplementar": "string",
+    "tipo": "K",
+    "situacao": "A",
+    "produtoPai": {
+      "id": 0,
+      "sku": "string",
+      "descricao": "string"
+    },
+    "unidade": "string",
+    "unidadePorCaixa": "string",
+    "ncm": "string",
+    "gtin": "string",
+    "origem": "0",
+    "garantia": "string",
+    "observacoes": "string",
+    "categoria": {
+      "id": 0,
+      "nome": "string",
+      "caminhoCompleto": "string"
+    },
+    "marca": {
+      "id": 0,
+      "nome": "string"
+    },
+    "dimensoes": {
+      "embalagem": {
+        "id": 0,
+        "tipo": 0,
+        "descricao": "string"
+      },
+      "largura": 0,
+      "altura": 0,
+      "comprimento": 0,
+      "diametro": 0,
+      "pesoLiquido": 0,
+      "pesoBruto": 0,
+      "quantidadeVolumes": 0
+    },
+    "precos": {
+      "preco": 0,
+      "precoPromocional": 0,
+      "precoCusto": 0,
+      "precoCustoMedio": 0
+    },
+    "estoque": {
+      "controlar": true,
+      "sobEncomenda": true,
+      "diasPreparacao": 0,
+      "localizacao": "string",
+      "minimo": 0,
+      "maximo": 0,
+      "quantidade": 0
+    },
+    "fornecedores": [
+      {
+        "id": 0,
+        "nome": "string",
+        "codigoProdutoNoFornecedor": "string"
+      }
+    ],
+    "seo": {
+      "titulo": "string",
+      "descricao": "string",
+      "keywords": [
+        "string"
+      ],
+      "linkVideo": "string",
+      "slug": "string"
+    },
+    "tributacao": {
+      "gtinEmbalagem": "string",
+      "valorIPIFixo": 0,
+      "classeIPI": "string"
+    },
+    "anexos": [
+      {
+        "url": "string",
+        "externo": true
+      }
+    ],
+    "variacoes": [
+      {
+        "id": 0,
+        "descricao": "string",
+        "sku": "string",
+        "gtin": "string",
+        "precos": {
+          "preco": 0,
+          "precoPromocional": 0,
+          "precoCusto": 0,
+          "precoCustoMedio": 0
+        },
+        "estoque": {
+          "controlar": true,
+          "sobEncomenda": true,
+          "diasPreparacao": 0,
+          "localizacao": "string",
+          "minimo": 0,
+          "maximo": 0,
+          "quantidade": 0
+        },
+        "grade": [
+          {
+            "chave": "string",
+            "valor": "string"
+          }
+        ]
+      }
+    ],
+    "kit": [
+      {
+        "produto": {
+          "id": 0,
+          "sku": "string",
+          "descricao": "string"
+        },
+        "quantidade": 0
+      }
+    ],
+    "producao": {
+      "produtos": [
+        {
+          "produto": {
+            "id": 0,
+            "sku": "string",
+            "descricao": "string"
+          },
+          "quantidade": 0
+        }
+      ],
+      "etapas": [
+        "string"
+      ]
+    }
+  },
+  "post": {
+    "sku": "string",
+    "descricaoComplementar": "string",
+    "unidade": "string",
+    "unidadePorCaixa": "string",
+    "ncm": "string",
+    "gtin": "string",
+    "origem": 0,
+    "codigoEspecificadorSubstituicaoTributaria": "string",
+    "garantia": "string",
+    "observacoes": "string",
+    "marca": {
+      "id": 0
+    },
+    "categoria": {
+      "id": 0
+    },
+    "precos": {
+      "preco": 0,
+      "precoPromocional": 0,
+      "precoCusto": 0
+    },
+    "dimensoes": {
+      "embalagem": {
+        "id": 0,
+        "tipo": 0
+      },
+      "largura": 0,
+      "altura": 0,
+      "comprimento": 0,
+      "diametro": 0,
+      "pesoLiquido": 0,
+      "pesoBruto": 0
+    },
+    "tributacao": {
+      "gtinEmbalagem": "string",
+      "valorIPIFixo": 0,
+      "classeIPI": "string"
+    },
+    "seo": {
+      "titulo": "string",
+      "descricao": "string",
+      "keywords": [
+        "string"
+      ],
+      "linkVideo": "string",
+      "slug": "string"
+    },
+    "fornecedores": [
+      {
+        "id": 0,
+        "codigoProdutoNoFornecedor": "string",
+        "padrao": true
+      }
+    ],
+    "descricao": "string",
+    "tipo": "K",
+    "estoque": {
+      "controlar": true,
+      "sobEncomenda": true,
+      "minimo": 0,
+      "maximo": 0,
+      "diasPreparacao": 0,
+      "localizacao": "string",
+      "inicial": 0
+    },
+    "anexos": [
+      {
+        "url": "string",
+        "externo": "string"
+      }
+    ],
+    "grade": [
+      "string"
+    ],
+    "producao": {
+      "produtos": [
+        {
+          "produto": {
+            "id": 0
+          },
+          "quantidade": 0
+        }
+      ],
+      "etapas": [
+        "string"
+      ]
+    },
+    "kit": [
+      {
+        "produto": {
+          "id": 0
+        },
+        "quantidade": 0
+      }
+    ],
+    "variacoes": [
+      {
+        "sku": "string",
+        "gtin": "string",
+        "precos": {
+          "preco": 0,
+          "precoPromocional": 0
+        },
+        "estoque": {
+          "inicial": 0
+        },
+        "grade": [
+          {
+            "chave": "string",
+            "valor": "string"
+          }
+        ]
+      }
+    ]
+  },
+  "put": {
+    "sku": "string",
+    "descricaoComplementar": "string",
+    "unidade": "string",
+    "unidadePorCaixa": "string",
+    "ncm": "string",
+    "gtin": "string",
+    "origem": 0,
+    "codigoEspecificadorSubstituicaoTributaria": "string",
+    "garantia": "string",
+    "observacoes": "string",
+    "marca": {
+      "id": 0
+    },
+    "categoria": {
+      "id": 0
+    },
+    "precos": {
+      "preco": 0,
+      "precoPromocional": 0,
+      "precoCusto": 0
+    },
+    "dimensoes": {
+      "embalagem": {
+        "id": 0,
+        "tipo": 0
+      },
+      "largura": 0,
+      "altura": 0,
+      "comprimento": 0,
+      "diametro": 0,
+      "pesoLiquido": 0,
+      "pesoBruto": 0
+    },
+    "tributacao": {
+      "gtinEmbalagem": "string",
+      "valorIPIFixo": 0,
+      "classeIPI": "string"
+    },
+    "seo": {
+      "titulo": "string",
+      "descricao": "string",
+      "keywords": [
+        "produto"
+      ],
+      "linkVideo": "string",
+      "slug": "string"
+    },
+    "fornecedores": [
+      {
+        "id": 0,
+        "codigoProdutoNoFornecedor": "string",
+        "padrao": true
+      }
+    ],
+    "descricao": "string",
+    "estoque": {
+      "controlar": true,
+      "sobEncomenda": true,
+      "minimo": 0,
+      "maximo": 0,
+      "diasPreparacao": 0,
+      "localizacao": "string"
+    }
+  }
+}

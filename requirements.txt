@@ -1,0 +1,10 @@
+cryptography==45.0.4
+nest_asyncio==1.6.0
+requests==2.32.4
+selenium==4.33.0
+tzdata==2025.2
+dotenv==0.9.9
+SQLAlchemy==2.0.34
+pydantic==2.8.2
+uvicorn==0.35.0
+fastapi==0.116.1

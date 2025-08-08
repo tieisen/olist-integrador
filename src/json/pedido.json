@@ -1,0 +1,231 @@
+{
+  "get": {
+    "dataPrevista": "string",
+    "dataEnvio": "string",
+    "observacoes": "string",
+    "observacoesInternas": "string",
+    "situacao": 8,
+    "data": "string",
+    "dataEntrega": "string",
+    "numeroOrdemCompra": "string",
+    "valorDesconto": 0,
+    "valorFrete": 0,
+    "valorOutrasDespesas": 0,
+    "id": 0,
+    "numeroPedido": 0,
+    "idNotaFiscal": 0,
+    "dataFaturamento": "string",
+    "valorTotalProdutos": 0,
+    "valorTotalPedido": 0,
+    "listaPreco": {
+      "id": 0,
+      "nome": "string",
+      "acrescimoDesconto": 0
+    },
+    "cliente": {
+      "nome": "string",
+      "codigo": "string",
+      "fantasia": "string",
+      "tipoPessoa": "J",
+      "cpfCnpj": "string",
+      "inscricaoEstadual": "string",
+      "rg": "string",
+      "telefone": "string",
+      "celular": "string",
+      "email": "string",
+      "endereco": {
+        "endereco": "string",
+        "numero": "string",
+        "complemento": "string",
+        "bairro": "string",
+        "municipio": "string",
+        "cep": "string",
+        "uf": "string",
+        "pais": "string"
+      },
+      "id": 0
+    },
+    "enderecoEntrega": {
+      "endereco": "string",
+      "numero": "string",
+      "complemento": "string",
+      "bairro": "string",
+      "municipio": "string",
+      "cep": "string",
+      "uf": "string",
+      "pais": "string",
+      "nomeDestinatario": "string",
+      "cpfCnpj": "string",
+      "tipoPessoa": "string"
+    },
+    "ecommerce": {
+      "id": 0,
+      "nome": "string",
+      "numeroPedidoEcommerce": "string",
+      "numeroPedidoCanalVenda": "string",
+      "canalVenda": "string"
+    },
+    "transportador": {
+      "id": 0,
+      "nome": "string",
+      "fretePorConta": "R",
+      "formaEnvio": {
+        "id": 0,
+        "nome": "string"
+      },
+      "formaFrete": {
+        "id": 0,
+        "nome": "string"
+      },
+      "codigoRastreamento": "string",
+      "urlRastreamento": "string"
+    },
+    "deposito": {
+      "id": 0,
+      "nome": "string"
+    },
+    "vendedor": {
+      "id": 0,
+      "nome": "string"
+    },
+    "naturezaOperacao": {
+      "id": 0,
+      "nome": "string"
+    },
+    "intermediador": {
+      "id": 0,
+      "nome": "string",
+      "cnpj": "string"
+    },
+    "pagamento": {
+      "formaPagamento": {
+        "id": 0,
+        "nome": "string"
+      },
+      "meioPagamento": {
+        "id": 0,
+        "nome": "string"
+      },
+      "condicaoPagamento": "string",
+      "parcelas": [
+        {
+          "dias": 0,
+          "data": "string",
+          "valor": 0,
+          "observacoes": "string",
+          "formaPagamento": {
+            "id": 0,
+            "nome": "string"
+          },
+          "meioPagamento": {
+            "id": 0,
+            "nome": "string"
+          }
+        }
+      ]
+    },
+    "itens": [
+      {
+        "produto": {
+          "id": 0,
+          "sku": "string",
+          "descricao": "string"
+        },
+        "quantidade": 0,
+        "valorUnitario": 0,
+        "infoAdicional": "string"
+      }
+    ]
+  },
+  "post": {
+    "dataPrevista": "string",
+    "dataEnvio": "string",
+    "observacoes": "string",
+    "observacoesInternas": "string",
+    "situacao": 8,
+    "data": "string",
+    "dataEntrega": "string",
+    "numeroOrdemCompra": "string",
+    "valorDesconto": 0,
+    "valorFrete": 0,
+    "valorOutrasDespesas": 0,
+    "idContato": 0,
+    "listaPreco": {
+      "id": 0
+    },
+    "naturezaOperacao": {
+      "id": 0
+    },
+    "vendedor": {
+      "id": 0
+    },
+    "enderecoEntrega": {
+      "endereco": "string",
+      "enderecoNro": "string",
+      "complemento": "string",
+      "bairro": "string",
+      "municipio": "string",
+      "cep": "string",
+      "uf": "string",
+      "fone": "string",
+      "nomeDestinatario": "string",
+      "cpfCnpj": "string",
+      "tipoPessoa": "J",
+      "ie": "string"
+    },
+    "ecommerce": {
+      "id": 0,
+      "numeroPedidoEcommerce": "string"
+    },
+    "transportador": {
+      "id": 0,
+      "fretePorConta": "R",
+      "formaEnvio": {
+        "id": 0
+      },
+      "formaFrete": {
+        "id": 0
+      },
+      "codigoRastreamento": "string",
+      "urlRastreamento": "string"
+    },
+    "intermediador": {
+      "id": 0
+    },
+    "deposito": {
+      "id": 0
+    },
+    "pagamento": {
+      "formaPagamento": {
+        "id": 0
+      },
+      "meioPagamento": {
+        "id": 0
+      },
+      "parcelas": [
+        {
+          "dias": 0,
+          "data": "string",
+          "valor": 0,
+          "observacoes": "string",
+          "formaPagamento": {
+            "id": 0
+          },
+          "meioPagamento": {
+            "id": 0
+          }
+        }
+      ]
+    },
+    "itens": [
+      {
+        "produto": {
+          "id": 0
+        },
+        "quantidade": 0,
+        "valorUnitario": 0,
+        "infoAdicional": "string"
+      }
+    ]
+  }
+}

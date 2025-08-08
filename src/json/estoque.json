@@ -1,0 +1,31 @@
+{
+  "get": {
+    "id": 0,
+    "nome": "string",
+    "codigo": "string",
+    "unidade": "string",
+    "saldo": 0,
+    "reservado": 0,
+    "disponivel": 0,
+    "depositos": [
+      {
+        "id": 0,
+        "nome": "string",
+        "desconsiderar": true,
+        "saldo": 0,
+        "reservado": 0,
+        "disponivel": 0
+      }
+    ]
+  },
+  "post": {
+    "deposito": {
+      "id": 0
+    },
+    "tipo": "B",
+    "data": "string",
+    "quantidade": 0,
+    "precoUnitario": 0,
+    "observacoes": "string"
+  }
+}
