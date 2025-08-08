@@ -59,8 +59,8 @@ Antes de começar, certifique-se de ter os seguintes pré-requisitos instalados 
 
 1.  Clone o repositório:
     ```bash
-    git clone https://github.com/dsrodrigovieira/olist-snk.git
-    cd integrador_snk_olist
+    git clone https://github.com/tieisen/olist-integrador.git
+    cd olist-integrador
     ```
 
 2.  Instale as dependências (exemplo para Python):
