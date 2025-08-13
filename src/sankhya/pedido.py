@@ -238,7 +238,7 @@ class Pedido:
                 print(res.text)
                 return 0
             if res.json().get('status')=='1':
-                return self.extrai_nunota(res.json()),""
+                return self.extrai_nunota(res.json())
             if res.json().get('status')=='2':
                 print(res.text)
                 return self.extrai_nunota(res.json())
