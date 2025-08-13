@@ -80,15 +80,30 @@ class Faturamento:
 
         for pedido in saldo_pedidos:
             qtd_transferir = None
-            for estoque in saldo_estoque:
+            for i, estoque in enumerate(saldo_estoque):
                 if estoque.get('codprod') == pedido.get('codprod') and estoque.get('controle') == pedido.get('controle'):
                     break
+                if i == len(saldo_estoque)-1:
+                    i = -1
             
+            if i == -1:
+                lista_transferir.append({
+                    "codprod": pedido.get('codprod'),
+                    "controle": pedido.get('controle'),
+                    "quantidade": pedido.get('qtdtotalunit')
+                })  
+                continue
+                
             if estoque.get('qtd') < pedido.get('qtdtotalunit'):
                 qtd_transferir = pedido.get('qtdtotalunit') - estoque.get('qtd')
                 #print(f"Item {pedido.get('codprod')} lote {pedido.get('controle')}: {qtd_transferir} UN para transferencia")
 
             if qtd_transferir:
+                # Se o item tem agrupamento mínimo configurado, utiliza esse valor pra transferência
+                if qtd_transferir < estoque.get('agrupmin'):
+                    #print(f"Item {estoque.get('codprod')} agrupmin {estoque.get('agrupmin')}")
+                    qtd_transferir = estoque.get('agrupmin')
+
                 lista_transferir.append({
                     "codprod": pedido.get('codprod'),
                     "controle": pedido.get('controle'),
