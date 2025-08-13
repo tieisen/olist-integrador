@@ -26,6 +26,7 @@ def emitir_notas_olist():
 def confirmar_notas_olist():
     nota = Nota()
     asyncio.run(nota.confirmar_notas())
+    asyncio.run(nota.baixar_financeiro())
     return True
 
 @router.get("/baixar-financeiro")
