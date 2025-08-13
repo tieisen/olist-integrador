@@ -19,7 +19,7 @@ A estrutura de diretórios do projeto está organizada da seguinte forma:
 
 ```bash
 olist-integrador/
-├── database/             # Contém a estrutura de banco de dados SQLite
+├── database/             # Contém a estrutura de banco de dados
 │   ├── backups/          # Backups do banco de dados
 │   ├── crud/             # Funções para interação com o banco de dados
 │   ├── models/           # Modelos Pydantic para validação de dados
@@ -38,7 +38,6 @@ olist-integrador/
 │   ├── parser/           # Funções para traduzir o formato dos dados entre APIs
 │   ├── sankhya/          # Funções para interação com a API Sankhya
 │   ├── services/         # Serviços de busca de CEP e envio de E-mail
-│   ├── sincronizador/    # Rotinas de atualização do banco de dados do integrador
 │   └── utils/            # Funções auxiliares
 ├── __init__.py           # Inicia a API
 ├── .gitignore            # Arquivos e pastas a serem ignorados pelo Git
