@@ -44,42 +44,42 @@ class Pedido:
         existentes = [p.id_pedido for p in existentes if p.id_pedido in lista_pedidos]
         return [pedido for pedido in lista_pedidos if pedido not in existentes]
 
-    async def validar_cancelamentos(self, lista_pedidos:list=None):
+    async def validar_cancelamentos(self):
 
         print("Validando pedidos cancelados...")
-
-        if not lista_pedidos:
-            pedidos_novos = venda.read_new_venda_to_snk()
-            pedidos_importados = venda.read_valida_importados_cancelados()
-
-            lista_pedidos = pedidos_novos + pedidos_importados
-
-            if not lista_pedidos:
-                print("Sem pedidos informados.")
-                logger.info("Sem pedidos informados.")
-                return False
-        
         olist = PedidoOlist()
-        snk = PedidoSnk()
-        for pedido in lista_pedidos:
-            time.sleep(self.req_time_sleep)  # Evita rate limit
-            dados_pedido_olist = await olist.buscar(id=pedido.id_pedido)
-            if not dados_pedido_olist:
-                print(f"Erro ao buscar dados do pedido {pedido.id_pedido} no Olist")
-                logger.error("Erro ao buscar dados do pedido %s no Olist",pedido.id_pedido)
-                continue
 
-            if dados_pedido_olist.get('situacao') == 2:
-                print(f"Pedido #{pedido.num_pedido} cancelado no Olist")
-                logger.info("Pedido %s cancelado no Olist", pedido.num_pedido)
-                venda.update_pedido_cancelado(id_pedido=pedido.id_pedido)
-                if pedido.nunota_pedido:
-                    dados_pedido_snk = await snk.buscar(nunota=pedido.nunota_pedido)
-                    if not dados_pedido_snk:
-                        print("Pedido já foi excluido")
-                        continue
+        cancelados = await olist.buscar(cancelados=True)
+
+        if not cancelados:
+            print("Nenhum pedido cancelado encontrado.")
+            logger.info("Nenhum pedido cancelado encontrado.")
+            return False
+
+        print(f"Pedidos dos últimos 3 dias cancelados no Olist: {len(cancelados)}")
+
+        pedidos_pendente_cancelar_integrador = venda.read_valida_cancelamentos(lista_ids=cancelados)
+        if pedidos_pendente_cancelar_integrador:
+            print(f"Pedidos pendentes de cancelamento no integrador: {len(pedidos_pendente_cancelar_integrador)}")
+            for pedido in pedidos_pendente_cancelar_integrador:
+                venda.update_pedido_cancelado_olist(id_pedido=pedido.id_pedido)
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+            print("Pedidos atualizados no integrador com sucesso!")
+        else:
+            print("Nenhum pedido pendente de cancelamento encontrado.")
+            logger.info("Nenhum pedido pendente de cancelamento encontrado.")
+
+        pedidos_pendente_cancelar_snk = venda.read_valida_importados_cancelados()
+        if pedidos_pendente_cancelar_snk:
+            print(f"Pedidos pendentes de cancelamento no Sankhya: {len(pedidos_pendente_cancelar_snk)}")            
+            snk = PedidoSnk()
+            for pedido in pedidos_pendente_cancelar_snk:
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                dados_pedido_snk = await snk.buscar(nunota=pedido.nunota_pedido)
+                if not dados_pedido_snk:
+                    print("Pedido já foi excluido")
+                else:
                     print(f"Cancelando pedido #{pedido.num_pedido} no Sankhya")
-                    logger.info("Cancelando pedido %s no Sankhya", pedido.num_pedido)
                     ack = await snk.cancelar(nunota=pedido.nunota_pedido,
                                              num_pedido=pedido.num_pedido)
                     if not ack:
@@ -87,12 +87,17 @@ class Pedido:
                         logger.error("Erro ao cancelar pedido %s no Sankhya", pedido.num_pedido)                    
                     print(f"Pedido #{pedido.num_pedido} cancelado no Sankhya")
                     logger.info("Pedido %s cancelado no Sankhya", pedido.num_pedido)
+                venda.update_pedido_cancelado_snk(id_pedido=pedido.id_pedido)
+            print("Pedidos atualizados no Sankhya com sucesso!")
+        else:
+            print("Nenhum pedido pendente de cancelamento encontrado.")
+            logger.info("Nenhum pedido pendente de cancelamento encontrado.")            
 
         print("Validação de pedidos cancelados concluída!")
         
         return True
 
-    async def receber_pedidos(self, lista_pedidos:list=None, atual:bool=True) -> bool:
+    async def receber(self, lista_pedidos:list=None, atual:bool=True) -> bool:
         """ Recebe pedidos do Olist e os adiciona à base de dados.
         Args:
             lista_pedidos (list, optional): Lista de IDs de pedidos a serem recebidos. Se None, busca todos os pedidos novos.            
@@ -104,7 +109,7 @@ class Pedido:
 
         ped_olist = PedidoOlist()
         if not lista_pedidos:
-            ack, lista = await ped_olist.buscar_novos(atual=atual)
+            ack, lista = await ped_olist.buscar_novos(atual=atual)            
             if not ack:
                 print("Nenhum pedido encontrado.")
                 logger.info("Nenhum pedido encontrado.")
@@ -119,6 +124,7 @@ class Pedido:
         
         print(f"Pedidos a serem recebidos: {len(lista_pedidos)}")
         first = True
+        db_con = venda.open()
         for pedido in lista_pedidos:
             if not first:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
@@ -135,17 +141,24 @@ class Pedido:
                 logger.warning("Pedido %s dados incompletos", dados_pedido.get('numeroPedido'))
                 continue
 
-            venda.create(id_loja=dados_pedido['ecommerce'].get('id'),
-                         id_pedido=dados_pedido.get('id'),
-                         cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
-                         num_pedido=dados_pedido.get('numeroPedido'))
-            print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
+            ack = venda.create(db=db_con,
+                               id_loja=dados_pedido['ecommerce'].get('id'),
+                               id_pedido=dados_pedido.get('id'),
+                               cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
+                               num_pedido=dados_pedido.get('numeroPedido'))
+            if not ack:
+                print(f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados.")
+                logger.error("Erro ao adicionar pedido %s à base de dados.", dados_pedido.get('numeroPedido'))
+                continue
 
+            print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
+        
+        db_con.close()
         print("Recebimento de pedidos concluído!")
 
         return True    
 
-    async def importar_novos(self):
+    async def importar(self):
         """ Importa novos pedidos do Olist para o Sankhya. """
         obs = None
         evento = 'I'
@@ -185,10 +198,6 @@ class Pedido:
 
             print("")
             print(f"Importando pedido {index + 1}/{len(novos_pedidos)}: {pedido.get('numero')}")
-            if pedido.get('numero') in [3489,3577,3608,3624]:
-                print(f"Pedido {pedido.get('numero')} dados incompletos")
-                continue  
-
             # Verifica se o pedido já existe no Olist e só não foi atualizado na base do integrador
             validacao = await snk.buscar(id_olist=pedido.get('id'))
             if validacao:
@@ -243,9 +252,9 @@ class Pedido:
 
             # Insere os dados do pedido
             print("Insere os dados do pedido")
-            pedido_incluido, mensagem = await snk.lancar(dados_cabecalho=data_cabecalho,dados_itens=data_itens)
+            pedido_incluido = await snk.lancar(dados_cabecalho=data_cabecalho,dados_itens=data_itens)
             if pedido_incluido == 0:
-                obs = f"Erro ao inserir pedido no Sankhya. Mensagem: {mensagem}"
+                obs = f"Erro ao inserir pedido no Sankhya."
                 continue
 
             log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=self.log_id,
@@ -254,11 +263,10 @@ class Pedido:
                                                                 pedido_ecommerce=dados_pedido_olist['ecommerce'].get('numeroPedidoEcommerce'),
                                                                 nunota_pedido=pedido_incluido,
                                                                 evento=evento,
-                                                                status=True,
-                                                                obs=mensagem))
+                                                                status=True))
             venda.update_new_venda_to_snk(id_pedido=pedido.get('id'),
                                           nunota_pedido=pedido_incluido)   
-            print(f"Pedido #{pedido.get('numero')} importado no código {pedido_incluido}. Mensagem: {mensagem}")
+            print(f"Pedido #{pedido.get('numero')} importado no código {pedido_incluido}")
                         
         status_log = False if log_pedido.read_by_logid_status_false(log_id=self.log_id) else True
         log.update(id=self.log_id, log=SchemaLog.LogBase(sucesso=status_log))
@@ -269,7 +277,7 @@ class Pedido:
         """ Confirma pedidos importados do Olist no Sankhya. """
         obs = None
         evento = 'C'
-
+        
         # Busca pedidos pendentes de confirmação
         pedidos_confirmar = venda.read_venda_confirmar_snk()
         if not pedidos_confirmar:
@@ -277,7 +285,7 @@ class Pedido:
             return True
 
         print(f"Pedidos para confirmar: {len(pedidos_confirmar)}")
-        pedidos_confirmar = [{'nunota': pedido.nunota_pedido, 'numero': pedido.num_pedido} for pedido in pedidos_confirmar]
+        pedidos_confirmar = [{'nunota': pedido.nunota_pedido, 'numero': pedido.num_pedido, 'id': pedido.id_pedido, 'separacao': pedido.id_separacao} for pedido in pedidos_confirmar]
 
         snk = PedidoSnk()
         first = True
@@ -297,9 +305,16 @@ class Pedido:
                                                                     evento=evento,
                                                                     status=False,
                                                                     obs=obs))
+                obs = None
             
             print("")
             print(f"Confirmando pedido {index + 1}/{len(pedidos_confirmar)}: {pedido.get('nunota')}")
+
+            # VALIDACAO DA SEPARACAO NO OLIST
+            if not pedido.get('separacao'):
+                obs = f"Pedido {pedido.get('numero')} ainda não foi enviado para separacao"
+                print(obs)
+                continue
 
             # Verifica se o pedido já foi confirmado e só não foi atualizado na base do integrador
             validacao = await snk.buscar(nunota=pedido.get('nunota'))
@@ -324,6 +339,9 @@ class Pedido:
                                                                 obs=f"Pedido {pedido.get('nunota')} confirmado com sucesso!"))
             venda.update_venda_confirmar_snk(nunota_pedido=pedido.get('nunota'))
             print(f"Pedido {pedido.get('nunota')} confirmado com sucesso!")
+
+        # separacao = SeparacaoOlist()
+        # await separacao.receber_separacoes()
 
         status_log = False if obs else True
         log.update(id=self.log_id, log=SchemaLog.LogBase(sucesso=status_log))
