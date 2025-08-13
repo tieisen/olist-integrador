@@ -5,8 +5,15 @@ from database.models.venda import Venda
 from database.schemas.venda import VendaBase
 from database.dependencies import get_db
 
-def create(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
-    db: Session = next(get_db())
+def open():
+    return next(get_db())
+
+def close(db: Session):
+    db.close()
+    return True
+
+def create(db:Session, id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
+    #db: Session = next(get_db())
     try:
         venda = VendaBase(
             id_loja=id_loja,
@@ -17,11 +24,12 @@ def create(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
         db_venda = Venda(**venda.model_dump())
         db.add(db_venda)
         db.commit()
-        db.close()
+        #db.close()
         return True
     except IntegrityError:
-        db.close()
+        #db.close()
         print(f"Erro de integridade. Um pedido com o ID {id_pedido} já existe na base.")
+        return False
 
 def read_last_venda_dt():
     db: Session = next(get_db())
@@ -46,18 +54,30 @@ def read_new_venda_to_snk():
         db.close()
         return None
 
+def read_valida_cancelamentos(lista_ids:list):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.id_pedido.in_(lista_ids),
+                                          Venda.dh_cancelamento_pedido.is_(None)).all()
+        db.close()
+        return db_venda
+    except Exception as e:
+        print(f"Erro ao validar cancelamentos: {e}")
+        db.close()
+        return None    
+
 def read_valida_importados_cancelados():
     db: Session = next(get_db())
     try:
         db_venda = db.query(Venda).filter(Venda.nunota_pedido.isnot(None),
-                                          Venda.dh_faturamento_snk.is_(None),
-                                          Venda.dh_cancelamento_pedido.is_(None)).order_by(Venda.num_pedido).all()
+                                          Venda.nunota_nota.is_(None),
+                                          Venda.dh_cancelamento_pedido.isnot(None)).order_by(Venda.num_pedido).all()
         db.close()
         return db_venda
     except Exception as e:
-        print(f"Erro ao ler as vendas: {e}")
+        print(f"Erro ao validar importados cancelados: {e}")
         db.close()
-        return None    
+        return None
 
 def read_venda_confirmar_snk():
     db: Session = next(get_db())
@@ -133,6 +153,42 @@ def read_by_list_idpedido(ids: list[int]):
         return db_venda
     finally:
         db.close()
+
+def read_list_separacao_pendente(ids: list[int]):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.id_pedido.in_(ids),
+                                          Venda.id_separacao.is_(None),
+                                          Venda.dh_cancelamento_pedido.is_(None),
+                                          Venda.dh_confirmacao_nota_snk.is_(None)).all()
+        db.close()
+        return db_venda
+    finally:
+        db.close()
+
+def read_separacao_pendente(id_pedido: int):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.id_pedido == id_pedido,
+                                          Venda.id_separacao.is_(None),
+                                          Venda.dh_cancelamento_pedido.is_(None),
+                                          Venda.dh_confirmacao_nota_snk.is_(None)).all()
+        db.close()
+        return db_venda
+    finally:
+        db.close()        
+
+def read_separacao_checkout():
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.dh_cancelamento_pedido.is_(None),
+                                          Venda.id_separacao.isnot(None),                                          
+                                          Venda.id_nota.isnot(None),                                          
+                                          Venda.dh_confirmacao_nota_snk.is_(None)).all()
+        db.close()
+        return db_venda
+    finally:
+        db.close()        
 
 def read_perdidos():
     db: Session = next(get_db())
@@ -279,7 +335,7 @@ def update_nota_cancelada(num_nota:int):
     finally:
         db.close()
 
-def update_pedido_cancelado(id_pedido:int):
+def update_pedido_cancelado_olist(id_pedido:int):
     db: Session = next(get_db())
     try:
         db_venda = db.query(Venda).filter(Venda.id_pedido == id_pedido).first()
@@ -287,6 +343,19 @@ def update_pedido_cancelado(id_pedido:int):
             db.close()
             return None
         setattr(db_venda, "dh_cancelamento_pedido", datetime.now())
+        db.commit()
+        db.close()
+        return True
+    finally:
+        db.close()
+
+def update_pedido_cancelado_snk(id_pedido:int):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.id_pedido == id_pedido).first()
+        if db_venda is None:
+            db.close()
+            return None
         setattr(db_venda, "dh_confirmacao_pedido_snk", None)
         setattr(db_venda, "nunota_pedido", None)
         db.commit()
@@ -294,3 +363,18 @@ def update_pedido_cancelado(id_pedido:int):
         return True
     finally:
         db.close()
+
+def update_separacao(id_pedido: int, id_separacao: int):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.id_pedido == id_pedido).first()
+        if db_venda is None:
+            db.close()
+            return None
+        setattr(db_venda, "id_separacao", id_separacao)
+        db.commit()
+        db.close()
+        return True
+    except:
+        db.close()
+        return False

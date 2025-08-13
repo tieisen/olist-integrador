@@ -13,6 +13,7 @@ class VendaBase(BaseModel):
     id_pedido: int
     cod_pedido: str
     num_pedido: int
+    id_separacao: int | None = None
     num_nota: int | None = None
     id_nota: int | None = None
     dh_nota_emissao: datetime | None = None

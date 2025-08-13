@@ -10,6 +10,7 @@ class Venda(Base):
     id_pedido = Column(Integer, nullable=False, unique=True)
     cod_pedido = Column(String, nullable=False)
     num_pedido = Column(Integer, nullable=False)
+    id_separacao = Column(Integer, nullable=True)
     num_nota = Column(Integer, nullable=True)
     id_nota = Column(Integer, nullable=True)
     dh_nota_emissao = Column(DateTime(timezone=True), nullable=True)
