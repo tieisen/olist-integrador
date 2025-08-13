@@ -181,23 +181,25 @@ class Estoque:
             return False        
 
         query = f'''
-            SELECT EST.CODPROD, EST.CONTROLE, SUM(EST.ESTOQUE) QTD
+            SELECT EST.CODPROD, EST.CONTROLE, SUM(EST.ESTOQUE) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN
             FROM TGFEST EST
+                INNER JOIN TGFPRO PRO ON EST.CODPROD = PRO.CODPROD
             WHERE EST.CODEMP = 31
                 AND EST.CODPROD = {codprod}
                 AND EST.CONTROLE = '{controle}'
-            GROUP BY EST.CODPROD, EST.CONTROLE
+            GROUP BY EST.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
         '''
 
         if lista_produtos:
             produtos = [produto.get('codprod') for produto in lista_produtos]
             query = f'''
-                SELECT EST.CODPROD, EST.CONTROLE, SUM(EST.ESTOQUE) QTD
+                SELECT EST.CODPROD, EST.CONTROLE, SUM(EST.ESTOQUE) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN
                 FROM TGFEST EST
+                    INNER JOIN TGFPRO PRO ON EST.CODPROD = PRO.CODPROD
                 WHERE EST.CODEMP = 31
                     AND TRIM(EST.CONTROLE) IS NOT NULL
                     AND EST.CODPROD IN ({','.join(map(str,produtos))})
-                GROUP BY EST.CODPROD, EST.CONTROLE
+                GROUP BY EST.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
             '''
 
         res = requests.get(
