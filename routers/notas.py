@@ -1,8 +1,11 @@
 from fastapi import APIRouter
 from src.integrador.nota import Nota
+from src.integrador.separacao import Separacao
 import asyncio
 
 router = APIRouter()
+nota = Nota()
+separacao = Separacao()
 
 @router.get("/")
 def default():
@@ -10,27 +13,24 @@ def default():
 
 @router.get("/integrar")
 def integrar_notas_olist():
-    nota = Nota()
-    asyncio.run(nota.emitir_notas())
-    asyncio.run(nota.confirmar_notas())
+    asyncio.run(nota.emitir())
+    asyncio.run(separacao.checkout())
+    asyncio.run(nota.confirmar())
     asyncio.run(nota.baixar_financeiro())
     return True
 
 @router.get("/emitir")
 def emitir_notas_olist():
-    nota = Nota()
-    asyncio.run(nota.emitir_notas())
+    asyncio.run(nota.emitir())
     return True
 
 @router.get("/confirmar")
 def confirmar_notas_olist():
-    nota = Nota()
-    asyncio.run(nota.confirmar_notas())
+    asyncio.run(nota.confirmar())
     asyncio.run(nota.baixar_financeiro())
     return True
 
 @router.get("/baixar-financeiro")
 def baixar_notas_olist():
-    nota = Nota()
     asyncio.run(nota.baixar_financeiro())
     return True
