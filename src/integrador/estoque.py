@@ -23,7 +23,7 @@ class Estoque:
     def __init__(self):
         pass
 
-    def calcula_variacao(self, estoque_olist:list=None, estoque_snk:list=None) -> list:
+    def calcular_variacao(self, estoque_olist:list=None, estoque_snk:list=None) -> list:
         # Verifica se existe diferença entre o estoque disponível do Sankhya e do Olist
         if not all([estoque_olist,estoque_snk]):
             print("Dados de estoque nas APIs não informados")
@@ -59,7 +59,7 @@ class Estoque:
 
         return result
 
-    async def atualiza_olist(self):
+    async def atualizar_olist(self):
         # Registro no log
         log_id = log.create(log=schemaLog.LogBase(de='sankhya', para='olist', contexto=CONTEXTO))
 
@@ -95,7 +95,7 @@ class Estoque:
 
         # Calcula variação dos produtos
         print("Calculando variação dos produtos")
-        dados_update = self.calcula_variacao(estoque_olist=dados_estoque_olist,
+        dados_update = self.calcular_variacao(estoque_olist=dados_estoque_olist,
                                              estoque_snk=dados_estoque_snk)
 
         # Envia modificações para Olist

@@ -31,7 +31,7 @@ class Produto:
         self.parse = Parser()
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
 
-    async def recebe_alteracoes_pendentes(self):
+    async def receber_alteracoes(self):
 
         alteracoes_raw = await self.produto_olist.busca_alteracoes()
         if not alteracoes_raw:
@@ -64,7 +64,7 @@ class Produto:
         
         return True
 
-    async def atualiza_olist_rotina(self):
+    async def atualizar_olist(self):
 
         log_id = crudLog.create(log=schemaLog.LogBase(de='sankhya', para='olist', contexto=CONTEXTO))
         obs = None
@@ -235,7 +235,7 @@ class Produto:
 
         return True
 
-    async def atualiza_snk_rotina(self):
+    async def atualizar_snk(self):
         log_id = crudLog.create(log=schemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
         obs = None
         # Busca lista de produtos com alterações no Olist
