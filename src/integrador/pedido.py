@@ -363,35 +363,38 @@ class Pedido:
         snk = PedidoSnk()
         nota = NotaSnk()
         first = True
-        for i, pedido in enumerate(pedidos_faturar):
-            if not first:
-                time.sleep(self.req_time_sleep)  # Evita rate limit
-            first = False
+        try:
+            for i, pedido in enumerate(pedidos_faturar):
+                if not first:
+                    time.sleep(self.req_time_sleep)  # Evita rate limit
+                first = False
 
-            print("")
-            print(f"Faturando pedido {i + 1}/{len(pedidos_faturar)}: {pedido.num_pedido}/{pedido.nunota_pedido}")
+                print("")
+                print(f"Faturando pedido {i + 1}/{len(pedidos_faturar)}: {pedido.num_pedido}/{pedido.nunota_pedido}")
 
-            # Verifica se o pedido já foi faturado e só não foi atualizado na base do integrador
-            validacao = await nota.buscar(codpedido=pedido.cod_pedido)
-            if validacao:
-                print(f"Pedido {pedido.num_pedido} já foi faturado.")
+                # Verifica se o pedido já foi faturado e só não foi atualizado na base do integrador
+                validacao = await nota.buscar(codpedido=pedido.cod_pedido)
+                if validacao:
+                    print(f"Pedido {pedido.num_pedido} já foi faturado.")
+                    venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
+                                                nunota_nota=int(validacao.get('nunota')),
+                                                dh_faturado=validacao.get('dtneg'))
+                    continue
+
+                ack, nunota_nota = await snk.faturar(nunota=pedido.nunota_pedido)
+                if not ack:
+                    print(f"Erro ao faturar pedido {pedido.nunota_pedido}")
+                    logger.error("Erro ao faturar pedido %s",pedido.nunota_pedido)
+                    continue
+
                 venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
-                                              nunota_nota=int(validacao.get('nunota')),
-                                              dh_faturado=validacao.get('dtneg'))
-                continue
+                                            nunota_nota=nunota_nota)
+                print(f"Pedido {pedido.nunota_pedido} faturado com sucesso!")
 
-            ack, nunota_nota = await snk.faturar(nunota=pedido.nunota_pedido)
-            if not ack:
-                print(f"Erro ao faturar pedido {pedido.nunota_pedido}")
-                logger.error("Erro ao faturar pedido %s",pedido.nunota_pedido)
-                continue
-
-            venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
-                                          nunota_nota=nunota_nota)
-            print(f"Pedido {pedido.nunota_pedido} faturado com sucesso!")
-
-        print("-> Processo de faturamento concluído!")
-        return True
+            print("-> Processo de faturamento concluído!")
+            return True
+        except:
+            return False
 
 
 

@@ -82,36 +82,39 @@ class Estoque:
                                                                       obs = "Sem alterações pendentes"))
             log.update(id=log_id, log=schemaLog.LogBase(sucesso=True))            
             return True
-                           
-        # Extrai lista dos produtos
-        print("Extraindo lista dos produtos")
-        lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
-        lista_id = [int(produto.get('idprod')) for produto in alteracoes_pendentes]
 
-        # Busca dados dos produtos no Sankhya e no Olist
-        print("Buscando dados dos produtos no Sankhya e no Olist")
-        dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
-        dados_estoque_olist = await estoque_olist.buscar(lista_produtos=lista_id)
+        try:
 
-        # Calcula variação dos produtos
-        print("Calculando variação dos produtos")
-        dados_update = self.calcular_variacao(estoque_olist=dados_estoque_olist,
-                                             estoque_snk=dados_estoque_snk)
+            # Extrai lista dos produtos
+            print("Extraindo lista dos produtos")
+            lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
+            lista_id = [int(produto.get('idprod')) for produto in alteracoes_pendentes]
 
-        # Envia modificações para Olist
-        print("Enviando modificações para Olist")
-        res_estoque = await estoque_olist.enviar_saldo(lista_dados=dados_update)
+            # Busca dados dos produtos no Sankhya e no Olist
+            print("Buscando dados dos produtos no Sankhya e no Olist")
+            dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
+            dados_estoque_olist = await estoque_olist.buscar(lista_produtos=lista_id)
 
-        # Limpa tabela de alterações pendentes
-        ack = await estoque_snk.remover_alteracoes(lista_produtos=res_estoque)
-        if not ack:
-            print("Erro ao remover alterações pendentes")
-            logger.error("Erro ao remover alterações pendentes")
+            # Calcula variação dos produtos
+            print("Calculando variação dos produtos")
+            dados_update = self.calcular_variacao(estoque_olist=dados_estoque_olist,
+                                                estoque_snk=dados_estoque_snk)
 
-        print(f"Estoque sincronizado com sucesso!")
-        # Registro no log
-        status_log = False if log_estoque.read_by_logid_status_estoque_false(log_id) else True
-        log.update(id=log_id, log=schemaLog.LogBase(sucesso=status_log))
+            # Envia modificações para Olist
+            print("Enviando modificações para Olist")
+            res_estoque = await estoque_olist.enviar_saldo(lista_dados=dados_update)
 
-        return True
-    
+            # Limpa tabela de alterações pendentes
+            ack = await estoque_snk.remover_alteracoes(lista_produtos=res_estoque)
+            if not ack:
+                print("Erro ao remover alterações pendentes")
+                logger.error("Erro ao remover alterações pendentes")
+
+            print(f"Estoque sincronizado com sucesso!")
+            # Registro no log
+            status_log = False if log_estoque.read_by_logid_status_estoque_false(log_id) else True
+            log.update(id=log_id, log=schemaLog.LogBase(sucesso=status_log))
+
+            return True
+        except:
+            return False   

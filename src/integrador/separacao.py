@@ -58,13 +58,20 @@ class Separacao:
         
         print(f"Checkouts pendentes: {len(lista_checkout)}")
         separacao = SeparacaoOlist()
-        for item in lista_checkout:
-            time.sleep(self.req_time_sleep)  # Evita rate limit
-            if not await separacao.concluir(id=item.id_separacao):
-                print(f"Erro ao concluir checkout do pedido ID {item.id_pedido}.")
-                logger.error("Erro ao concluir checkout do pedido ID %s.",item.id_pedido)
-                continue
 
-        print("Checkout dos pedidos concluído!")
+        try:
+            for item in lista_checkout:
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                if not await separacao.concluir(id=item.id_separacao):
+                    ack = False
+                    print(f"Erro ao concluir checkout do pedido ID {item.id_pedido}.")
+                    logger.error("Erro ao concluir checkout do pedido ID %s.",item.id_pedido)
+                    continue
 
-        return True
+            print("Checkout dos pedidos concluído!")
+
+            return True
+        except:
+            return False
+
+
