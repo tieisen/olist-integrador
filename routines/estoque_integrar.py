@@ -5,4 +5,4 @@ from src.integrador.estoque import Estoque
 
 if __name__=="__main__":    
     estoque = Estoque()
-    asyncio.run(estoque.atualiza_olist())
+    asyncio.run(estoque.atualizar_olist())

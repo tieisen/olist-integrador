@@ -10,3 +10,4 @@ if __name__=="__main__":
     ack = asyncio.run(faturamento.venda_entre_empresas())
     if ack:
         asyncio.run(pedido.faturar())
+        

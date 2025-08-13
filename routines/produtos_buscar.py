@@ -5,4 +5,4 @@ import asyncio
 
 if __name__=="__main__":    
     produto = Produto()
-    asyncio.run(produto.recebe_alteracoes_pendentes())
+    asyncio.run(produto.receber_alteracoes())

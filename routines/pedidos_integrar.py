@@ -1,9 +1,12 @@
 import asyncio
 from src.integrador.pedido import Pedido
+from src.integrador.separacao import Separacao
 
 # ROTINA A SER EXECUTADA EM DIAS ÚTEIS, ÀS 8H E ÀS 11H
 
 if __name__=="__main__":    
     pedido = Pedido()
-    asyncio.run(pedido.importar_novos())
+    separacao = Separacao()
+    asyncio.run(pedido.importar())
+    asyncio.run(separacao.receber())
     asyncio.run(pedido.confirmar())

@@ -2,5 +2,5 @@
 cd c:/repos/olist-integrador
 call venv\Scripts\activate
 set PYTHONPATH=%cd%
-python routines\buscar_produtos_olist.py
+python routines\pedidos_integrar.py
 call deactivate

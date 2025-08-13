@@ -5,5 +5,5 @@ import asyncio
 
 if __name__=="__main__":    
     produto = Produto()    
-    asyncio.run(produto.atualiza_olist_rotina())
-    asyncio.run(produto.atualiza_snk_rotina())
+    asyncio.run(produto.atualizar_olist())
+    asyncio.run(produto.atualizar_snk())
