@@ -149,7 +149,10 @@ class Nota:
             return False
         
         if res.status_code == 200:
-            return res.json().get('itens')[0]
+            try:
+                return res.json().get('itens')[0]
+            except:
+                return False
             # print(res.json())
             # url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')+f"/{res.json().get('itens')[0].get('id')}"
             # res_ = requests.get(
