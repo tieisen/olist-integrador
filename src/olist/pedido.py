@@ -22,9 +22,9 @@ class Pedido:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PEDIDOS')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
-    async def buscar(self,id:int=None,codigo:str=None) -> bool:
+    async def buscar(self,id:int=None,codigo:str=None,numero:int=None,cancelados:bool=False):
 
-        if not any([id, codigo]):
+        if not cancelados and not any([id, codigo, numero]):
             logger.error("Pedido não informado.")
             print("Pedido não informado.")
             return False
@@ -39,6 +39,10 @@ class Pedido:
             url = self.endpoint+f"/{id}"
         if codigo:
             url = self.endpoint+f"/?numeroPedidoEcommerce={codigo}"
+        if numero:
+            url = self.endpoint+f"/?numero={numero}"
+        if cancelados:
+            url = self.endpoint+f"/?situacao=2&dataInicial={(datetime.today()-timedelta(days=4)).strftime('%Y-%m-%d')}"            
 
         if not url:
             print(f"Erro relacionado à url. {url}")
@@ -55,7 +59,9 @@ class Pedido:
         )
 
         if res.status_code == 200:
-            if codigo:
+            if id:
+                return res.json()
+            if codigo or numero:
                 try:
                     id = res.json()['itens'][0].get('id')
                     url = self.endpoint+f"/{id}"
@@ -67,20 +73,25 @@ class Pedido:
                             "Accept":"application/json"
                         }
                     )
+                    return res.json()
                 except:
                     return False
-                if res.json().get('situacao') == 8:
-                    print(f"Pedido {res.json().get('numeroPedido')} dados incompletos")
-                    logger.warning("Pedido %s dados incompletos", res.json().get('numeroPedido'))
-                    return False
-            return res.json()
+            if not cancelados and res.json().get('situacao') == 8:
+                print(f"Pedido {res.json().get('numeroPedido')} dados incompletos")
+                logger.warning("Pedido %s dados incompletos", res.json().get('numeroPedido'))
+                return False
+            if cancelados:
+                if res.json().get('itens'):
+                    return [i.get('id') for i in res.json().get('itens')]
+                else:
+                    return []            
         else:
             if id:
-                print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} pedido {id}")
-                logger.error("Erro %s: %s pedido %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
+                print(f"Erro {res.status_code}: {res.text} pedido {id}")
+                logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
             if codigo:
-                print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} pedido {codigo}")
-                logger.error("Erro %s: %s pedido %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), codigo)
+                print(f"Erro {res.status_code}: {res.text} pedido {codigo}")
+                logger.error("Erro %s: %s pedido %s", res.status_code, res.text, codigo)
             return False
 
     async def validar_kit(self,id:int=None,item_no_pedido:dict=None) -> tuple[bool,dict]:
