@@ -53,28 +53,39 @@ class Separacao:
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
-        url = self.endpoint+"/?situacao=1" # Aguardando Separacao
+        url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
+                self.endpoint+"/?situacao=2",  # Separada
+                self.endpoint+"/?situacao=4" ] # Em Separacao
+        
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False        
 
-        res = requests.get(
-            url = url,
-            headers = {
-                "Authorization":f"Bearer {token}",
-                "Content-Type":"application/json",
-                "Accept":"application/json"
-            }
-        )
+        status = True
+        lista = []
+        for u in url:
+            res = requests.get(
+                url = u,
+                headers = {
+                    "Authorization":f"Bearer {token}",
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                }
+            )
 
-        if res.status_code != 200:
-            logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
-            return False
-        
-        return self.extrair_lista(res.json())
-        
+            if res.status_code != 200:
+                status == False
+                logger.error("Erro %s: %s", res.status_code, res.text)
+                print(f"Erro {res.status_code}: {res.text}")
+                continue
+
+            if res.status_code == 200 and not res.json().get('itens'):
+                continue
+
+            lista+=self.extrair_lista(res.json())
+
+        return lista if status else status        
 
     async def buscar(self, id:int=None) -> bool:
 
@@ -111,6 +122,44 @@ class Separacao:
         
         return res.json()
 
+    async def separar(self, id:int=None) -> bool:
+
+        if not id:
+            logger.error("ID da separação não informado.")
+            print("ID da separação não informado.")
+            return False
+        
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False
+
+        url = self.endpoint+f"/{id}/situacao"
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+        res = requests.put(
+            url = url,
+            headers = {
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json={
+                "situacao": 2 # Separada
+            }
+        )
+
+        if res.status_code != 204:
+            logger.error("Erro %s: %s", res.status_code, res.text)
+            print(f"Erro {res.status_code}: {res.text}")
+            return False
+        
+        return True
+
     async def concluir(self, id:int=None) -> bool:
 
         if not id:
@@ -130,7 +179,7 @@ class Separacao:
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
-        res = requests.get(
+        res = requests.put(
             url = url,
             headers = {
                 "Authorization":f"Bearer {token}",
