@@ -283,10 +283,11 @@ class Pedido:
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
             return True
-        else:
-            print(f"Erro ao confirmar pedido. Nunota {nunota}. {res.text}")
-            logger.error("Erro ao confirmar pedido. Nunota %s. %s",nunota,res.text)
-            return False
+        if res.status_code in (200,201) and res.json().get('status')=='0' and res.json().get('statusMessage') == f"A nota {nunota} já foi confirmada.":
+            return True        
+        print(f"Erro ao confirmar pedido. Nunota {nunota}. {res.text}")
+        logger.error("Erro ao confirmar pedido. Nunota %s. %s",nunota,res.text)
+        return False
 
     async def faturar(self, nunota:int=None, dt_fatur:str=None) -> tuple[bool,int]:
 
@@ -360,7 +361,8 @@ class Pedido:
             logger.error("Dados não informados.")
             return False
         
-        url = os.getenv('SANKHYA_URL_CANCELA_PEDIDO')
+        #url = os.getenv('SANKHYA_URL_CANCELA_PEDIDO')
+        url = os.getenv('SANKHYA_URL_DELETE')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
@@ -373,31 +375,35 @@ class Pedido:
             return False
 
         body = {
-            "serviceName": "CACSP.cancelarNota",
+            "serviceName": "DatasetSP.removeRecord",
             "requestBody": {
-                "notasCanceladas": {
-                    "nunota": [
-                        {
-                            "$": f"{nunota}"
-                        }
-                    ],
-                    "justificativa": f"Pedido #{num_pedido} cancelado no Olist",
-                    "validarProcessosWmsEmAndamento": "true"
-                }
+                "entityName": "CabecalhoNota",
+                "offsetPage": "0",        
+                "standAlone": False,
+                "pks": [
+                    {
+                        "NUNOTA": f"{nunota}"
+                    }
+                ]
             }
         }
 
-        res = requests.post(
+        res = requests.get(
             url=url,
             headers={ 'Authorization': token },
             json=body)
         
-        if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
-            return True
-        else:
+        if res.status_code != 200:
+            print(f"Erro do servidor ao cancelar pedido {num_pedido}. Nunota {nunota}. {res.text}")
+            logger.error("Erro do servidor ao cancelar pedido %s. Nunota %s. %s",num_pedido,nunota,res.text)
+            return False
+        
+        if res.status_code == 200 and res.json().get('status') != '1':
             print(f"Erro ao cancelar pedido {num_pedido}. Nunota {nunota}. {res.text}")
             logger.error("Erro ao cancelar pedido %s. Nunota %s. %s",num_pedido,nunota,res.text)
             return False
+        
+        return True
 
 class Itens(Pedido):
     def __init__(self):
