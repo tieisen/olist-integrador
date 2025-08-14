@@ -74,4 +74,29 @@ class Separacao:
         except:
             return False
 
+    async def separar(self) -> bool:
+
+        print("Buscando pedidos para separar...")
+        lista_checkout = venda.read_separacao_checkout()
+        if not lista_checkout:
+            print("Nenhuma separacao pendente encontrada.")
+            logger.info("Nenhuma separacao pendente encontrada.")
+            return True
+        
+        print(f"Separacoes pendentes: {len(lista_checkout)}")
+        separacao = SeparacaoOlist()
+
+        try:
+            for item in lista_checkout:
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                if not await separacao.separar(id=item.id_separacao):
+                    ack = False
+                    print(f"Erro ao separar pedido {item.num_pedido}.")
+                    logger.error("Erro ao separar pedido %s.",item.num_pedido)
+                    continue
+            print("Checkout dos pedidos concluído!")
+            return True
+        except:
+            return False
+
 
