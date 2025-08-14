@@ -29,6 +29,86 @@ class Nota:
         # Busca notas pendentes
         print("Busca notas pendentes")
 
+        notas_pendentes = venda.read_nota_autorizar()
+        if not notas_pendentes:
+            obs = "Nenhuma nota pendente"
+            print(obs)
+            return True
+        
+        print(f"{len(notas_pendentes)} notas pendentes encontradas")
+        evento = 'F'
+        obs = None
+        first = True 
+        nota_olist = NotaOlist()
+        nota_snk = NotaSnk()
+
+        try:
+            for i, nota in enumerate(notas_pendentes):
+                if not first:
+                    time.sleep(self.req_time_sleep)  # Evita rate limit
+                first = False
+
+                if obs:
+                    # Cria um log de erro se houver observação
+                    print(obs)
+                    log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
+                                                                        id_loja=notas_pendentes[i-1].id_loja,
+                                                                        id_pedido=notas_pendentes[i-1].id_pedido,
+                                                                        pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                                                        nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                                                        nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                                                        evento=evento,
+                                                                        status=False,
+                                                                        obs=obs))
+                    obs = None
+                                
+                print("")
+                print(f"Emitindo nota {i+1}/{len(notas_pendentes)}: {nota.num_pedido}")
+                
+                dados_nota = await nota_olist.buscar(id=nota.id_nota)
+                if not dados_nota:
+                    obs = f"Nota do pedido {nota.cod_pedido} não encontrada"
+                    continue
+
+                dados_emissao = await nota_olist.emitir(id=nota.id_nota)
+                if not dados_emissao:
+                    obs = f"Erro ao emitir nota {nota.num_nota} ref. pedido {nota.cod_pedido}"
+                    continue
+
+                venda.update_nota_autorizada(id_nota=nota.id_nota)
+                
+                if not await nota_snk.informar_numero_e_chavenfe(nunota=nota.nunota_nota,
+                                                                chavenfe=dados_emissao.get('chaveAcesso'),
+                                                                numero=nota.num_nota,
+                                                                id_nota=nota.id_nota):
+                    obs = f"Erro ao informar dados da nota {nota.num_nota} na venda {nota.nunota_nota} do Sankhya"
+                    continue
+
+                log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
+                                                                    id_loja=nota.id_loja,
+                                                                    id_pedido=nota.id_pedido,
+                                                                    pedido_ecommerce=nota.cod_pedido,
+                                                                    nunota_pedido=nota.nunota_pedido,
+                                                                    nunota_nota=nota.nunota_nota,
+                                                                    id_nota=dados_nota.get('id'),
+                                                                    evento=evento,
+                                                                    status=True))
+                
+                print(f"Nota {int(dados_nota.get('numero'))} emitida com sucesso!")
+                            
+            status_log = False if log_pedido.read_by_logid_status_false(log_id=log_id) else True
+            log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
+            print(f"-> Processo de emissão de notas concluído! Status do log: {status_log}")
+            return True
+        except:
+            return False
+        
+    async def _emitir(self):
+        log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        obs = None
+        # Busca notas pendentes
+        print("Busca notas pendentes")
+
         notas_pendentes = venda.read_pendente_nota_olist()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
