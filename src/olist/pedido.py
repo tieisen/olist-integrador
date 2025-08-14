@@ -42,7 +42,7 @@ class Pedido:
         if numero:
             url = self.endpoint+f"/?numero={numero}"
         if cancelados:
-            url = self.endpoint+f"/?situacao=2&dataInicial={(datetime.today()-timedelta(days=5)).strftime('%Y-%m-%d')}"            
+            url = self.endpoint+f"/?situacao=2&dataInicial={(datetime.today()-timedelta(days=7)).strftime('%Y-%m-%d')}"            
 
         if not url:
             print(f"Erro relacionado à url. {url}")
@@ -93,6 +93,42 @@ class Pedido:
                 print(f"Erro {res.status_code}: {res.text} pedido {codigo}")
                 logger.error("Erro %s: %s pedido %s", res.status_code, res.text, codigo)
             return False
+
+    async def gerar_nf(self,id:int=None):
+
+        if not id:
+            logger.error("Pedido não informado.")
+            print("Pedido não informado.")
+            return False
+
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False 
+        
+        url = self.endpoint+f"/{id}/gerar-nota-fiscal"
+
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+        res = requests.post(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        if res.status_code != 200:
+            print(f"Erro {res.status_code}: {res.text} pedido {id}")
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)            
+            return False
+
+        return res.json()
 
     async def validar_kit(self,id:int=None,item_no_pedido:dict=None) -> tuple[bool,dict]:
         
