@@ -102,6 +102,17 @@ def read_venda_faturar_snk():
     finally:
         db.close()
 
+def read_faturar_olist():
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.dh_cancelamento_pedido.is_(None),
+                                          Venda.id_separacao.isnot(None),
+                                          Venda.id_nota.is_(None)).order_by(Venda.num_pedido).all()
+        db.close()
+        return db_venda
+    finally:
+        db.close()
+
 def read_venda_faturada_confirmar_snk():
     db: Session = next(get_db())
     try:
@@ -120,6 +131,17 @@ def read_pendente_nota_olist():
         db_venda = db.query(Venda).filter(Venda.dh_faturamento_snk.isnot(None),
                                           Venda.dh_cancelamento_pedido.is_(None),
                                           Venda.id_nota.is_(None)).order_by(Venda.num_pedido).all()
+        db.close()
+        return db_venda
+    finally:
+        db.close()
+
+def read_nota_autorizar():
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.dh_cancelamento_pedido.is_(None),
+                                          Venda.id_nota.isnot(None),
+                                          Venda.dh_nota_emissao.is_(None)).order_by(Venda.num_pedido).all()
         db.close()
         return db_venda
     finally:
@@ -261,6 +283,38 @@ def update_venda_fatura_snk(nunota_pedido: int, nunota_nota:int, dh_faturado:str
             setattr(db_venda, "dh_faturamento_snk", datetime.strptime(dh_faturado,'%d/%m/%Y'))
         else:
             setattr(db_venda, "dh_faturamento_snk", datetime.now())
+        db.commit()
+        db.close()
+        return True
+    finally:
+        db.close()
+
+def update_gera_nf_olist(cod_pedido:str, num_nota:int, id_nota:int):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.cod_pedido == cod_pedido).first()
+        if db_venda is None:
+            db.close()
+            return None
+        setattr(db_venda, "num_nota", num_nota)
+        setattr(db_venda, "id_nota", id_nota)
+        db.commit()
+        db.close()
+        return True
+    finally:
+        db.close()
+
+def update_nota_autorizada(id_nota:int, dh_nota:str=None):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.id_nota == id_nota).first()
+        if db_venda is None:
+            db.close()
+            return None
+        if dh_nota:
+            setattr(db_venda, "dh_nota_emissao", datetime.strptime(dh_nota,'%Y-%m-%d %H:%M:%S'))
+        else:
+            setattr(db_venda, "dh_nota_emissao", datetime.now())
         db.commit()
         db.close()
         return True
