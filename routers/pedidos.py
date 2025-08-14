@@ -24,6 +24,7 @@ def buscar_pedidos_olist():
 @router.get("/integrar")
 def integrar_pedidos_olist():
     asyncio.run(pedido.importar())
+    asyncio.run(separacao.receber())
     asyncio.run(pedido.confirmar())
     return True
 
