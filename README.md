@@ -92,9 +92,9 @@ Para executar a integração, utilize o script principal:
 
 ```bash
 # Exemplo de como executar o script
-uvicorn __init__:app --port=[PORTA] --reload
+uvicorn __init__:app --host=[IP] --port=[PORTA] --reload
 ```
-Acesse `http://localhost:[PORTA]/docs` para acessar a documentação da API com a funcão de cada rota.
+Acesse `http://localhost:[PORTA]/docs` para buscar a documentação da API com a funcão de cada rota.
 
 Recomenda-se agendar a execução deste script utilizando ferramentas como o `cron` (Linux/macOS) ou o Agendador de Tarefas (Windows) para manter os sistemas sincronizados em intervalos regulares.
 
