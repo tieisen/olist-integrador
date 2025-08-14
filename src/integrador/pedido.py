@@ -353,7 +353,8 @@ class Pedido:
         from src.sankhya.nota import Nota as NotaSnk
 
         # Busca os pedidos pendentes de faturamento
-        pedidos_faturar = venda.read_venda_faturar_snk()
+        #pedidos_faturar = venda.read_venda_faturar_snk()
+        pedidos_faturar = venda.read_faturar_olist()
         if not pedidos_faturar:
             print("Nenhum pedido para faturamento.")
             return True
@@ -361,6 +362,7 @@ class Pedido:
         print(f"Pedidos para faturamento: {len(pedidos_faturar)}")
 
         snk = PedidoSnk()
+        olist = PedidoOlist()
         nota = NotaSnk()
         first = True
         try:
@@ -388,8 +390,20 @@ class Pedido:
                     continue
 
                 venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
-                                            nunota_nota=nunota_nota)
-                print(f"Pedido {pedido.nunota_pedido} faturado com sucesso!")
+                                              nunota_nota=nunota_nota)
+                
+                print("Gerando NF no Olist...")
+                dados_nf = await olist.gerar_nf(id=pedido.id_pedido)
+                if not dados_nf:
+                    print(f"Erro ao gerar NF do pedido {pedido.nunota_pedido}")
+                    logger.error("Erro ao gerar NF do pedido %s",pedido.nunota_pedido)
+                    continue
+                venda.update_gera_nf_olist(cod_pedido=pedido.cod_pedido,
+                                           num_nota=dados_nf.get('numero'),
+                                           id_nota=dados_nf.get('id'))
+                print(f"Pedido {pedido.nunota_pedido} faturado com sucesso na NF {dados_nf.get('numero')}!")
+                
+                #print(f"Pedido {pedido.nunota_pedido} faturado com sucesso!")
 
             print("-> Processo de faturamento concluído!")
             return True
