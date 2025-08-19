@@ -22,7 +22,7 @@ class Faturamento:
         self.con = Connect()
         self.formatter = Formatter()
 
-    async def buscar_itens(self):
+    async def buscar_itens(self, nunota:int=None):
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
@@ -37,19 +37,32 @@ class Faturamento:
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False  
 
-        query = '''
-            SELECT
-                COI.CODPROD,
-                COI.CONTROLE,
-                SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
-            FROM TGFCON2 CON
-                INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
-                INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
-            WHERE TRUNC(CON.DHFINCONF) = TRUNC(SYSDATE)
-                AND CAB.AD_MKP_ID IS NOT NULL
-                AND CAB.PENDENTE = 'S'
-            GROUP BY COI.CODPROD, COI.CONTROLE
-        '''
+        if nunota:
+            query = f'''
+                SELECT
+                    COI.CODPROD,
+                    COI.CONTROLE,
+                    SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
+                FROM TGFCON2 CON
+                    INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
+                    INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
+                WHERE CON.NUNOTAORIG = {nunota}
+                GROUP BY COI.CODPROD, COI.CONTROLE
+            '''
+        else:
+            query = '''
+                SELECT
+                    COI.CODPROD,
+                    COI.CONTROLE,
+                    SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
+                FROM TGFCON2 CON
+                    INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
+                    INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
+                WHERE TRUNC(CON.DHFINCONF) = TRUNC(SYSDATE)
+                    AND CAB.AD_MKP_ID IS NOT NULL
+                    AND CAB.PENDENTE = 'S'
+                GROUP BY COI.CODPROD, COI.CONTROLE
+            '''
 
         res = requests.get(
             url=url,
@@ -65,8 +78,12 @@ class Faturamento:
             # print(res.json())
             return self.formatter.return_format(res.json())
         else:
-            logger.error("Erro ao buscar itens conferidos no dia. %s",res.text)
-            print(f"Erro ao buscar itens conferidos no dia. {res.text}")
+            if nunota:
+                logger.error("Erro ao buscar itens conferidos do pedido %s. %s",nunota,res.text)
+                print(f"Erro ao buscar itens conferidos do pedido {nunota}. {res.text}")
+            else:
+                logger.error("Erro ao buscar itens conferidos no dia. %s",res.text)
+                print(f"Erro ao buscar itens conferidos no dia. {res.text}")
             return False
 
     async def compara_saldos(self, saldo_estoque:list=None, saldo_pedidos:list=None):
