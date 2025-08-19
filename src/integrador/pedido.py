@@ -3,8 +3,11 @@ import time
 import logging
 from dotenv import load_dotenv
 from src.olist.pedido import Pedido as PedidoOlist
+from src.olist.nota import Nota as NotaOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
 from src.parser.pedido import Pedido as ParserPedido
+from src.sankhya.conferencia import Conferencia as ConferenciaSnk
+from src.parser.conferencia import Conferencia as ParserConferencia
 from src.services.viacep import Viacep
 from database.schemas import log as SchemaLog
 from database.schemas import log_pedido as SchemaLogPedido
@@ -265,8 +268,18 @@ class Pedido:
                                                                 evento=evento,
                                                                 status=True))
             venda.update_new_venda_to_snk(id_pedido=pedido.get('id'),
-                                          nunota_pedido=pedido_incluido)   
+                                          nunota_pedido=pedido_incluido)
+            
             print(f"Pedido #{pedido.get('numero')} importado no código {pedido_incluido}")
+
+            # Manda número do pedido pro Olist
+            ack_observacao = await olist.atualizar_nunota(id=pedido.get('id'),
+                                                          nunota=pedido_incluido,
+                                                          observacao=dados_pedido_olist.get('observacoes'))
+            
+            if not ack_observacao:
+                obs = "Erro ao enviar nunota do pedido para Olist"
+                continue
                         
         status_log = False if log_pedido.read_by_logid_status_false(log_id=self.log_id) else True
         log.update(id=self.log_id, log=SchemaLog.LogBase(sucesso=status_log))
@@ -347,14 +360,81 @@ class Pedido:
         log.update(id=self.log_id, log=SchemaLog.LogBase(sucesso=status_log))
         print(f"-> Processo de confirmação de pedidos concluído! Status do log: {status_log}")
         return True
-    
-    async def faturar(self):
+
+    async def conferir(self):
+        #log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        obs = None
+        conferencia = ConferenciaSnk()
+        print("Busca pedidos para conferir")
+        lista_pedidos = await conferencia.buscar_aguardando_conferencia()
+        if not lista_pedidos:
+            print("Nenhum pedido para conferir.")
+            return True
+
+        print(f"{len(lista_pedidos)} pedidos encontrados")
+        nota_olist = NotaOlist()
+        parser_conferencia = ParserConferencia()
+
+        for i, pedido in enumerate(lista_pedidos):
+            time.sleep(self.req_time_sleep)
+            print("")
+            print(f"Pedido {i+1}/{len(lista_pedidos)}: {pedido.get('nunota')}")
+
+            print("Busca a nota")
+            #dados_nota = await nota_olist.buscar(id_ecommerce=pedido.get('ad_mkp_codped'))
+            dados_nota = await nota_olist.buscar_legado(id_ecommerce=pedido.get('ad_mkp_codped'))
+            if not dados_nota:
+                obs = "Erro ao buscar nota"
+                print(obs)             
+                continue
+
+            print("Gerando conferência do pedido")            
+            if not await conferencia.criar(nunota=pedido.get('nunota')):
+                obs = "Erro ao criar conferência do pedido no Sankhya"
+                print(obs)
+                continue
+
+            # Vincula a conferencia ao pedido
+            print("Vincula a conferencia ao pedido")
+            if not await conferencia.vincular_pedido(nunota=pedido.get('nunota'), nuconf=conferencia.nuconf):
+                obs = "Erro ao vincular conferência ao pedido no Sankhya"
+                print(obs)
+                continue
+
+            # Informa os itens na conferência
+            print("Informa os itens na conferência")
+            itens_para_conferencia = parser_conferencia.to_sankhya_itens(nuconf=conferencia.nuconf, dados_olist=dados_nota.get('itens'))
+            if not itens_para_conferencia:
+                obs = "Erro ao converter itens da nota para o formato da API do Sankhya"
+                print(obs)
+                continue
+
+            ack_insercao_itens = await conferencia.insere_itens(dados_item=itens_para_conferencia)
+            if not ack_insercao_itens:
+                obs = "Erro ao inserir itens na conferência no Sankhya"
+                print(obs)
+                continue
+
+            print("Itens inseridos na conferência")
+            
+            # Conclui a conferência do pedido
+            print("Conclui a conferência do pedido")
+            if not await conferencia.concluir(nuconf=conferencia.nuconf):
+                obs = "Erro ao concluir conferência do pedido no Sankhya"
+                print(obs)
+                continue
+
+            print(f"Conferência do pedido {pedido.get('nunota')} concluída!")
+
+        status_log = False if obs else True
+        return status_log
+
+    async def faturar_legado(self):
 
         from src.sankhya.nota import Nota as NotaSnk
 
         # Busca os pedidos pendentes de faturamento
-        #pedidos_faturar = venda.read_venda_faturar_snk()
-        pedidos_faturar = venda.read_faturar_olist()
+        pedidos_faturar = venda.read_venda_faturar_snk()
         if not pedidos_faturar:
             print("Nenhum pedido para faturamento.")
             return True
@@ -392,24 +472,9 @@ class Pedido:
                 venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
                                               nunota_nota=nunota_nota)
                 
-                print("Gerando NF no Olist...")
-                dados_nf = await olist.gerar_nf(id=pedido.id_pedido)
-                if not dados_nf:
-                    print(f"Erro ao gerar NF do pedido {pedido.nunota_pedido}")
-                    logger.error("Erro ao gerar NF do pedido %s",pedido.nunota_pedido)
-                    continue
-                venda.update_gera_nf_olist(cod_pedido=pedido.cod_pedido,
-                                           num_nota=dados_nf.get('numero'),
-                                           id_nota=dados_nf.get('id'))
-                print(f"Pedido {pedido.nunota_pedido} faturado com sucesso na NF {dados_nf.get('numero')}!")
-                
-                #print(f"Pedido {pedido.nunota_pedido} faturado com sucesso!")
+                print(f"Pedido {pedido.nunota_pedido} faturado com sucesso!")
 
             print("-> Processo de faturamento concluído!")
             return True
         except:
             return False
-
-
-
-
