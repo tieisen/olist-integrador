@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from src.integrador.pedido import Pedido
 from src.integrador.faturamento import Faturamento
 from src.integrador.nota import Nota
@@ -29,17 +29,7 @@ def integrar_pedidos_olist():
     return True
 
 @router.get("/faturar")
-def faturar_pedidos_snk():
-    if not asyncio.run(faturamento.venda_entre_empresas()):
-        return False
-    if not asyncio.run(pedido.faturar()):
-        return False
-    if not asyncio.run(nota.emitir()):
-        return False
-    if not asyncio.run(separacao.checkout()):
-        return False
-    if not asyncio.run(nota.confirmar()):
-        return False
-    if not asyncio.run(nota.baixar_financeiro()):
-        return False
+def faturar_pedidos_snk():    
+    if not asyncio.run(faturamento.faturar()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True
