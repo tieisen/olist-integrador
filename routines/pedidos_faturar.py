@@ -11,9 +11,9 @@ def faturar_pedidos_snk():
     faturamento = Faturamento()
     separacao = Separacao()
     nota = Nota()    
-    if not asyncio.run(faturamento.venda_entre_empresas()):
+    if not asyncio.run(faturamento.venda_entre_empresas_em_lote()):
         return False
-    if not asyncio.run(pedido.faturar()):
+    if not asyncio.run(pedido.faturar_legado()):
         return False
     if not asyncio.run(nota.emitir()):
         return False

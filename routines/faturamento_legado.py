@@ -10,7 +10,7 @@ def faturar_pedidos_snk():
     faturamento = Faturamento()    
     nota = Nota()    
     asyncio.run(faturamento.venda_entre_empresas_em_lote())
-    asyncio.run(pedido.faturar())
+    asyncio.run(pedido.faturar_legado())
     asyncio.run(nota.confirmar_legado())
 
 if __name__=="__main__":
