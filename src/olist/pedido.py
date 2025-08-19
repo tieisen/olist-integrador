@@ -94,6 +94,67 @@ class Pedido:
                 logger.error("Erro %s: %s pedido %s", res.status_code, res.text, codigo)
             return False
 
+    async def atualizar_nunota(self,id:int=None,nunota:int=None,observacao:str=None):
+
+        if not id:
+            logger.error("Pedido não informado.")
+            print("Pedido não informado.")
+            return False
+
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False  
+        
+        url = self.endpoint+f"/{id}"
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+        if not observacao:
+            res_get = requests.get(
+                url=url,
+                headers={
+                    "Authorization":f"Bearer {token}",
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                }
+            )
+            if res_get.status_code != 200:
+                print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
+                logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
+                return False
+            observacao = res_get.json().get('observacao')
+
+        payload = {
+            "dataPrevista": None,
+            "dataEnvio": None,
+            "observacoes": observacao + f' | Nº do pedido no Sankhya: {nunota}',
+            "observacoesInternas": None,
+            "pagamento": {
+                "parcelas": []
+            }
+        }
+
+        res_put = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload
+        )
+
+        if res_put.status_code != 204:
+            print(f"Erro {res_put.status_code}: {res_put.text} pedido {id}")
+            logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
+            return False
+        
+        return True
+
     async def gerar_nf(self,id:int=None):
 
         if not id:
@@ -206,7 +267,8 @@ class Pedido:
         if atual:
             dataInicial = (datetime.today()-timedelta(days=3)).strftime('%Y-%m-%d')
         else:
-            dataInicial = '2025-07-20'  # Data fixa para buscar pedidos
+            #dataInicial = '2025-07-20'  # Data fixa para buscar pedidos
+            dataInicial = '2025-08-08'  # Data fixa para buscar pedidos
             
         if not dataInicial:
             print("Erro ao buscar a data da última venda.")
