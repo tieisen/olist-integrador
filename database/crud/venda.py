@@ -212,6 +212,15 @@ def read_separacao_checkout():
     finally:
         db.close()        
 
+def read_separacao_pedido(cod_pedido: str):
+    db: Session = next(get_db())
+    try:
+        db_venda = db.query(Venda).filter(Venda.cod_pedido == cod_pedido).first()
+        db.close()
+        return db_venda.id_separacao
+    finally:
+        db.close()        
+
 def read_perdidos():
     db: Session = next(get_db())
     try:
