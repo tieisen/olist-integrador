@@ -265,83 +265,92 @@ class Nota:
         print(f"-> Processo de recebimento de notas concluído! Status do log: {status_log}")
         return True
 
-    async def _receber_financeiro(self):
-        #log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
-        obs = None
-        # Busca notas pendentes
-        print("Busca notas pendentes")
-
-        fin_pendentes = venda.read_pendente_fin_olist()
-        if not fin_pendentes:
-            obs = "Nenhum pendente"
-            print(obs)
-            return True
-        
-        print(f"{len(fin_pendentes)} fin pendentes")
-        evento = 'F'
-        obs = None
-        first = True 
+    async def confirmar_legado(self):
         nota_olist = NotaOlist()
-        
-        #dados_para_atualizar = []
+        nota_snk = NotaSnk()
+        obs = None
+        # Busca as notas pendentes de confirmação
+        print("Busca as notas pendentes de confirmação")
+        notas_pendentes = venda.read_venda_faturada_confirmar_snk()
+        if not notas_pendentes:
+            obs = "Nenhuma nota pendente"
+            print(obs)
+            return True  
+        print(f"{len(notas_pendentes)} notas pendentes de confirmação encontradas")
 
-        for i, fin in enumerate(fin_pendentes):
-            #dados = {}
-            if not first:
-                time.sleep(2)  # Evita rate limit
-            first = False
-
-            # if obs:
-            #     # Cria um log de erro se houver observação
-            #     print(obs)
-            #     log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-            #                                                         id_loja=notas_pendentes[i-1].id_loja,
-            #                                                         id_pedido=notas_pendentes[i-1].id_pedido,
-            #                                                         pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-            #                                                         nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-            #                                                         nunota_nota=notas_pendentes[i-1].nunota_nota,
-            #                                                         evento=evento,
-            #                                                         status=False,
-            #                                                         obs=obs))
-            #     obs = None
-                            
-            # print("")
-            # print(f"Recebendo nota {i+1}/{len(notas_pendentes)}: {nota.num_pedido}")
-            
-            # dados_nota = await nota_olist.buscar(id_ecommerce=nota.cod_pedido)
-            # if not dados_nota:
-            #     obs = f"Nota do pedido {nota.cod_pedido} não encontrada"
-            #     continue
-
-            # venda.update_faturado_olist(cod_pedido=nota.cod_pedido,
-            #                             num_nota=int(dados_nota.get('numero')),
-            #                             id_nota=dados_nota.get('id'))
-
-            print("")
-            print(f"Recebendo financeiro da nota {i+1}/{len(fin_pendentes)}: {fin.num_nota}")
-            
-            dados_financeiro = await nota_olist.buscar_financeiro(serie='2', numero=str(fin.num_nota).zfill(6))
-            if not dados_financeiro:
-                print(f"Financeiro da nota {fin.num_nota} não encontrado no Olist")
+        first = True
+        for i, nota in enumerate(notas_pendentes):
+            print("")            
+            print(f"Nota #{nota.nunota_nota} - {i+1}/{len(notas_pendentes)}")
+            time.sleep(float(os.getenv('REQ_TIME_SLEEP',1.5)))
+            # Busca os dados da nota no Sankhya
+            print("Busca os dados da nota no Sankhya")
+            dados_nota_snk = await nota_snk.buscar(nunota=nota.nunota_nota)
+            if not dados_nota_snk:
+                obs = f"Nota {nota.nunota_nota} não encontrada no Sankhya"
+                print(obs)
                 continue
-            venda.update_baixa_financeiro(num_nota=fin.num_nota,
-                                          id_financeiro=dados_financeiro.get('id'))
-            print(f"Financeiro da nota {fin.num_nota} recebido com sucesso")
 
-            # print(f"Nota {int(dados_nota.get('numero'))} recebida com sucesso!")
-            # log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-            #                                                     id_loja=nota.id_loja,
-            #                                                     id_pedido=nota.id_pedido,
-            #                                                     pedido_ecommerce=nota.cod_pedido,
-            #                                                     nunota_pedido=nota.nunota_pedido,
-            #                                                     nunota_nota=nota.nunota_nota,
-            #                                                     id_nota=dados_nota.get('id'),
-            #                                                     evento=evento,
-            #                                                     status=True))
+            # Busca os dados da nota no Olist
+            print("Busca os dados da nota no Olist")
+            dados_nota_olist = await nota_olist.buscar(id_ecommerce=nota.cod_pedido)
+            if not dados_nota_olist:
+                obs = f"Nota do pedido {nota.cod_pedido} não encontrada no Olist"
+                print(obs)
+                continue
+
+            if dados_nota_olist.get('situacao') not in ['2','6','7']:
+                obs = f"Situação da Nota é inválida {dados_nota_olist.get('situacao')}"
+                print(obs)
+                continue                
+
+            venda.update_faturado_olist(cod_pedido=nota.cod_pedido,
+                                        num_nota=int(dados_nota_olist.get('numero')),
+                                        id_nota=dados_nota_olist.get('id'))
+
+            # Envia os dados da nota para o Sankhya
+            print("Envia os dados da nota para o Sankhya")
+            ack_envio_dados_nota = await nota_snk.informar_numero_e_chavenfe(nunota=nota.nunota_nota,
+                                                                             chavenfe=dados_nota_olist.get('chaveAcesso'),
+                                                                             numero=dados_nota_olist.get('numero'),
+                                                                             id_nota=dados_nota_olist.get('id'))
             
-        # status_log = False if log_pedido.read_by_logid_status_false(log_id=log_id) else True
-        # log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
-        print(f"-> Processo de recebimento de financeiro concluído!")
+            if not ack_envio_dados_nota:
+                obs = f"Erro ao enviar dados da nota do pedido {nota.cod_pedido} para o Sankhya"
+                print(obs)
+                continue
+
+            print(f"Dados da nota do pedido {nota.cod_pedido} enviados com sucesso para o Sankhya")
+
+            ack_confirmacao_nota = await nota_snk.confirmar(nunota=nota.nunota_nota)
+            if not ack_confirmacao_nota:
+                obs = f"Erro ao confirmar nota {nota.nunota_nota} no Sankhya"
+                print(obs)
+                continue
+            
+            venda.update_nota_confirma_snk(nunota_nota=nota.nunota_nota)
+            print(f"Nota {nota.nunota_nota} confirmada com sucesso no Sankhya")
+
+            # Baixa o financeiro da nota no Olist
+            print("Baixa o financeiro da nota no Olist")
+            dados_financeiro = await nota_olist.buscar_financeiro(serie=dados_nota_olist.get('serie'), numero=dados_nota_olist.get('numero'))
+            if not dados_financeiro:
+                obs = f"Erro ao buscar financeiro da nota {dados_nota_olist.get('numero')} no Olist"
+                print(obs)
+                continue
+            
+            ack_financeiro = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),
+                                                                valor=dados_nota_olist.get('parcelas')[0].get('valor'))
+            if not ack_financeiro:
+                obs = f"Erro ao baixar financeiro da nota {dados_nota_olist.get('numero')} no Olist"
+                print(obs)
+                continue
+            
+            venda.update_baixa_financeiro(num_nota=dados_nota_olist.get('numero'),
+                                          id_financeiro=dados_financeiro.get('id'))
+            print(f"Financeiro da nota {dados_nota_olist.get('numero')} baixado com sucesso no Olist")
+        
+        print("Processo de confirmação de notas concluído.")
         return True
 
     async def confirmar(self):
@@ -416,7 +425,6 @@ class Nota:
             return True
         except:
             return False
-
 
     async def baixar_financeiro(self):
 
