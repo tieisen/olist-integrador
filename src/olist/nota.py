@@ -78,6 +78,124 @@ class Nota:
             logger.error("Nota cancelada")
             return False
 
+    async def buscar_legado(self, id:int=None, id_ecommerce:str=None) -> bool:
+
+        def desmembra_xml(dados_nota:dict=None, xml=None):
+            
+            if not dados_nota or not xml:
+                return {}
+            
+            from lxml import etree
+            ns = {'nfe': 'http://www.portalfiscal.inf.br/nfe'}
+
+            tree = etree.fromstring(xml.encode('utf-8'))
+            ide = tree.xpath('//nfe:ide', namespaces=ns)
+            itens = tree.xpath('//nfe:det', namespaces=ns)
+            rastros_itens = [{"cProd":i[0].findtext('nfe:cProd', namespaces=ns),"rastro":r} for i in itens for r in i.xpath('.//nfe:rastro', namespaces=ns)]
+
+            for i, item in enumerate(dados_nota.get("itens")):
+                try:
+                    for j in rastros_itens:
+                        if j.get('cProd') == item.get('codigo'):
+                            rastro = j.get('rastro')
+                            break  
+                    controles = []
+                    if type(rastro) == list:
+                        for r in rastro:
+                            controles.append({
+                                "quantidade": int(float(r.findtext('nfe:qLote', namespaces=ns))),
+                                "lote": r.findtext('nfe:nLote', namespaces=ns),
+                                "dtFab": r.findtext('nfe:dFab', namespaces=ns),
+                                "dtVal": r.findtext('nfe:dVal', namespaces=ns)
+                            })
+                    else:
+                        controles.append({
+                            "quantidade": int(float(rastro.findtext('nfe:qLote', namespaces=ns))),
+                            "lote": rastro.findtext('nfe:nLote', namespaces=ns),
+                            "dtFab": rastro.findtext('nfe:dFab', namespaces=ns),
+                            "dtVal": rastro.findtext('nfe:dVal', namespaces=ns)
+                        })                    
+
+                except Exception as e:
+                    logger.error("Erro ao extrair dados de controle do produto %s. %s",item.get("codigo"),e)
+                item['lotes'] = controles
+            dados_nota['codChaveAcesso'] = ide[0].findtext('nfe:cNF', namespaces=ns)
+
+            return dados_nota
+
+
+        if not any([id, id_ecommerce]):
+            logger.error("Nota não informada.")
+            print("Nota não informada.")
+            return False
+        
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False
+
+        if id:
+            url_ = self.endpoint+f"/{id}"
+            id_ecommerce = None
+        
+        if id_ecommerce:
+            url_ = self.endpoint+f"/?numeroPedidoEcommerce={id_ecommerce}"
+            id = None             
+
+        res = requests.get(
+            url = url_,
+            headers = {
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        nota = None
+        if res.status_code != 200:
+            logger.error("Erro %s: %s", res.status_code, res.text)
+            print(f"Erro {res.status_code}: {res.text}")
+            return False
+        
+        if res.status_code == 200 and id and res.json().get('itens'):
+            nota = res.json()
+        
+        if res.status_code == 200 and id_ecommerce and res.json().get('itens'):
+            url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
+            res = requests.get(
+                url = url_id,
+                headers = {
+                    "Authorization":f"Bearer {token}",
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                }
+            )
+            if res.status_code == 200 and url_id:
+                nota = res.json()
+                
+        if nota:
+            res = requests.get(
+                url = self.endpoint+f"/{nota.get('id')}/xml",
+                headers = {
+                    "Authorization":f"Bearer {token}",
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                }
+            )
+            if res.status_code != 200:
+                print(f"Erro {res.status_code} ao buscar XML da nota: {res.text} cod {nota.get('numero')}")            
+                logger.error("Erro %s ao buscar XML da nota: %s cod %s", res.status_code, res.text, nota.get('numero'))            
+                return False
+
+            if res.status_code == 200:
+                return desmembra_xml(dados_nota=nota, xml=res.json().get('xmlNfe'))          
+            
+        else:
+            print("Nota cancelada")
+            logger.error("Nota cancelada")
+            return False
+
     async def emitir(self, id:int=None):
 
         if not id:
