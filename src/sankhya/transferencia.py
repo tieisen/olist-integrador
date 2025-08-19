@@ -41,7 +41,31 @@ class Transferencia:
 
     async def criar(self, cabecalho:dict=None, itens:list=None) -> tuple:
 
-        if not all([cabecalho, itens]):
+        if cabecalho and not itens:
+            payload = {
+                "serviceName":"CACSP.incluirNota",
+                "requestBody":{
+                    "nota":{
+                        "cabecalho":cabecalho
+                    }
+                }
+            }
+
+        elif cabecalho and itens:
+            payload = {
+                "serviceName":"CACSP.incluirNota",
+                "requestBody":{
+                    "nota":{
+                        "cabecalho":cabecalho,
+                        "itens":{
+                            "INFORMARPRECO":"True",
+                            "item":itens
+                        }
+                    }
+                }
+            }
+        
+        else:
             print("Dados não informados")
             logger.error("Dados não informados")
             return False
@@ -57,20 +81,7 @@ class Transferencia:
         except Exception as e:
             print(f"Erro relacionado ao token de acesso. {e}")
             logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
-        payload = {
-            "serviceName":"CACSP.incluirNota",
-            "requestBody":{
-                "nota":{
-                    "cabecalho":cabecalho,
-                    "itens":{
-                        "INFORMARPRECO":"True",
-                        "item":itens
-                    }
-                }
-            }
-        }
+            return False 
 
         res = requests.get(
             url=url,
@@ -90,19 +101,44 @@ class Transferencia:
             print(f"Erro ao lançar nota de transferência. {res.json()}")
             return False, None
 
-    async def buscar(self, itens:bool=False) -> dict:
+    async def buscar(self, nunota:int=None, itens:bool=False) -> tuple[bool,dict]:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
+            return False, {}
         
         try:
             token = self.con.get_token()
         except Exception as e:
             logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False          
+            return False, {}
+
+        if nunota:
+            criteria = {
+                "expression": {
+                    "$": f"this.NUNOTA = ?"
+                },
+                "parameter": [
+                    {
+                        "$": f"{nunota}",
+                        "type": "I"
+                    }
+                ]
+            }
+        else:
+            criteria = {
+                "expression": {
+                    "$": self.criterios_nota_transferencia
+                },
+                "parameter": [
+                    {
+                        "$": f"{datetime.now().strftime('%d/%m/%Y')}",
+                        "type": "D"
+                    }
+                ]
+            }
 
         res = requests.get(
             url=url,
@@ -114,17 +150,7 @@ class Transferencia:
                         "rootEntity": "CabecalhoNota",
                         "includePresentationFields": "N",
                         "offsetPage": "0",
-                        "criteria": {
-                            "expression": {
-                                "$": self.criterios_nota_transferencia
-                            },
-                            "parameter": [
-                                {
-                                    "$": f"{datetime.now().strftime('%d/%m/%Y')}",
-                                    "type": "D"
-                                }
-                            ]
-                        },
+                        "criteria": criteria,
                         "entity": {
                             "fieldset": {
                                 "list": ','.join(self.campos_cabecalho_transferencia)                            
@@ -141,23 +167,17 @@ class Transferencia:
             if res.json().get('status')=='1':
                 dados_nota = self.formatter.return_format(res.json())
                 if isinstance(dados_nota, dict):
-                    try:
-                        self.nunota = int(dados_nota.get('nunota'))
-                    except:
-                        pass
-                    finally:
-                        return True, dados_nota
+                    return True, dados_nota
                 if isinstance(dados_nota, list):
                     dados_nota = dados_nota[0]
-                    self.nunota = int(dados_nota.get('nunota'))
                     if itens:
-                        dados_itens = await Itens().buscar(token=token, nunota=int(dados_nota.get('nunota')))
+                        dados_itens = await Itens().buscar(nunota=int(dados_nota.get('nunota')))
                         dados_nota['itens'] = dados_itens
                     return True, dados_nota
         else:
             logger.error("Erro ao buscar dados da nota de transferência vigente. %s",res.json())
             print(f"Erro ao buscar dados da nota de transferência vigente. {res.json()}")
-            return False
+            return False, {}
 
     async def confirmar(self, nunota:int=None) -> bool:
 
@@ -275,11 +295,9 @@ class Itens(Transferencia):
     async def buscar(self, nunota:int=None) -> dict:
 
         if not nunota:
-            nunota = self.nunota
-            if not nunota:
-                print("Número único do pedido não informado")
-                logger.error("Número único do pedido não informado")
-                return False
+            print("Número único do pedido não informado")
+            logger.error("Número único do pedido não informado")
+            return False
     
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
@@ -299,7 +317,7 @@ class Itens(Transferencia):
             },
             "parameter": [
                 {
-                    "$": f"{nunota or self.nunota}",
+                    "$": f"{nunota}",
                     "type": "I"
                 }
             ]
