@@ -7,47 +7,42 @@ from database.dependencies import get_db
 
 def read_by_id(id: int):
     db: Session = next(get_db())
-    try:
-        dh_log_pedido = db.query(LogPedido).filter(LogPedido.id == id).first()
-        return dh_log_pedido
-    finally:
-        db.close()
+    pedido = db.query(LogPedido).filter(LogPedido.id == id).first()
+    db.close()
+    return pedido
 
 def read_by_nunota_pedido(nunota: int):
     db: Session = next(get_db())
-    try:
-        dh_log_pedido = db.query(LogPedido).filter(LogPedido.nunota_pedido == nunota).first()
-        return dh_log_pedido
-    finally:
-        db.close()
+    pedido = db.query(LogPedido).filter(LogPedido.nunota_pedido == nunota).first()
+    db.close()
+    return pedido
 
 def read_by_logid_status_false(log_id: int):
     db: Session = next(get_db())
-    try:
-        dh_log_pedido = db.query(LogPedido).filter(LogPedido.log_id == log_id, LogPedido.status.is_(False)).first()
-        return dh_log_pedido
-    finally:
-        db.close()        
+    pedido = db.query(LogPedido).filter(LogPedido.log_id == log_id, LogPedido.status.is_(False)).first()
+    db.close()
+    return pedido
 
 def read_last():
     db: Session = next(get_db())    
-    return db.query(LogPedido).filter(Log.contexto == 'pedido').order_by(LogPedido.id.desc()).first()        
+    pedido = db.query(LogPedido).filter(Log.contexto == 'pedido').order_by(LogPedido.id.desc()).first()
+    db.close()
+    return pedido
 
 def read_all(dtini: datetime, dtfim: datetime):
     db: Session = next(get_db())
-    try:    
-        dh_log_pedido = db.query(LogPedido).filter(LogPedido.dh_atualizacao >= dtini, LogPedido.dh_atualizacao <= dtfim).all()
-        return dh_log_pedido
-    finally:
-        db.close()        
+    pedido = db.query(LogPedido).filter(LogPedido.dh_atualizacao >= dtini, LogPedido.dh_atualizacao <= dtfim).all()
+    db.close()
+    return pedido
 
 def create(log: LogPedidoBase):
     db: Session = next(get_db())
     try:
-        dh_log_pedido = LogPedido(**log.model_dump())
-        db.add(dh_log_pedido)
+        pedido = LogPedido(**log.model_dump())
+        db.add(pedido)
         db.commit()
-        db.refresh(dh_log_pedido)
-        return dh_log_pedido
+        db.refresh(pedido)
+        db.close()
+        return pedido
     finally:
         db.close() 

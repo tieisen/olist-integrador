@@ -5,7 +5,9 @@ from database.dependencies import get_db
 
 def read_last():
     db: Session = next(get_db())
-    return db.query(TokenOlist).order_by(TokenOlist.id.desc()).first()
+    token = db.query(TokenOlist).order_by(TokenOlist.id.desc()).first() 
+    db.close()
+    return token
 
 def create(token: TokenOlistBase):
     db: Session = next(get_db())
@@ -14,6 +16,9 @@ def create(token: TokenOlistBase):
         db.add(db_token)
         db.commit()
         db.refresh(db_token)
-        return db_token.token_criptografado
-    finally:
+        tkn = db_token.token_criptografado
         db.close()
+        return tkn
+    except:
+        db.close()
+        return False
