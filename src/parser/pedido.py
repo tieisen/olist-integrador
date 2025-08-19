@@ -51,6 +51,7 @@ class Pedido:
         dados_sankhya['DTNEG'] = {"$":datetime.strptime(dados_olist.get('data'),'%Y-%m-%d').strftime('%d/%m/%Y')}
         dados_sankhya['NUNOTA'] = {},
         dados_sankhya['TIPMOV'] = {"$":"P"}
+        dados_sankhya['VLRFRETE'] = {"$":dados_olist.get('valorFrete') if dados_olist.get('valorFrete') > 0 else ""}
         dados_sankhya['OBSERVACAO'] = {"$":f"Pedido #{dados_olist.get('numeroPedido')} importado do Olist."}
 
         for item in dados_olist.get('itens'):            
