@@ -177,7 +177,6 @@ class Faturamento:
 
         # Busca os pedidos pendentes de faturamento
         pedidos_faturar = venda.read_venda_faturar_snk()
-        #pedidos_faturar = venda.read_faturar_olist()
         if not pedidos_faturar:
             print("Nenhum pedido para faturamento.")
             return True
@@ -206,6 +205,14 @@ class Faturamento:
                     venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
                                                   nunota_nota=int(validacao.get('nunota')),
                                                   dh_faturado=validacao.get('dtneg'))
+                    continue
+
+                # Lança os itens na nota de transferência
+                print("Lançando itens na nota de transferência...")
+                ack_transferencia = await self.venda_entre_empresas_por_item(nunota=pedido.nunota_pedido)
+                if not ack_transferencia:
+                    print(f"Erro ao lançar itens na nota de transferência para o pedido {pedido.num_pedido}")
+                    logger.error("Erro ao lançar itens na nota de transferência para o pedido %s",pedido.num_pedido)
                     continue
 
                 # Fatura pedido no Sankhya
