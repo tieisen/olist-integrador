@@ -189,6 +189,9 @@ class Nota:
         if res.status_code in (200,201) and res.json().get('status')=='1':
             return True
         else:
+            if res.json().get('statusMessage') == f'A nota {nunota} já foi confirmada.':
+                print(res.json().get('statusMessage'))
+                return True
             logger.error("Erro ao confirmar nota. Nunota %s. %s",nunota,res.json())
             print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
             return False
