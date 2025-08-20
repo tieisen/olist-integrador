@@ -5,7 +5,6 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
-from database.schemas import token_sankhya as schema
 from database.crud import token_sankhya as crud
 from datetime import datetime, timedelta
 from src.utils.log import Log
@@ -47,16 +46,17 @@ class Connect(object):
     def save_token(self, token: str) -> bool:
         try:
             encrypted_token = self.fernet.encrypt(token.encode("utf-8")).decode()
-            crud.create(token=schema.TokenSankhyaBase(token_criptografado=encrypted_token,
-                                                      dh_expiracao_token=datetime.now()+timedelta(minutes=self.timeout_token)))
+            expire_date = datetime.now() + timedelta(minutes=self.timeout_token)            
+            crud.criar(token_criptografado=encrypted_token,
+                       dh_expiracao_token=expire_date)
             return True
         except Exception as e:
             logger.error("Erro ao salvar token criptografado: %s",e)
             return False
         
-    def get_token(self):
+    def get_token(self) -> str:
         try:
-            token_data = crud.read_last()
+            token_data = crud.buscar()
             if token_data and token_data.dh_expiracao_token > datetime.now():
                 # print("Token salvo ainda é válido")
                 decrypted_token = self.fernet.decrypt(token_data.token_criptografado.encode()).decode()

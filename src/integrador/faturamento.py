@@ -176,7 +176,7 @@ class Faturamento:
     async def faturar(self):        
 
         # Busca os pedidos pendentes de faturamento
-        pedidos_faturar = venda.read_venda_faturar_snk()
+        pedidos_faturar = venda.buscar_faturar()
         if not pedidos_faturar:
             print("Nenhum pedido para faturamento.")
             return True
@@ -202,9 +202,9 @@ class Faturamento:
                 validacao = await nota_snk.buscar(codpedido=pedido.cod_pedido)
                 if validacao:
                     print(f"Pedido {pedido.num_pedido} já foi faturado.")
-                    venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
-                                                  nunota_nota=int(validacao.get('nunota')),
-                                                  dh_faturado=validacao.get('dtneg'))
+                    venda.atualizar_faturada(nunota_pedido=pedido.nunota_pedido,
+                                             nunota_nota=int(validacao.get('nunota')),
+                                             dh_faturamento=validacao.get('dtneg'))
                     continue
 
                 # Lança os itens na nota de transferência
@@ -222,8 +222,8 @@ class Faturamento:
                     print(f"Erro ao faturar pedido {pedido.nunota_pedido}")
                     logger.error("Erro ao faturar pedido %s",pedido.nunota_pedido)
                     continue
-                venda.update_venda_fatura_snk(nunota_pedido=pedido.nunota_pedido,
-                                              nunota_nota=nunota_nota)
+                venda.atualizar_faturada(nunota_pedido=pedido.nunota_pedido,
+                                         nunota_nota=nunota_nota)
                 
                 # Fatura pedido no Olist
                 print("Gerando NF no Olist...")
@@ -232,9 +232,9 @@ class Faturamento:
                     print(f"Erro ao gerar NF do pedido {pedido.nunota_pedido}")
                     logger.error("Erro ao gerar NF do pedido %s",pedido.nunota_pedido)
                     continue
-                venda.update_gera_nf_olist(cod_pedido=pedido.cod_pedido,
-                                           num_nota=dados_nota_olist.get('numero'),
-                                           id_nota=dados_nota_olist.get('id'))
+                venda.atualizar_nf_gerada(cod_pedido=pedido.cod_pedido,
+                                          num_nota=dados_nota_olist.get('numero'),
+                                          id_nota=dados_nota_olist.get('id'))
                 
                 # Emite NF no Olist
                 print(f"Autorizando NF {dados_nota_olist.get('numero')} pelo Olist...")                
@@ -243,11 +243,11 @@ class Faturamento:
                     print(f"Erro ao emitir nota {dados_nota_olist.get('numero')} ref. pedido {pedido.cod_pedido}")
                     logger.error("Erro ao emitir nota %s ref. pedido %s",dados_nota_olist.get('numero'),pedido.cod_pedido)
                     continue
-                venda.update_nota_autorizada(id_nota=dados_nota_olist.get('id'))                
+                venda.atualizar_nf_autorizada(id_nota=dados_nota_olist.get('id'))                
                 
                 # Envia pedido pra separação no Olist
                 print("Enviando pedido para separação no Olist...")
-                id_separacao = venda.read_separacao_pedido(cod_pedido=pedido.cod_pedido)
+                id_separacao = venda.buscar_idseparacao(cod_pedido=pedido.cod_pedido)
                 if not id_separacao:
                     print(f"Separação do pedido {pedido.num_pedido} não localizada na base")
                     logger.error("Separação do pedido %s não localizada na base",pedido.num_pedido)
@@ -299,8 +299,8 @@ class Faturamento:
                     print(f"Erro ao baixar financeiro da nota no Olist")
                     logger.error("Erro ao baixar financeiro da nota %s no Olist",dados_nota_olist.get('numero'))
                     continue                
-                venda.update_baixa_financeiro(num_nota=dados_nota_olist.get('numero'),
-                                              id_financeiro=dados_financeiro.get('id'))                
+                venda.atualizar_financeiro(num_nota=dados_nota_olist.get('numero'),
+                                           id_financeiro=dados_financeiro.get('id'))                
 
                 print(f"-> Faturamento do pedido {pedido.num_pedido} concluído!")    
 
@@ -313,7 +313,7 @@ class Faturamento:
     async def consolidar(self):        
 
         # Busca as notas pendentes de confirmação
-        notas_confirmar = venda.read_venda_faturada_confirmar_snk()
+        notas_confirmar = venda.buscar_confirmar_nota()
         if not notas_confirmar:
             print("Nenhuma nota para confirmar.")
             return True
@@ -365,7 +365,7 @@ class Faturamento:
                     print(f"Erro ao confirmar nota {pedido.nunota_nota}")
                     logger.error("Erro ao confirmar nota %s",pedido.nunota_nota)
                     continue
-                venda.update_nota_confirma_snk(nunota_nota=pedido.nunota_nota)              
+                venda.atualizar_confirmada_nota(nunota_nota=pedido.nunota_nota)              
 
                 print(f"-> Confirmação da Nota {pedido.nunota_nota} concluída!")    
 

@@ -11,7 +11,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import urlparse, parse_qs
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
-from database.schemas import token_olist as schema
 from database.crud import token_olist as crud
 from datetime import datetime, timedelta
 from src.utils.log import Log
@@ -112,11 +111,13 @@ class Connect(object):
             encrypted_access_token = self.fernet.encrypt(access_token).decode()
             encrypted_refresh_token = self.fernet.encrypt(refresh_token).decode()
             encrypted_id_token = self.fernet.encrypt(id_token).decode()
-            crud.create(token=schema.TokenOlistBase(token_criptografado=encrypted_access_token,
-                                                    dh_expiracao_token=datetime.now()+timedelta(0,token_data['expires_in']),
-                                                    refresh_token_criptografado=encrypted_refresh_token,
-                                                    dh_expiracao_refresh_token=datetime.now()+timedelta(0,token_data['refresh_expires_in']),
-                                                    id_token_criptografado=encrypted_id_token))
+            expire_date = datetime.now()+timedelta(0,token_data['expires_in'])
+            expire_date_refresh = datetime.now()+timedelta(0,token_data['refresh_expires_in'])
+            crud.criar(token_criptografado=encrypted_access_token,
+                       dh_expiracao_token=expire_date,
+                       refresh_token_criptografado=encrypted_refresh_token,
+                       dh_expiracao_refresh_token=expire_date_refresh,
+                       id_token_criptografado=encrypted_id_token)
             return True
         except Exception as e:
             logger.error("Erro ao salvar token criptografado: %s",e)
@@ -124,7 +125,7 @@ class Connect(object):
         
     def get_token(self) -> str:
         try:
-            token_data = crud.read_last()
+            token_data = crud.buscar()
             if token_data:
                 if token_data.dh_expiracao_token > datetime.now():
                     token_descriptografado = self.fernet.decrypt(token_data.token_criptografado.encode()).decode()

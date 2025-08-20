@@ -5,10 +5,8 @@ from datetime import datetime
 from src.parser.produto import Produto as Parser
 from src.olist.produto import Produto as ProdutoOlist
 from src.sankhya.produto import Produto as ProdutoSnk
-from database.schemas import log_produto as schemaLogProd
 from database.crud import log_produto as crudLogProd
 from dotenv import load_dotenv
-from database.schemas import log as schemaLog
 from database.crud import log as crudLog
 from database.crud import produto as crudProduto
 from src.utils.log import Log
@@ -42,7 +40,7 @@ class Produto:
 
         try:
             for alteracao in alteracoes_raw:
-                hist_produto = crudProduto.read_by_snk(cod_snk=alteracao.get('sku'))
+                hist_produto = crudProduto.buscar_snk(cod_snk=alteracao.get('sku'))
                 if not hist_produto:
                     logger.error("Produto %s não pode ser alterado por não foi encontrado",alteracao.get('sku'))
                     print(f"Produto {alteracao.get('sku')} não pode ser alterado por não foi encontrado")
@@ -59,7 +57,7 @@ class Produto:
                 if hist_produto.pendencia:
                     continue
 
-                crudProduto.update(cod_snk=alteracao.get('sku'), pendencia=True)
+                crudProduto.atualizar(cod_snk=alteracao.get('sku'), pendencia=True)
                 print(f"Produto {alteracao.get('sku')} adicionado à lista de alterações pendentes")
                 time.sleep(self.req_time_sleep)
             
@@ -70,7 +68,7 @@ class Produto:
 
     async def atualizar_olist(self):
 
-        log_id = crudLog.create(log=schemaLog.LogBase(de='sankhya', para='olist', contexto=CONTEXTO))
+        log_id = crudLog.criar(de='sankhya', para='olist', contexto=CONTEXTO)
         obs = None
         # Busca lista de produtos com alterações no Sankhya
         print("Busca lista de produtos com alterações no Sankhya")        
@@ -78,7 +76,7 @@ class Produto:
         if not alteracoes_pendentes:
             obs = "Sem alterações pendentes"
             print(obs)
-            crudLog.update(id=log_id, log=schemaLog.LogBase(sucesso=True))
+            crudLog.atualizar(id=log_id, sucesso=True)
             return True
 
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
@@ -91,10 +89,11 @@ class Produto:
 
                 if obs:
                     # Registro no log
-                    crudLogProd.create(log=schemaLogProd.LogProdutoBase(codprod=alteracoes_pendentes[i-1].get('codprod'),
-                                                                        idprod=alteracoes_pendentes[i-1].get('sku'),
-                                                                        sucesso=alteracoes_pendentes[i-1].get('sucesso'),
-                                                                        obs=obs))
+                    crudLogProd.criar(log_id=log_id,
+                                      codprod=alteracoes_pendentes[i-1].get('codprod'),
+                                      idprod=alteracoes_pendentes[i-1].get('sku'),
+                                      sucesso=alteracoes_pendentes[i-1].get('sucesso'),
+                                      obs=obs)
                     obs = None
 
                 if produto.get('evento') == 'I':
@@ -155,24 +154,20 @@ class Produto:
 
                     print("Produto sincronizado com sucesso!")
 
-                    crudProduto.create(cod_snk=dados_produto_sankhya.get('codprod'),
-                                    cod_olist=dados_produto_olist.get('id'))
-                
                     # Registro no log
                     if log_atualizacoes_olist[0] == -1:
-                        crudLogProd.create(log=schemaLogProd.LogProdutoBase(log_id=log_id,
-                                                                            codprod=int(dados_produto_sankhya.get('codprod')),
-                                                                            idprod=int(dados_produto_olist.get('id')),
-                                                                            campo='all'))   
+                        crudLogProd.criar(log_id=log_id,
+                                          codprod=int(dados_produto_sankhya.get('codprod')),
+                                          idprod=int(dados_produto_olist.get('id')),
+                                          campo='all')
                     else:                                        
                         for atualizacao in log_atualizacoes_olist:
-                            crudLogProd.create(log=schemaLogProd.LogProdutoBase(log_id=log_id,
-                                                                                codprod=int(dados_produto_olist.get('sku')),
-                                                                                idprod=int(dados_produto_olist.get('id')),
-                                                                                campo=atualizacao.get('campo'),
-                                                                                valor_old=str(atualizacao.get('valorOld')),
-                                                                                valor_new=str(atualizacao.get('valorNew'))
-                                                                                ))                    
+                            crudLogProd.criar(log_id=log_id,
+                                              codprod=int(dados_produto_olist.get('sku')),
+                                              idprod=int(dados_produto_olist.get('id')),
+                                              campo=atualizacao.get('campo'),
+                                              valor_old=str(atualizacao.get('valorOld')),
+                                              valor_new=str(atualizacao.get('valorNew')))
 
                 if produto.get('evento') == 'A':
 
@@ -227,17 +222,16 @@ class Produto:
                 
                     # Registro no log                                      
                     for atualizacao in log_atualizacoes_olist:
-                        crudLogProd.create(log=schemaLogProd.LogProdutoBase(log_id=log_id,
-                                                                            codprod=int(dados_produto_olist.get('sku')),
-                                                                            idprod=int(dados_produto_olist.get('id')),
-                                                                            campo=atualizacao.get('campo'),
-                                                                            valor_old=str(atualizacao.get('valorOld')),
-                                                                            valor_new=str(atualizacao.get('valorNew'))
-                                                                            ))
+                        crudLogProd.criar(log_id=log_id,
+                                          codprod=int(dados_produto_olist.get('sku')),
+                                          idprod=int(dados_produto_olist.get('id')),
+                                          campo=atualizacao.get('campo'),
+                                          valor_old=str(atualizacao.get('valorOld')),
+                                          valor_new=str(atualizacao.get('valorNew')))
 
             await self.produto_snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)
 
-            crudLog.update(id=log_id, log=schemaLog.LogBase(sucesso=True))
+            crudLog.atualizar(id=log_id, sucesso=True)
 
             return True
         except:
@@ -245,15 +239,15 @@ class Produto:
 
 
     async def atualizar_snk(self):
-        log_id = crudLog.create(log=schemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        log_id = crudLog.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca lista de produtos com alterações no Olist
         print("Busca lista de produtos com alterações no Olist")
-        alteracoes_pendentes = crudProduto.read_pendencias()
+        alteracoes_pendentes = crudProduto.buscar_pendencias()
         if not alteracoes_pendentes:
             obs = "Sem alterações pendentes"
             print(obs)
-            crudLog.update(id=log_id, log=schemaLog.LogBase(sucesso=True))
+            crudLog.atualizar(id=log_id, sucesso=True)
             return True
 
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")    
@@ -267,10 +261,11 @@ class Produto:
 
                 if obs:
                     # Registro no log
-                    crudLogProd.create(log=schemaLogProd.LogProdutoBase(codprod=alteracoes_pendentes[i-1].cod_snk,
-                                                                        idprod=alteracoes_pendentes[i-1].cod_olist,
-                                                                        sucesso=alteracoes_pendentes[i-1].sucesso,
-                                                                        obs=obs))
+                    crudLogProd.criar(log_id=log_id,
+                                      codprod=alteracoes_pendentes[i-1].cod_snk,
+                                      idprod=alteracoes_pendentes[i-1].cod_olist,
+                                      sucesso=alteracoes_pendentes[i-1].sucesso,
+                                      obs=obs)
                     obs = None
 
                 # Busca os dados do produto no Olist e no Sankhya para comparação
@@ -319,21 +314,20 @@ class Produto:
 
                 setattr(produto,"sucesso",True)
 
-                crudProduto.update(cod_snk=produto.cod_snk,pendencia=False)
+                crudProduto.atualizar(cod_snk=produto.cod_snk,pendencia=False)
                 
                 # Registro no log                                      
                 for atualizacao in log_atualizacoes:
-                    crudLogProd.create(log=schemaLogProd.LogProdutoBase(log_id=log_id,
-                                                                        codprod=produto.cod_snk,
-                                                                        idprod=produto.cod_olist,
-                                                                        campo=atualizacao.get('campo'),
-                                                                        valor_old=str(atualizacao.get('valorOld')),
-                                                                        valor_new=str(atualizacao.get('valorNew'))
-                                                                        ))            
+                    crudLogProd.criar(log_id=log_id,
+                                      codprod=produto.cod_snk,
+                                      idprod=produto.cod_olist,
+                                      campo=atualizacao.get('campo'),
+                                      valor_old=str(atualizacao.get('valorOld')),
+                                      valor_new=str(atualizacao.get('valorNew')))            
 
             await self.produto_snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)
 
-            crudLog.update(id=log_id, log=schemaLog.LogBase(sucesso=True))
+            crudLog.atualizar(id=log_id, sucesso=True)
 
             return True
         except:

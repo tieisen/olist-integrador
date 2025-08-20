@@ -1,7 +1,5 @@
 import logging
 import os
-from database.schemas import log_estoque as schemaLogEstoque
-from database.schemas import log as schemaLog
 from database.crud import log, log_estoque
 from src.sankhya.estoque import Estoque as EstoqueSnk
 from src.olist.estoque import Estoque as EstoqueOlist
@@ -61,7 +59,7 @@ class Estoque:
 
     async def atualizar_olist(self):
         # Registro no log
-        log_id = log.create(log=schemaLog.LogBase(de='sankhya', para='olist', contexto=CONTEXTO))
+        log_id = log.criar(de='sankhya', para='olist', contexto=CONTEXTO)
 
         estoque_snk = EstoqueSnk()
         estoque_olist = EstoqueOlist()
@@ -75,16 +73,14 @@ class Estoque:
         if len(alteracoes_pendentes) == 0:
             print("Sem alterações pendentes")
             # Registro no log
-            log_estoque.create(log=schemaLogEstoque.LogEstoqueBase(log_id=log_id,
-                                                                      codprod=0,
-                                                                      idprod=0,
-                                                                      qtdmov=0,
-                                                                      obs = "Sem alterações pendentes"))
-            log.update(id=log_id, log=schemaLog.LogBase(sucesso=True))            
+            log_estoque.criar(log_id=log_id,
+                              codprod=0,
+                              idprod=0,
+                              qtdmov=0,
+                              obs = "Sem alterações pendentes")
             return True
 
         try:
-
             # Extrai lista dos produtos
             print("Extraindo lista dos produtos")
             lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
@@ -111,9 +107,12 @@ class Estoque:
                 logger.error("Erro ao remover alterações pendentes")
 
             print(f"Estoque sincronizado com sucesso!")
+
             # Registro no log
-            status_log = False if log_estoque.read_by_logid_status_estoque_false(log_id) else True
-            log.update(id=log_id, log=schemaLog.LogBase(sucesso=status_log))
+            status_log = False if log_estoque.buscar_status_false(log_id) else True
+            log.atualizar(id=log_id, sucesso=status_log)
+
+            #TODO: atualizar no log os resultados dos estoques
 
             return True
         except:

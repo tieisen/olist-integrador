@@ -3,8 +3,7 @@ import time
 import logging
 from dotenv import load_dotenv
 from src.olist.separacao import Separacao as SeparacaoOlist
-from database.schemas import log as SchemaLog
-from database.crud import venda, log, log_pedido
+from database.crud import venda
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -34,8 +33,8 @@ class Separacao:
         print(f"Separacoes pendentes: {len(lista_separacoes)}")
 
         for item in lista_separacoes:
-            if venda.read_separacao_pendente(id_pedido=item.get('id_pedido')):
-                if venda.update_separacao(id_pedido=item.get('id_pedido'), id_separacao=item.get('id_separacao')):
+            if venda.buscar_separacao_idpedido(id_pedido=item.get('id_pedido')):
+                if venda.atualizar_separacao(id_pedido=item.get('id_pedido'), id_separacao=item.get('id_separacao')):
                     print("Separacao atualizada com sucesso!")
                 else:
                     print(f"Erro ao atualizar separacao do pedido ID {item.get('id_pedido')}.")
@@ -49,7 +48,7 @@ class Separacao:
 
         print("Buscando pedidos para checkout...")
 
-        lista_checkout = venda.read_separacao_checkout()
+        lista_checkout = venda.buscar_separacao()
 
         if not lista_checkout:
             print("Nenhum checkout pendente encontrado.")
@@ -77,7 +76,7 @@ class Separacao:
     async def separar(self) -> bool:
 
         print("Buscando pedidos para separar...")
-        lista_checkout = venda.read_separacao_checkout()
+        lista_checkout = venda.buscar_separacao()
         if not lista_checkout:
             print("Nenhuma separacao pendente encontrada.")
             logger.info("Nenhuma separacao pendente encontrada.")
@@ -94,7 +93,7 @@ class Separacao:
                     print(f"Erro ao separar pedido {item.num_pedido}.")
                     logger.error("Erro ao separar pedido %s.",item.num_pedido)
                     continue
-            print("Checkout dos pedidos concluído!")
+            print("Separação dos pedidos concluído!")
             return True
         except:
             return False

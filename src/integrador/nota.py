@@ -3,8 +3,6 @@ import os
 import time
 from src.sankhya.nota import Nota as NotaSnk
 from src.olist.nota import Nota as NotaOlist
-from database.schemas import log_pedido as SchemaLogPedido
-from database.schemas import log as SchemaLog
 from database.crud import venda, log, log_pedido
 from dotenv import load_dotenv
 from src.utils.log import Log
@@ -24,12 +22,12 @@ class Nota:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     async def emitir(self):
-        log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
         print("Busca notas pendentes")
 
-        notas_pendentes = venda.read_nota_autorizar()
+        notas_pendentes = venda.buscar_autorizar()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
             print(obs)
@@ -51,15 +49,15 @@ class Nota:
                 if obs:
                     # Cria um log de erro se houver observação
                     print(obs)
-                    log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                        id_loja=notas_pendentes[i-1].id_loja,
-                                                                        id_pedido=notas_pendentes[i-1].id_pedido,
-                                                                        pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                                                        nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                                                        nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                                                        evento=evento,
-                                                                        status=False,
-                                                                        obs=obs))
+                    log_pedido.criar(log_id=log_id,
+                                     id_loja=notas_pendentes[i-1].id_loja,
+                                     id_pedido=notas_pendentes[i-1].id_pedido,
+                                     pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                     nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                     nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                     evento=evento,
+                                     status=False,
+                                     obs=obs)
                     obs = None
                                 
                 print("")
@@ -75,7 +73,7 @@ class Nota:
                     obs = f"Erro ao emitir nota {nota.num_nota} ref. pedido {nota.cod_pedido}"
                     continue
 
-                venda.update_nota_autorizada(id_nota=nota.id_nota)
+                venda.atualizar_nf_autorizada(id_nota=nota.id_nota)
                 
                 if not await nota_snk.informar_numero_e_chavenfe(nunota=nota.nunota_nota,
                                                                 chavenfe=dados_emissao.get('chaveAcesso'),
@@ -84,32 +82,32 @@ class Nota:
                     obs = f"Erro ao informar dados da nota {nota.num_nota} na venda {nota.nunota_nota} do Sankhya"
                     continue
 
-                log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                    id_loja=nota.id_loja,
-                                                                    id_pedido=nota.id_pedido,
-                                                                    pedido_ecommerce=nota.cod_pedido,
-                                                                    nunota_pedido=nota.nunota_pedido,
-                                                                    nunota_nota=nota.nunota_nota,
-                                                                    id_nota=dados_nota.get('id'),
-                                                                    evento=evento,
-                                                                    status=True))
+                log_pedido.criar(log_id=log_id,
+                                 id_loja=nota.id_loja,
+                                 id_pedido=nota.id_pedido,
+                                 pedido_ecommerce=nota.cod_pedido,
+                                 nunota_pedido=nota.nunota_pedido,
+                                 nunota_nota=nota.nunota_nota,
+                                 id_nota=dados_nota.get('id'),
+                                 evento=evento,
+                                 status=True)
                 
                 print(f"Nota {int(dados_nota.get('numero'))} emitida com sucesso!")
                             
-            status_log = False if log_pedido.read_by_logid_status_false(log_id=log_id) else True
-            log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
+            status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+            log.atualizar(id=log_id, sucesso=status_log)
             print(f"-> Processo de emissão de notas concluído! Status do log: {status_log}")
             return True
         except:
             return False
         
     async def _emitir(self):
-        log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
         print("Busca notas pendentes")
 
-        notas_pendentes = venda.read_pendente_nota_olist()
+        notas_pendentes = venda.buscar_sem_nota()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
             print(obs)
@@ -131,15 +129,15 @@ class Nota:
                 if obs:
                     # Cria um log de erro se houver observação
                     print(obs)
-                    log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                        id_loja=notas_pendentes[i-1].id_loja,
-                                                                        id_pedido=notas_pendentes[i-1].id_pedido,
-                                                                        pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                                                        nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                                                        nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                                                        evento=evento,
-                                                                        status=False,
-                                                                        obs=obs))
+                    log_pedido.criar(log_id=log_id,
+                                     id_loja=notas_pendentes[i-1].id_loja,
+                                     id_pedido=notas_pendentes[i-1].id_pedido,
+                                     pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                     nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                     nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                     evento=evento,
+                                     status=False,
+                                     obs=obs)
                     obs = None
                                 
                 print("")
@@ -155,9 +153,9 @@ class Nota:
                     obs = f"Erro ao emitir nota {dados_nota.get('numero')} ref. pedido {nota.cod_pedido}"
                     continue
 
-                venda.update_faturado_olist(cod_pedido=nota.cod_pedido,
-                                            num_nota=int(dados_nota.get('numero')),
-                                            id_nota=dados_nota.get('id'))
+                venda.atualizar_nf_gerada(cod_pedido=nota.cod_pedido,
+                                          num_nota=int(dados_nota.get('numero')),
+                                          id_nota=dados_nota.get('id'))
                 
                 if not await nota_snk.informar_numero_e_chavenfe(nunota=nota.nunota_nota,
                                                                 chavenfe=dados_emissao.get('chaveAcesso'),
@@ -166,32 +164,32 @@ class Nota:
                     obs = f"Erro ao informar dados da nota {dados_nota.get('numero')} na venda {nota.nunota_nota} do Sankhya"
                     continue
 
-                log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                    id_loja=nota.id_loja,
-                                                                    id_pedido=nota.id_pedido,
-                                                                    pedido_ecommerce=nota.cod_pedido,
-                                                                    nunota_pedido=nota.nunota_pedido,
-                                                                    nunota_nota=nota.nunota_nota,
-                                                                    id_nota=dados_nota.get('id'),
-                                                                    evento=evento,
-                                                                    status=True))
+                log_pedido.criar(log_id=log_id,
+                                 id_loja=nota.id_loja,
+                                 id_pedido=nota.id_pedido,
+                                 pedido_ecommerce=nota.cod_pedido,
+                                 nunota_pedido=nota.nunota_pedido,
+                                 nunota_nota=nota.nunota_nota,
+                                 id_nota=dados_nota.get('id'),
+                                 evento=evento,
+                                 status=True)
                 
                 print(f"Nota {int(dados_nota.get('numero'))} emitida com sucesso!")
                             
-            status_log = False if log_pedido.read_by_logid_status_false(log_id=log_id) else True
-            log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
+            status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+            log.atualizar(id=log_id, sucesso=status_log)
             print(f"-> Processo de emissão de notas concluído! Status do log: {status_log}")
             return True
         except:
             return False
 
     async def _receber_notas(self):
-        log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
         print("Busca notas pendentes")
 
-        notas_pendentes = venda.read_pendente_nota_olist()
+        notas_pendentes = venda.buscar_sem_nota()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
             print(obs)
@@ -202,11 +200,8 @@ class Nota:
         obs = None
         first = True 
         nota_olist = NotaOlist()
-        
-        #dados_para_atualizar = []
 
         for i, nota in enumerate(notas_pendentes):
-            #dados = {}
             if not first:
                 time.sleep(2)  # Evita rate limit
             first = False
@@ -214,15 +209,15 @@ class Nota:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
-                log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                    id_loja=notas_pendentes[i-1].id_loja,
-                                                                    id_pedido=notas_pendentes[i-1].id_pedido,
-                                                                    pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                                                    nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                                                    nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                                                    evento=evento,
-                                                                    status=False,
-                                                                    obs=obs))
+                log_pedido.criar(log_id=log_id,
+                                 id_loja=notas_pendentes[i-1].id_loja,
+                                 id_pedido=notas_pendentes[i-1].id_pedido,
+                                 pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                 nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                 nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                 evento=evento,
+                                 status=False,
+                                 obs=obs)
                 obs = None
                             
             print("")
@@ -233,9 +228,9 @@ class Nota:
                 obs = f"Nota do pedido {nota.cod_pedido} não encontrada"
                 continue
 
-            venda.update_faturado_olist(cod_pedido=nota.cod_pedido,
-                                        num_nota=int(dados_nota.get('numero')),
-                                        id_nota=dados_nota.get('id'))
+            venda.atualizar_nf_gerada(cod_pedido=nota.cod_pedido,
+                                      num_nota=int(dados_nota.get('numero')),
+                                      id_nota=dados_nota.get('id'))
 
             print(f"Recebendo financeiro da nota {i+1}/{len(notas_pendentes)}: {int(dados_nota.get('numero'))}")
             
@@ -243,25 +238,23 @@ class Nota:
             if not dados_financeiro:
                 print(f"Financeiro da nota {int(dados_nota.get('numero'))} não encontrado no Olist")
                 continue
-            venda.update_baixa_financeiro(num_nota=int(dados_nota.get('numero')),
-                                            id_financeiro=dados_financeiro.get('id'))
-            #print(f"Financeiro da nota {int(dados_nota.get('numero'))} baixado com sucesso no Olist")
-
-            venda.update_nota_confirma_snk(nunota_nota=nota.nunota_nota)
+            venda.atualizar_financeiro(num_nota=int(dados_nota.get('numero')),
+                                       id_financeiro=dados_financeiro.get('id'))
+            venda.atualizar_confirmada_nota(nunota_nota=nota.nunota_nota)
 
             print(f"Nota {int(dados_nota.get('numero'))} recebida com sucesso!")
-            log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                id_loja=nota.id_loja,
-                                                                id_pedido=nota.id_pedido,
-                                                                pedido_ecommerce=nota.cod_pedido,
-                                                                nunota_pedido=nota.nunota_pedido,
-                                                                nunota_nota=nota.nunota_nota,
-                                                                id_nota=dados_nota.get('id'),
-                                                                evento=evento,
-                                                                status=True))
+            log_pedido.criar(log_id=log_id,
+                             id_loja=nota.id_loja,
+                             id_pedido=nota.id_pedido,
+                             pedido_ecommerce=nota.cod_pedido,
+                             nunota_pedido=nota.nunota_pedido,
+                             nunota_nota=nota.nunota_nota,
+                             id_nota=dados_nota.get('id'),
+                             evento=evento,
+                             status=True)
             
-        status_log = False if log_pedido.read_by_logid_status_false(log_id=log_id) else True
-        log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
+        status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+        log.atualizar(id=log_id, sucesso=status_log)
         print(f"-> Processo de recebimento de notas concluído! Status do log: {status_log}")
         return True
 
@@ -271,7 +264,7 @@ class Nota:
         obs = None
         # Busca as notas pendentes de confirmação
         print("Busca as notas pendentes de confirmação")
-        notas_pendentes = venda.read_venda_faturada_confirmar_snk()
+        notas_pendentes = venda.buscar_confirmar_nota()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
             print(obs)
@@ -304,9 +297,9 @@ class Nota:
                 print(obs)
                 continue                
 
-            venda.update_faturado_olist(cod_pedido=nota.cod_pedido,
-                                        num_nota=int(dados_nota_olist.get('numero')),
-                                        id_nota=dados_nota_olist.get('id'))
+            venda.atualizar_nf_gerada(cod_pedido=nota.cod_pedido,
+                                      num_nota=int(dados_nota_olist.get('numero')),
+                                      id_nota=dados_nota_olist.get('id'))
 
             # Envia os dados da nota para o Sankhya
             print("Envia os dados da nota para o Sankhya")
@@ -328,7 +321,7 @@ class Nota:
                 print(obs)
                 continue
             
-            venda.update_nota_confirma_snk(nunota_nota=nota.nunota_nota)
+            venda.atualizar_confirmada_nota(nunota_nota=nota.nunota_nota)
             print(f"Nota {nota.nunota_nota} confirmada com sucesso no Sankhya")
 
             # Baixa o financeiro da nota no Olist
@@ -346,8 +339,8 @@ class Nota:
                 print(obs)
                 continue
             
-            venda.update_baixa_financeiro(num_nota=dados_nota_olist.get('numero'),
-                                          id_financeiro=dados_financeiro.get('id'))
+            venda.atualizar_financeiro(num_nota=dados_nota_olist.get('numero'),
+                                       id_financeiro=dados_financeiro.get('id'))
             print(f"Financeiro da nota {dados_nota_olist.get('numero')} baixado com sucesso no Olist")
         
         print("Processo de confirmação de notas concluído.")
@@ -355,11 +348,11 @@ class Nota:
 
     async def confirmar(self):
 
-        log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
         print("Busca notas pendentes")
-        notas_pendentes = venda.read_venda_faturada_confirmar_snk()
+        notas_pendentes = venda.buscar_confirmar_nota()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
             print(obs)
@@ -380,16 +373,16 @@ class Nota:
                 if obs:
                     # Cria um log de erro se houver observação
                     print(obs)
-                    log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                        id_loja=notas_pendentes[i-1].id_loja,
-                                                                        id_pedido=notas_pendentes[i-1].id_pedido,
-                                                                        pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                                                        nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                                                        nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                                                        id_nota=notas_pendentes[i-1].id_nota,
-                                                                        evento=evento,
-                                                                        status=False,
-                                                                        obs=obs))
+                    log_pedido.criar(log_id=log_id,
+                                     id_loja=notas_pendentes[i-1].id_loja,
+                                     id_pedido=notas_pendentes[i-1].id_pedido,
+                                     pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                     nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                     nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                     id_nota=notas_pendentes[i-1].id_nota,
+                                     evento=evento,
+                                     status=False,
+                                     obs=obs)
                     obs = None
                                 
                 print("")
@@ -403,24 +396,24 @@ class Nota:
                         continue
                     else:
                         print(f"Nota {nota.num_nota}/{nota.nunota_nota} já foi confirmada no Sankhya")
-                        venda.update_nota_confirma_snk(nunota_nota=nota.nunota_nota)
+                        # venda.atualizar_confirmada_nota(nunota_nota=nota.nunota_nota)
 
-                venda.update_nota_confirma_snk(nunota_nota=nota.nunota_nota)
+                venda.atualizar_confirmada_nota(nunota_nota=nota.nunota_nota)
 
                 print(f"Nota {nota.num_nota}/{nota.nunota_nota} confirmada com sucesso no Sankhya")
 
-            log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                id_loja=nota.id_loja,
-                                                                id_pedido=nota.id_pedido,
-                                                                pedido_ecommerce=nota.cod_pedido,
-                                                                nunota_pedido=nota.nunota_pedido,
-                                                                nunota_nota=nota.nunota_nota,
-                                                                id_nota=nota.id_nota,
-                                                                evento=evento,
-                                                                status=True))
+            log_pedido.criar(log_id=log_id,
+                             id_loja=nota.id_loja,
+                             id_pedido=nota.id_pedido,
+                             pedido_ecommerce=nota.cod_pedido,
+                             nunota_pedido=nota.nunota_pedido,
+                             nunota_nota=nota.nunota_nota,
+                             id_nota=nota.id_nota,
+                             evento=evento,
+                             status=True)
 
-            status_log = False if log_pedido.read_by_logid_status_false(log_id=log_id) else True
-            log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
+            status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+            log.atualizar(id=log_id, sucesso=status_log)
             print(f"-> Processo de confirmação de notas concluído! Status do log: {status_log}")
             return True
         except:
@@ -428,11 +421,11 @@ class Nota:
 
     async def baixar_financeiro(self):
 
-        log_id = log.create(log=SchemaLog.LogBase(de='olist', para='sankhya', contexto=CONTEXTO))
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
         print("Busca notas pendentes")
-        notas_pendentes = venda.read_pendente_fin_olist()
+        notas_pendentes = venda.buscar_financeiro()
         if not notas_pendentes:
             obs = "Nenhuma nota pendente"
             print(obs)
@@ -454,16 +447,16 @@ class Nota:
                 if obs:
                     # Cria um log de erro se houver observação
                     print(obs)
-                    log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                        id_loja=notas_pendentes[i-1].id_loja,
-                                                                        id_pedido=notas_pendentes[i-1].id_pedido,
-                                                                        pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                                                        nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                                                        nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                                                        id_nota=notas_pendentes[i-1].id_nota,
-                                                                        evento=evento,
-                                                                        status=False,
-                                                                        obs=obs))
+                    log_pedido.criar(log_id=log_id,
+                                     id_loja=notas_pendentes[i-1].id_loja,
+                                     id_pedido=notas_pendentes[i-1].id_pedido,
+                                     pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                     nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                     nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                     id_nota=notas_pendentes[i-1].id_nota,
+                                     evento=evento,
+                                     status=False,
+                                     obs=obs)
                     obs = None
                                 
                 print("")
@@ -484,22 +477,22 @@ class Nota:
                     obs = f"Erro ao baixar financeiro da nota {nota.num_nota} no Olist"
                     continue
                 
-                venda.update_baixa_financeiro(num_nota=nota.num_nota,
-                                            id_financeiro=dados_financeiro.get('id'))
+                venda.atualizar_financeiro(num_nota=nota.num_nota,
+                                           id_financeiro=dados_financeiro.get('id'))
                 print(f"Financeiro da nota {nota.num_nota} baixado com sucesso no Olist")
 
-                log_pedido.create(log=SchemaLogPedido.LogPedidoBase(log_id=log_id,
-                                                                    id_loja=notas_pendentes[i-1].id_loja,
-                                                                    id_pedido=notas_pendentes[i-1].id_pedido,
-                                                                    pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                                                    nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                                                    nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                                                    id_nota=notas_pendentes[i-1].id_nota,
-                                                                    evento=evento,
-                                                                    status=True))          
+                log_pedido.criar(log_id=log_id,
+                                 id_loja=notas_pendentes[i-1].id_loja,
+                                 id_pedido=notas_pendentes[i-1].id_pedido,
+                                 pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
+                                 nunota_pedido=notas_pendentes[i-1].nunota_pedido,
+                                 nunota_nota=notas_pendentes[i-1].nunota_nota,
+                                 id_nota=notas_pendentes[i-1].id_nota,
+                                 evento=evento,
+                                 status=True)
             
             status_log = False if obs else True
-            log.update(id=log_id, log=SchemaLog.LogBase(sucesso=status_log))
+            log.atualizar(id=log_id, sucesso=status_log)
             print(f"-> Processo de baixa do financeiro das notas concluído! Status do log: {status_log}")
             return True
         except:
