@@ -1,5 +1,6 @@
 from database.database import SessionLocal
 from database.models import LogEstoque
+from datetime import datetime
 
 def criar(log_id:int,codprod:int=0,idprod:int=0,qtdmov:int=0,obs:str=None):
     session = SessionLocal()
@@ -7,6 +8,7 @@ def criar(log_id:int,codprod:int=0,idprod:int=0,qtdmov:int=0,obs:str=None):
         obs = 'Sem alterações pendentes'
 
     novo_log = LogEstoque(log_id=log_id,
+                          dh_atualizacao=datetime.now(),
                           codprod=codprod,
                           idprod=idprod,
                           qtdmov=qtdmov,

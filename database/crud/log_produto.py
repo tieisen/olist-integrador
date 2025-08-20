@@ -1,10 +1,12 @@
 from database.database import SessionLocal
 from database.models import LogProduto
 from database.models import Log
+from datetime import datetime
 
 def criar(log_id:int=None,codprod:int=None,idprod:int=None,campo:str=None,valor_old:str=None,valor_new:str=None):
     session = SessionLocal()
-    novo_log = LogProduto(log_id=log_id,
+    novo_log = LogProduto(dh_atualizacao=datetime.now(),
+                          log_id=log_id,
                           codprod=codprod,
                           idprod=idprod,
                           campo=campo,
