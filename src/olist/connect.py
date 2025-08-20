@@ -113,11 +113,14 @@ class Connect(object):
             encrypted_id_token = self.fernet.encrypt(id_token).decode()
             expire_date = datetime.now()+timedelta(0,token_data['expires_in'])
             expire_date_refresh = datetime.now()+timedelta(0,token_data['refresh_expires_in'])
-            crud.criar(token_criptografado=encrypted_access_token,
-                       dh_expiracao_token=expire_date,
-                       refresh_token_criptografado=encrypted_refresh_token,
-                       dh_expiracao_refresh_token=expire_date_refresh,
-                       id_token_criptografado=encrypted_id_token)
+            ack = crud.criar(token_criptografado=encrypted_access_token,
+                             dh_expiracao_token=expire_date,
+                             refresh_token_criptografado=encrypted_refresh_token,
+                             dh_expiracao_refresh_token=expire_date_refresh,
+                             id_token_criptografado=encrypted_id_token)
+            if not ack:
+                logger.error("Erro ao salvar token criptografado")
+                return False            
             return True
         except Exception as e:
             logger.error("Erro ao salvar token criptografado: %s",e)
