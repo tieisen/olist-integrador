@@ -1,24 +1,22 @@
-from sqlalchemy.orm import Session
-from database.models.token_sankhya import TokenSankhya
-from database.schemas.token_sankhya import TokenSankhyaBase
-from database.dependencies import get_db
+from database.database import SessionLocal
+from database.models import TokenSankhya
 
-def read_last():
-    db: Session = next(get_db())
-    token = db.query(TokenSankhya).order_by(TokenSankhya.id.desc()).first() 
-    db.close()
-    return token
-
-def create(token: TokenSankhyaBase):
-    db: Session = next(get_db())
+def criar(token_criptografado: str, dh_expiracao_token: str):
+    session = SessionLocal()
     try:
-        db_token = TokenSankhya(**token.model_dump())
-        db.add(db_token)
-        db.commit()
-        db.refresh(db_token)
-        tkn = db_token.token_criptografado
-        db.close()
-        return tkn
+        novo_token = TokenSankhya(token_criptografado=token_criptografado,
+                                  dh_expiracao_token=dh_expiracao_token)
+        session.add(novo_token)
+        session.commit()
+        session.refresh(novo_token)
+        session.close()
+        return novo_token.token_criptografado
     except:
-        db.close()
-        return False
+        session.close()
+        return False    
+
+def buscar():
+    session = SessionLocal()
+    token = session.query(TokenSankhya).order_by(TokenSankhya.id.desc()).first()
+    session.close()
+    return token

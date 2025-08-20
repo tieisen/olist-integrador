@@ -1,37 +1,43 @@
-from sqlalchemy.orm import Session
-from datetime import datetime
-from database.models.log_produto import LogProduto
-from database.models.log import Log
-from database.schemas.log_produto import LogProdutoBase
-from database.dependencies import get_db
+from database.database import SessionLocal
+from database.models import LogProduto
+from database.models import Log
 
-def read_by_codprod(codprod: int):
-    db: Session = next(get_db())
-    try:
-        db_log_produto = db.query(LogProduto).filter(LogProduto.codprod == codprod).all()
-        return db_log_produto
-    finally:
-        db.close()
+def criar(log_id:int=None,codprod:int=None,idprod:int=None,campo:str=None,valor_old:str=None,valor_new:str=None):
+    session = SessionLocal()
+    novo_log = LogProduto(log_id=log_id,
+                          codprod=codprod,
+                          idprod=idprod,
+                          campo=campo,
+                          valor_old=str(valor_old),
+                          valor_new=str(valor_new))
+    session.add(novo_log)
+    session.commit()
+    session.refresh(novo_log)
+    session.close()
+    return True
 
-def read_last():
-    db: Session = next(get_db())    
-    return db.query(LogProduto).filter(Log.contexto == 'produto').order_by(LogProduto.id.desc()).first()        
+def buscar_todos_codprod(codprod: int):
+    session = SessionLocal()
+    log = session.query(LogProduto).filter(LogProduto.codprod == codprod).all()
+    session.close()
+    return log
 
-def read_all(dtini: datetime, dtfim: datetime):
-    db: Session = next(get_db())
-    try:    
-        db_log_produto = db.query(LogProduto).filter(LogProduto.dh_atualizacao >= dtini, LogProduto.dh_atualizacao <= dtfim).all()
-        return db_log_produto
-    finally:
-        db.close()        
+def buscar_ultimo_codprod(codprod: int):
+    session = SessionLocal()
+    ultimo_log = session.query(LogProduto).filter(Log.contexto == 'produto', LogProduto.codprod == codprod).order_by(LogProduto.log_id.desc()).first()
+    if not ultimo_log:
+        session.close()
+        return False
+    log_produto = session.query(LogProduto).filter(LogProduto.log_id == ultimo_log.id, LogProduto.codprod == codprod).all()
+    session.close()
+    return log_produto
 
-def create(log: LogProdutoBase):
-    db: Session = next(get_db())
-    try:
-        db_log_produto = LogProduto(**log.model_dump())
-        db.add(db_log_produto)
-        db.commit()
-        db.refresh(db_log_produto)
-        return db_log_produto
-    finally:
-        db.close() 
+def buscar_ultimo():
+    session = SessionLocal()
+    ultimo_log = session.query(LogProduto).filter(Log.contexto == 'produto').order_by(LogProduto.log_id.desc()).first()
+    if not ultimo_log:
+        session.close()
+        return False
+    log_produto = session.query(LogProduto).filter(LogProduto.log_id == ultimo_log.id).all()
+    session.close()
+    return log_produto

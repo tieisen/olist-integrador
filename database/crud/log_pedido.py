@@ -1,48 +1,36 @@
-from sqlalchemy.orm import Session
-from datetime import datetime
-from database.models.log_pedido import LogPedido
-from database.models.log import Log
-from database.schemas.log_pedido import LogPedidoBase
-from database.dependencies import get_db
+from database.database import SessionLocal
+from database.models import LogPedido
 
-def read_by_id(id: int):
-    db: Session = next(get_db())
-    pedido = db.query(LogPedido).filter(LogPedido.id == id).first()
-    db.close()
-    return pedido
+def criar(log_id:int,id_loja:int,id_pedido:int,pedido_ecommerce:str,evento:str='I',nunota_pedido:int=0,status:bool=False,obs:str=None):
+    session = SessionLocal()
+    novo_log = LogPedido(log_id=log_id,
+                         id_loja=id_loja,
+                         id_pedido=id_pedido,
+                         pedido_ecommerce=pedido_ecommerce,
+                         evento=evento,
+                         nunota_pedido=nunota_pedido,
+                         status=status,
+                         obs=obs)
+    session.add(novo_log)
+    session.commit()
+    session.refresh(novo_log)
+    session.close()
+    return True
 
-def read_by_nunota_pedido(nunota: int):
-    db: Session = next(get_db())
-    pedido = db.query(LogPedido).filter(LogPedido.nunota_pedido == nunota).first()
-    db.close()
-    return pedido
+def buscar_id_pedido(id_pedido: int):
+    session = SessionLocal()
+    log = session.query(LogPedido).filter(LogPedido.id_pedido == id_pedido).first()
+    session.close()
+    return log
 
-def read_by_logid_status_false(log_id: int):
-    db: Session = next(get_db())
-    pedido = db.query(LogPedido).filter(LogPedido.log_id == log_id, LogPedido.status.is_(False)).first()
-    db.close()
-    return pedido
+def buscar_nunota_pedido(nunota_pedido: int):
+    session = SessionLocal()
+    log = session.query(LogPedido).filter(LogPedido.nunota_pedido == nunota_pedido).first()
+    session.close()
+    return log
 
-def read_last():
-    db: Session = next(get_db())    
-    pedido = db.query(LogPedido).filter(Log.contexto == 'pedido').order_by(LogPedido.id.desc()).first()
-    db.close()
-    return pedido
-
-def read_all(dtini: datetime, dtfim: datetime):
-    db: Session = next(get_db())
-    pedido = db.query(LogPedido).filter(LogPedido.dh_atualizacao >= dtini, LogPedido.dh_atualizacao <= dtfim).all()
-    db.close()
-    return pedido
-
-def create(log: LogPedidoBase):
-    db: Session = next(get_db())
-    try:
-        pedido = LogPedido(**log.model_dump())
-        db.add(pedido)
-        db.commit()
-        db.refresh(pedido)
-        db.close()
-        return pedido
-    finally:
-        db.close() 
+def buscar_status_false(log_id: int):
+    session = SessionLocal()
+    log = session.query(LogPedido).filter(LogPedido.log_id == log_id, LogPedido.status.is_(False)).first()
+    session.close()
+    return log
