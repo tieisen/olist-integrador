@@ -9,8 +9,8 @@ def criar(cod_snk:int, cod_olist:int):
         session.close()
         return False        
     novo_produto = Produto(cod_snk=cod_snk,
-                               cod_olist=cod_olist,
-                               dh_cadastro=datetime.now())
+                           cod_olist=cod_olist,
+                           dh_cadastro=datetime.now())
     session.add(novo_produto)
     session.commit()
     session.refresh(novo_produto)
