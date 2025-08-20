@@ -1,5 +1,6 @@
 from database.database import SessionLocal
 from datetime import datetime
+from sqlalchemy import func
 from database.models import Venda
 
 def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
@@ -11,6 +12,7 @@ def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
     
     nova_venda = Venda(id_loja=id_loja,
                        id_pedido=id_pedido,
+                       dh_pedido=datetime.now(),
                        cod_pedido=cod_pedido,
                        num_pedido=num_pedido)
     session.add(nova_venda)
@@ -23,6 +25,13 @@ def buscar_importar():
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.nunota_pedido.is_(None),
                                         Venda.dh_cancelamento_pedido.is_(None)).order_by(Venda.num_pedido).all()
+    session.close()
+    return venda
+
+def buscar_hoje():
+    session = SessionLocal()
+    hoje = datetime.now().date()
+    venda = session.query(Venda).filter(func.date(Venda.dh_pedido) == hoje, Venda.dh_cancelamento_pedido.is_(None)).order_by(Venda.num_pedido).all()
     session.close()
     return venda
 
