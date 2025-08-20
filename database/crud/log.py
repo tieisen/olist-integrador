@@ -1,9 +1,11 @@
 from database.database import SessionLocal
 from database.models import Log
+from datetime import datetime
 
 def criar(de:str, para:str, contexto:str=None):
     session = SessionLocal()
-    novo_log = Log(de=de,
+    novo_log = Log(dh_execucao=datetime.now(),
+                   de=de,
                    para=para,
                    contexto=contexto)
     session.add(novo_log)
