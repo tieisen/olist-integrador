@@ -30,6 +30,6 @@ def integrar_pedidos_olist():
 
 @router.get("/faturar")
 def faturar_pedidos_snk():    
-    if not asyncio.run(faturamento.faturar()):
+    if not asyncio.run(faturamento.faturar_lote()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True
