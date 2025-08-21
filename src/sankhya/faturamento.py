@@ -59,7 +59,7 @@ class Faturamento:
                     INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
                     INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
                 WHERE TRUNC(CON.DHFINCONF) = TRUNC(SYSDATE)
-                    AND CAB.AD_MKP_ID IS NOT NULL
+                    AND CAB.AD_MKP_ORIGEM IS NOT NULL
                     AND CAB.PENDENTE = 'S'
                 GROUP BY COI.CODPROD, COI.CONTROLE
             '''
@@ -113,13 +113,11 @@ class Faturamento:
                 
             if estoque.get('qtd') < pedido.get('qtdtotalunit'):
                 qtd_transferir = pedido.get('qtdtotalunit') - estoque.get('qtd')
-                #print(f"Item {pedido.get('codprod')} lote {pedido.get('controle')}: {qtd_transferir} UN para transferencia")
 
             if qtd_transferir:
                 # Se o item tem agrupamento mínimo configurado, utiliza esse valor pra transferência
-                if qtd_transferir < estoque.get('agrupmin'):
-                    #print(f"Item {estoque.get('codprod')} agrupmin {estoque.get('agrupmin')}")
-                    qtd_transferir = estoque.get('agrupmin')
+                if qtd_transferir < int(estoque.get('agrupmin')):
+                    qtd_transferir = int(estoque.get('agrupmin'))
 
                 lista_transferir.append({
                     "codprod": pedido.get('codprod'),
