@@ -7,6 +7,6 @@ from src.integrador.separacao import Separacao
 if __name__=="__main__":    
     pedido = Pedido()
     separacao = Separacao()
-    asyncio.run(pedido.importar())
     asyncio.run(separacao.receber())
+    asyncio.run(pedido.importar())    
     asyncio.run(pedido.confirmar())
