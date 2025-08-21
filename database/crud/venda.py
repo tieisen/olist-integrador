@@ -167,6 +167,21 @@ def atualizar_confirmada(nunota_pedido:int, dh_confirmado: str=None):
     session.close()
     return True
 
+def atualizar_confirmada_lote(nunota_pedido:int, dh_confirmado: str=None):
+    session = SessionLocal()
+    vendas = session.query(Venda).filter(Venda.nunota_pedido == nunota_pedido).all()
+    if not vendas:
+        session.close()
+        return False
+    for venda in vendas:
+        if dh_confirmado:
+            setattr(venda, "dh_confirmacao_pedido_snk", datetime.strptime(dh_confirmado,'%d/%m/%Y'))
+        else:
+            setattr(venda, "dh_confirmacao_pedido_snk", datetime.now())
+    session.commit()
+    session.close()
+    return True
+
 def atualizar_confirmada_nota(nunota_nota:int, dh_confirmado:str=None):
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.nunota_nota == nunota_nota).first()
@@ -177,6 +192,21 @@ def atualizar_confirmada_nota(nunota_nota:int, dh_confirmado:str=None):
         setattr(venda, "dh_confirmacao_nota_snk", datetime.strptime(dh_confirmado,'%d/%m/%Y'))
     else:
         setattr(venda, "dh_confirmacao_nota_snk", datetime.now())
+    session.commit()
+    session.close()
+    return True
+
+def atualizar_confirmada_nota_lote(nunota_nota:int, dh_confirmado:str=None):
+    session = SessionLocal()
+    vendas = session.query(Venda).filter(Venda.nunota_nota == nunota_nota).all()
+    if not vendas:
+        session.close()
+        return False
+    for venda in vendas:
+        if dh_confirmado:
+            setattr(venda, "dh_confirmacao_nota_snk", datetime.strptime(dh_confirmado,'%d/%m/%Y'))
+        else:
+            setattr(venda, "dh_confirmacao_nota_snk", datetime.now())
     session.commit()
     session.close()
     return True
@@ -192,6 +222,22 @@ def atualizar_faturada(nunota_pedido:int,nunota_nota:int,dh_faturamento:str=None
         setattr(venda, "dh_faturamento_snk", datetime.strptime(dh_faturamento,'%Y-%m-%d %H:%M:%S'))
     else:
         setattr(venda, "dh_faturamento_snk", datetime.now())
+    session.commit()
+    session.close()
+    return True
+
+def atualizar_faturada_lote(nunota_pedido:int,nunota_nota:int,dh_faturamento:str=None):
+    session = SessionLocal()
+    vendas = session.query(Venda).filter(Venda.nunota_pedido == nunota_pedido).all()
+    if not vendas:
+        session.close()
+        return False
+    for venda in vendas:
+        setattr(venda, "nunota_nota", nunota_nota)
+        if dh_faturamento:
+            setattr(venda, "dh_faturamento_snk", datetime.strptime(dh_faturamento,'%Y-%m-%d %H:%M:%S'))
+        else:
+            setattr(venda, "dh_faturamento_snk", datetime.now())
     session.commit()
     session.close()
     return True
