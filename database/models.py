@@ -102,7 +102,7 @@ class TokenSankhya(Base):
 class Venda(Base):
     __tablename__ = "venda"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     id_loja = Column(Integer, nullable=False)
     dh_pedido = Column(DateTime(timezone=True),server_default=func.now())
     id_pedido = Column(Integer, nullable=False, unique=True)
@@ -116,7 +116,7 @@ class Venda(Base):
     dh_baixa_financeiro = Column(DateTime(timezone=True), nullable=True)
     dh_cancelamento_pedido = Column(DateTime(timezone=True), nullable=True)
     dh_cancelamento_nota = Column(DateTime(timezone=True), nullable=True)
-    nunota_pedido = Column(Integer, nullable=True, unique=True)
+    nunota_pedido = Column(Integer, nullable=True)
     dh_importacao_pedido_snk = Column(DateTime(timezone=True), nullable=True)
     dh_confirmacao_pedido_snk = Column(DateTime(timezone=True), nullable=True)
     dh_faturamento_snk = Column(DateTime(timezone=True), nullable=True)
