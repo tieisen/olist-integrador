@@ -36,7 +36,7 @@ class Pedido:
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
     
-    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, itens:bool=False, ) -> dict:
+    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, itens:bool=False) -> dict:
         
         if not any([nunota, id_olist, codpedido]):
             print("Nenhum critério de busca informado. Informe nunota, id_olist ou codpedido.")
@@ -141,6 +141,43 @@ class Pedido:
                 logger.error("Erro ao buscar pedido. Pedido %s. %s",codpedido,res.text)        
             return False
     
+    async def buscar_nunota_nota(self, nunota:int) -> dict:
+        
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+        
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False
+
+        query = f'''
+            SELECT VAR.NUNOTA
+            FROM TGFVAR VAR
+            WHERE VAR.NUNOTAORIG = {nunota} AND ROWNUM = 1
+        '''
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization': token },
+            json={
+                "serviceName": "DbExplorerSP.executeQuery",
+                "requestBody": {
+                    "sql":query
+                }
+            })
+        
+        if res.status_code in (200,201) and res.json().get('status')=='1':
+            return self.formatter.return_format(res.json())
+        else:
+            logger.error("Erro ao buscar número da nota. %s",res.json())
+            print(f"Erro ao buscar número da nota. {res.json()}")
+            return False
+
     async def buscar_cidade(self, ibge:int=None) -> dict:
 
         if not ibge:
