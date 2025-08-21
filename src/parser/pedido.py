@@ -70,3 +70,45 @@ class Pedido:
             lista_itens.append(dados_item)
             
         return dados_sankhya, lista_itens
+    
+    def to_sankhya_lote(self, lista_pedidos:list, lista_itens:list) -> tuple[dict,list]:
+
+        def formatar_pedidos(lista_pedidos):
+            linhas = [f"- {pedido['numero']}/{pedido['codigo']}" for pedido in lista_pedidos]
+            return "Referente aos pedidos:\n" + "\n".join(linhas)        
+
+        dados_cabecalho = {}
+        dados_itens = []       
+
+        data_negociacao = datetime.now().strftime('%d/%m/%Y')
+        observacao = formatar_pedidos(lista_pedidos)
+        origem = lista_pedidos[0].get('origem')
+        
+        dados_cabecalho['AD_MKP_ORIGEM'] = {"$":origem}
+        dados_cabecalho['CIF_FOB'] = {"$":'C'}
+        dados_cabecalho['CODCENCUS'] = {"$":'0'}
+        dados_cabecalho['CODEMP'] = {"$":self.codemp}
+        dados_cabecalho['CODNAT'] = {"$":self.codnat}
+        dados_cabecalho['CODPARC'] = {"$":self.codparc}
+        dados_cabecalho['CODTIPOPER'] = {"$":self.codtipoper}
+        dados_cabecalho['CODTIPVENDA'] = {"$":self.codtipvenda}
+        dados_cabecalho['CODVEND'] = {"$":self.codvend}        
+        dados_cabecalho['DTNEG'] = {"$":data_negociacao}
+        dados_cabecalho['NUNOTA'] = {},
+        dados_cabecalho['TIPMOV'] = {"$":"P"}
+        dados_cabecalho['OBSERVACAO'] = {"$":observacao}
+
+        for item in lista_itens:
+            dados_item = {}
+            codprod = re.search(r'^\d{8}', item.get('codprod'))
+            dados_item['NUNOTA'] = {},
+            dados_item['CODPROD'] = {"$":codprod.group()}
+            dados_item['QTDNEG'] = {"$":item.get('qtdneg')}
+            dados_item['VLRUNIT'] = {"$":item.get('vlrunit') if item.get('vlrunit') > 0 else 0.01}
+            dados_item['PERCDESC'] = {"$":'0'}
+            dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
+            dados_item['CODVOL'] = {"$":"UN"}
+            dados_item['CODLOCALORIG'] = {"$":self.codlocalorig}
+            dados_itens.append(dados_item)
+
+        return dados_cabecalho, dados_itens
