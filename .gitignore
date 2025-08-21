@@ -8,3 +8,4 @@ vscode
 *.log
 *.ipynb
 *.csv
+*.sql
