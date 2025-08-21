@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from src.integrador.pedido import Pedido
 from src.integrador.faturamento import Faturamento
-from src.integrador.nota import Nota
 from src.integrador.separacao import Separacao
 import asyncio
 
@@ -9,27 +8,40 @@ router = APIRouter()
 pedido = Pedido()
 faturamento = Faturamento()
 separacao = Separacao()
-nota = Nota()
 
 @router.get("/")
 def default():
     return {"message": "Pedidos"}
 
-@router.get("/buscar")
-def buscar_pedidos_olist():    
-    asyncio.run(pedido.receber())
-    asyncio.run(pedido.validar_cancelamentos())
-    return True
-
 @router.get("/integrar")
-def integrar_pedidos_olist():
-    asyncio.run(pedido.importar())
-    asyncio.run(separacao.receber())
-    asyncio.run(pedido.confirmar())
+def integrar_pedidos():
+    """
+    Busca os pedidos novos do Olist que estão com status Preparando Envio.
+    Valida pedidos cancelados.
+    Importa os pedidos pendentes do Olist em um único pedido no Sankhya.
+    Confirma o pedido no Sankhya.
+    """
+    if not asyncio.run(pedido.receber()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+    if not asyncio.run(pedido.validar_cancelamentos()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+    if not asyncio.run(separacao.receber()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+    if not asyncio.run(pedido.importar_lote()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+    if not asyncio.run(pedido.confirmar_lote()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
     return True
 
 @router.get("/faturar")
-def faturar_pedidos_snk():    
+def faturar_pedidos():
+    """
+    Emite e autoriza as NFs dos pedidos no Olist.
+    Envia os pedidos para separação no Olist.
+    Cria e confirma a nota de transferência no Sankhya.
+    Fatura o pedido no Sankhya.
+    Confirma a nota gerada no Sankhya.
+    """    
     if not asyncio.run(faturamento.faturar_lote()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import estoque, notas, pedidos, produtos
+from routers import estoque, pedidos, produtos
 
 app = FastAPI(title="Integrador Olist x Sankhya",
               description="Integrador Olist x Sankhya",
@@ -15,7 +15,6 @@ app.add_middleware(
 )
 
 app.include_router(estoque.router, prefix="/estoque", tags=["Estoque"])
-app.include_router(notas.router, prefix="/notas", tags=["Notas"])
 app.include_router(pedidos.router, prefix="/pedidos", tags=["Pedidos"])
 app.include_router(produtos.router, prefix="/produtos", tags=["Produtos"])
 
