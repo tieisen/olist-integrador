@@ -1,6 +1,18 @@
 from database.database import SessionLocal
 from datetime import datetime
 from database.models import Produto
+from src.utils.log import Log
+import os
+import logging
+from dotenv import load_dotenv
+
+load_dotenv('keys/.env')
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename=Log().buscar_path(),
+                    encoding='utf-8',
+                    format=os.getenv('LOGGER_FORMAT'),
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    level=logging.INFO)
 
 def criar(cod_snk:int, cod_olist:int):
     session = SessionLocal()
@@ -30,6 +42,12 @@ def atualizar(cod_snk: int, pendencia: bool):
     session.close()
     return True
 
+def buscar_todos():
+    session = SessionLocal()
+    produto = session.query(Produto).all()
+    session.close()
+    return produto
+
 def buscar_pendencias():
     session = SessionLocal()
     produto = session.query(Produto).filter(Produto.pendencia.is_(True)).all()
@@ -47,3 +65,20 @@ def buscar_snk(cod_snk: int):
     produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
     session.close()
     return produto
+
+def excluir(cod_snk: int):
+    session = SessionLocal()
+    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
+    if not produto:
+        session.close()
+        return False
+    try:
+        session.delete(produto)
+        session.commit()
+        session.close()
+        return True        
+    except Exception as e:
+        logger.error("Erro ao excluir produtos no banco de dados: %s",e)
+        session.close()
+        return False   
+
