@@ -31,9 +31,12 @@ class Produto:
 
     async def receber_alteracoes(self):
 
-        alteracoes_raw = await self.produto_olist.busca_alteracoes()
+        log_id = crudLog.criar(de='olist', para='base', contexto=CONTEXTO)
+
+        alteracoes_raw = await self.produto_olist.buscar_alteracoes()
         if not alteracoes_raw:
             print("Sem alterações pendentes")
+            crudLog.atualizar(id=log_id)
             return True
 
         print(f"{len(alteracoes_raw)} produtos com alteracoes pendentes")
@@ -42,8 +45,14 @@ class Produto:
             for alteracao in alteracoes_raw:
                 hist_produto = crudProduto.buscar_snk(cod_snk=alteracao.get('sku'))
                 if not hist_produto:
-                    logger.error("Produto %s não pode ser alterado por não foi encontrado",alteracao.get('sku'))
-                    print(f"Produto {alteracao.get('sku')} não pode ser alterado por não foi encontrado")
+                    obs = f"Produto {alteracao.get('sku')} não pode ser alterado pois não foi encontrado"
+                    logger.error(obs)
+                    print(obs)
+                    crudLogProd.criar(log_id=log_id,
+                                      codprod=alteracao.get('sku'),
+                                      idprod=alteracao.get('id'),
+                                      sucesso=False,
+                                      obs=obs)                    
                     continue
 
                 ultima_alteracao = datetime.strptime(alteracao.get('dh_alter'),'%Y-%m-%d %H:%M:%S')
@@ -58,13 +67,20 @@ class Produto:
                     continue
 
                 crudProduto.atualizar(cod_snk=alteracao.get('sku'), pendencia=True)
+                crudLogProd.criar(log_id=log_id,
+                                  codprod=alteracao.get('sku'),
+                                  idprod=alteracao.get('id'))                  
                 print(f"Produto {alteracao.get('sku')} adicionado à lista de alterações pendentes")
-                time.sleep(self.req_time_sleep)
             
+            status_log = False if crudLogProd.buscar_status_false(log_id) else True
+            crudLog.atualizar(id=log_id,sucesso=status_log)
             return True
-        except:
+        except Exception as e:
+            erro = f"Erro: {e}"
+            logger.error(erro)
+            print(erro)
+            crudLog.atualizar(id=log_id,sucesso=False)
             return False
-
 
     async def atualizar_olist(self):
 
@@ -83,10 +99,6 @@ class Produto:
 
         try:
             for i, produto in enumerate(alteracoes_pendentes):
-                print("")            
-                print(f"Produto #{produto.get('codprod')} - {i+1}/{len(alteracoes_pendentes)}")
-                time.sleep(float(os.getenv('REQ_TIME_SLEEP',1.5)))
-
                 if obs:
                     # Registro no log
                     crudLogProd.criar(log_id=log_id,
@@ -95,6 +107,10 @@ class Produto:
                                       sucesso=alteracoes_pendentes[i-1].get('sucesso'),
                                       obs=obs)
                     obs = None
+
+                print("")            
+                print(f"Produto #{produto.get('codprod')} - {i+1}/{len(alteracoes_pendentes)}")
+                time.sleep(float(os.getenv('REQ_TIME_SLEEP',1.5)))
 
                 if produto.get('evento') == 'I':
                     
@@ -106,7 +122,7 @@ class Produto:
                         continue # TODO >>
 
                     print(f"Inclusão do produto {produto.get('codprod')}")
-                    print("Busca dados do produto no Sankhya")
+                    print("Buscando dados do produto no Sankhya...")
                     dados_produto_sankhya = await self.produto_snk.buscar(codprod=int(produto.get('codprod'))) 
                     if not dados_produto_sankhya:
                         obs = 'Produto não encontrado no Sankhya'
@@ -114,7 +130,7 @@ class Produto:
                         continue
 
                     # Converte para o formato da API do Olist
-                    print("Converte para o formato da API do Olist")
+                    print("Convertendo para o formato da API do Olist...")
                     log_atualizacoes_olist, dados_formato_olist = self.parse.to_olist(data_sankhya=dados_produto_sankhya)
                     if not log_atualizacoes_olist:
                         obs = "Erro ao converter dados do produto"
@@ -122,7 +138,7 @@ class Produto:
                         continue
                     
                     # Envia dados para o Olist
-                    print("Envia dados para o Olist")
+                    print("Enviando dados para o Olist...")
                     ack_olist, dados_produto_olist = await self.produto_olist.incluir(data=dados_formato_olist)
                     if not ack_olist:
                         obs = 'Erro ao incluir produto no Olist'
@@ -130,7 +146,7 @@ class Produto:
                         continue
 
                     # Converte o retorno da API do Olist para o formato da API do Sankhya
-                    print("Converte o retorno da API do Olist para o formato da API do Sankhya")
+                    print("Convertendo o retorno do Olist para o formato da API do Sankhya...")
                     log_atualizacoes_snk, dados_formato_snk = self.parse.to_sankhya(data_olist=dados_produto_olist,
                                                                                     data_sankhya=dados_produto_sankhya,
                                                                                     type='insert')
@@ -142,7 +158,7 @@ class Produto:
                     dados_formato_snk = self.produto_snk.prepapar_dados(payload=dados_formato_snk)
 
                     # Atualiza ID no Sankhya
-                    print("Atualiza ID no Sankhya")
+                    print("Atualizando ID no Sankhya...")
                     ack_snk = await self.produto_snk.atualizar(codprod=dados_produto_sankhya.get('codprod'),
                                                             payload=dados_formato_snk)
                     if not ack_snk:
@@ -177,7 +193,7 @@ class Produto:
                         continue
 
                     print(f"Atualização do produto {produto.get('codprod')}")
-                    print("Busca dados do produto no Sankhya")
+                    print("Buscando dados do produto no Sankhya...")
                     # Busca dados do produto no Sankhya
                     dados_produto_sankhya = await self.produto_snk.buscar(codprod=int(produto.get('codprod'))) 
                     if not dados_produto_sankhya:
@@ -185,7 +201,7 @@ class Produto:
                         produto['sucesso'] = False
                         continue
 
-                    print("Busca dados do produto no Olist")
+                    print("Buscando dados do produto no Olist...")
                     # Busca dados do produto no Olist
                     dados_produto_olist = await self.produto_olist.buscar(id=int(produto.get('idprod'))) 
                     if not dados_produto_olist:
@@ -193,10 +209,10 @@ class Produto:
                         produto['sucesso'] = False
                         continue
 
-                    print("Converte para o formato da API do Olist")
+                    print("Convertendo para o formato da API do Olist...")
                     # Converte para o formato da API do Olist
                     log_atualizacoes_olist, dados_formato_olist = self.parse.to_olist(data_olist=dados_produto_olist,
-                                                                                    data_sankhya=dados_produto_sankhya)
+                                                                                      data_sankhya=dados_produto_sankhya)
                     if not log_atualizacoes_olist:
                         obs = "Erro ao comparar dados do produto"
                         produto['sucesso'] = False
@@ -206,10 +222,10 @@ class Produto:
                         produto['sucesso'] = True
                         continue
 
-                    print("Atualiza dados no Olist")
+                    print("Atualizando dados no Olist...")
                     # Atualiza dados no Olist
                     ack_atualizacao = await self.produto_olist.atualizar(id=int(produto.get('idprod')),
-                                                                        data=dados_formato_olist)
+                                                                         data=dados_formato_olist)
 
                     if not ack_atualizacao:
                         obs = 'Erro ao atualizar produto no Olist'
@@ -217,8 +233,10 @@ class Produto:
                         continue
 
                     produto['sucesso'] = True
+                    print("Produto atualizado com sucesso!")
 
-                    crudProduto.update(cod_snk=dados_produto_sankhya.get('codprod'),pendencia=False)
+                    crudProduto.atualizar(cod_snk=dados_produto_sankhya.get('codprod'),
+                                          pendencia=False)
                 
                     # Registro no log                                      
                     for atualizacao in log_atualizacoes_olist:
@@ -228,15 +246,18 @@ class Produto:
                                           campo=atualizacao.get('campo'),
                                           valor_old=str(atualizacao.get('valorOld')),
                                           valor_new=str(atualizacao.get('valorNew')))
+            
+            print("Removendo da lista de alterações pendentes...")
+            await self.produto_snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)            
+            status_log = False if crudLogProd.buscar_status_false(log_id) else True
+            crudLog.atualizar(id=log_id,sucesso=status_log)
 
-            await self.produto_snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)
-
-            crudLog.atualizar(id=log_id, sucesso=True)
+            print("=========================")
+            print("PROCESSO DE ATUALIZAÇÃO DE PRODUTOS NO OLIST CONCLUÍDO!")
 
             return True
         except:
             return False
-
 
     async def atualizar_snk(self):
         log_id = crudLog.criar(de='olist', para='sankhya', contexto=CONTEXTO)
@@ -247,19 +268,15 @@ class Produto:
         if not alteracoes_pendentes:
             obs = "Sem alterações pendentes"
             print(obs)
-            crudLog.atualizar(id=log_id, sucesso=True)
+            crudLog.atualizar(id=log_id)
             return True
 
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")    
         
         try:
-
             for i, produto in enumerate(alteracoes_pendentes):
-                print("")            
-                print(f"Produto #{produto.cod_snk} - {i+1}/{len(alteracoes_pendentes)}")
-                time.sleep(float(os.getenv('REQ_TIME_SLEEP',1.5)))
-
                 if obs:
+                    print(obs)
                     # Registro no log
                     crudLogProd.criar(log_id=log_id,
                                       codprod=alteracoes_pendentes[i-1].cod_snk,
@@ -268,25 +285,37 @@ class Produto:
                                       obs=obs)
                     obs = None
 
+                print("")            
+                print(f"Produto #{produto.cod_snk} - {i+1}/{len(alteracoes_pendentes)}")
+                time.sleep(float(os.getenv('REQ_TIME_SLEEP',1.5)))
+
                 # Busca os dados do produto no Olist e no Sankhya para comparação
-                print(f"Busca os dados do produto no Olist e no Sankhya para comparação")
+                print(f"Buscando dados do produto no Olist...")
                 dados_produto_olist = await self.produto_olist.buscar(id=produto.cod_olist)
                 if not dados_produto_olist:
                     obs = 'Produto não encontrado no Olist'
                     setattr(produto,"sucesso",False)
                     continue
 
-                dados_produto_sankhya = await self.produto_snk.buscar(idprod=produto.cod_snk)
+                print(f"Buscando dados do produto no Sankhya...")
+                dados_produto_sankhya = await self.produto_snk.buscar(codprod=produto.cod_snk)
                 if not dados_produto_sankhya:
                     obs = 'Produto não encontrado no Sankhya'
                     setattr(produto,"sucesso",False)
                     continue
-
-                if dados_produto_olist.get('situacao') == 'A':
-                    tipo_atualizacao = 'update'
-                if dados_produto_olist.get('situacao') == 'E':
-                    tipo_atualizacao = 'delete'                
                 
+                match dados_produto_olist.get('situacao'):
+                    case 'A':
+                        tipo_atualizacao = 'update'
+                    case 'E':
+                        tipo_atualizacao = 'delete'
+                    case _:
+                        obs = f"Produto com a situação {dados_produto_olist.get('situacao')} no Olist"
+                        setattr(produto,"sucesso",False)
+                        logger.warning(obs)
+                        continue
+                
+                print("Convertendo para o formato API Sankhya...")
                 log_atualizacoes, dados_atualizados = self.parse.to_sankhya(data_olist=dados_produto_olist,
                                                                             data_sankhya=dados_produto_sankhya,
                                                                             type=tipo_atualizacao)
@@ -299,14 +328,15 @@ class Produto:
                 if log_atualizacoes[0] == 0:
                     obs = "Sem dados para atualizar no produto"
                     setattr(produto,"sucesso",True)
+                    crudProduto.atualizar(cod_snk=produto.cod_snk,pendencia=False)
                     continue
             
                 dados_formato_snk = self.produto_snk.prepapar_dados(payload=dados_atualizados)
 
                 # Atualiza dados no Sankhya
-                print("Atualiza dados no Sankhya")
+                print("Atualizando dados no Sankhya...")
                 ack_snk = await self.produto_snk.atualizar(codprod=produto.cod_snk,
-                                                        payload=dados_formato_snk)
+                                                           payload=dados_formato_snk)
                 if not ack_snk:
                     obs = 'Erro ao atualizar produto no sankhya'
                     setattr(produto,"sucesso",False)
@@ -316,6 +346,8 @@ class Produto:
 
                 crudProduto.atualizar(cod_snk=produto.cod_snk,pendencia=False)
                 
+                print(f"Produto atualizado com sucesso!")
+
                 # Registro no log                                      
                 for atualizacao in log_atualizacoes:
                     crudLogProd.criar(log_id=log_id,
@@ -325,10 +357,14 @@ class Produto:
                                       valor_old=str(atualizacao.get('valorOld')),
                                       valor_new=str(atualizacao.get('valorNew')))            
 
+            print("Removendo da lista de alterações pendentes...")
             await self.produto_snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)
 
-            crudLog.atualizar(id=log_id, sucesso=True)
-
+            crudLog.atualizar(id=log_id)
+            print("=========================")
+            print("PROCESSO DE ATUALIZAÇÃO DE PRODUTOS NO SANKHYA CONCLUÍDO!")
             return True
-        except:
+        except Exception as e:
+            logger.error("Erro ao atualizar produto no sankhya: %s",e)
+            print(f"Erro: {e}")
             return False
