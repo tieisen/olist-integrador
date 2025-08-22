@@ -31,7 +31,7 @@ class Bot:
 
     async def login(self):
         try:
-            driver = webdriver.Firefox()
+            driver = webdriver.Chrome()
             driver.maximize_window() 
             driver.get(self.link_erp)
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
@@ -49,17 +49,23 @@ class Bot:
             submit_button.click()
 
             try:
-                WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, "//h3[@class='modal-title']")))
+                WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//h3[@class='modal-title']")))
                 elemento = driver.find_element(By.XPATH, "//h3[@class='modal-title']")
                 if elemento.text == 'Este usuário já está logado em outro dispositivo':
                     btn_confirma_login = driver.find_element(By.XPATH, "//button[@class='btn btn-primary']")
                     btn_confirma_login.click()
-                    WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-logo-usuario']")))
+                    WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-logo-usuario']")))
                     time.sleep(self.time_sleep)
             except:
                 pass
-            return True, driver
+
+            if WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-iniciais-usuario']"))):
+                return True, driver
+            else:
+                return False, None
+            
         except Exception as e:
+            print(f"Falha no login. {e}")
             logger.error("Falha no login. %s",e)
             return False, None 
 
@@ -95,20 +101,26 @@ class Bot:
         
         if WebDriverWait(driver, 10).until(EC.element_to_be_clickable(driver.find_element(By.XPATH, "//button[@class='btn btn-primary btn-edicao-item']"))):
             btn_editar = driver.find_element(By.XPATH, "//button[@class='btn btn-primary btn-edicao-item']")
+            time.sleep(self.time_sleep)
             btn_editar.click()
+            time.sleep(self.time_sleep)
         else:
             logger.error("Erro no botao editar")
             return False, driver
         
         if WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "controlarLotes"))):
-            controle_lote = driver.find_element(By.ID, "controlarLotes")        
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+            controle_lote = driver.find_element(By.ID, "controlarLotes")
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(self.time_sleep)
             controle_lote = Select(controle_lote)
             controle_lote.select_by_value('0')
             btn_salvar = driver.find_element(By.ID, "botaoSalvar")
+            time.sleep(self.time_sleep)
             btn_salvar.click()
-            return True, driver
+            if WebDriverWait(driver, 10).until(EC.element_to_be_clickable(driver.find_element(By.XPATH, "//button[@class='btn btn-primary btn-edicao-item']"))):
+                return True, driver
+            else:                
+                return False, driver
         else:
             logger.error("Erro no selecionar opção")
             return False, driver
