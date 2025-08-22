@@ -2,10 +2,9 @@ import os
 import shutil
 from datetime import datetime
 
-# Caminho do banco de dados original
-DB_PATH = os.path.join("database", "olist.db")
+# ROTINA A SER EXECUTADA DIARIAMENTE, ÀS 17H55
 
-# Diretório de destino do backup
+DB_PATH = os.path.join("database", "olist.db")
 BACKUP_DIR = "database/backups"
 
 # Garante que o diretório de backup existe
