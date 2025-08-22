@@ -1,10 +1,10 @@
-
 import os
 import logging
 import smtplib
 from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from database.crud import log, log_estoque, log_pedido, log_produto
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -24,8 +24,53 @@ class Email:
         self.email = os.getenv('SENDER_MAIL')
         self.pwd = os.getenv('SENDER_PASSWORD')
         self.default_to = os.getenv('TO_DEFAULT')
-        self.path_logs = os.getenv('PATH_LOGS')
-        
+
+    def buscar_historico(self):
+        historico = log.buscar_falhas()
+
+        body = ''
+
+        body+='<ul style="list-style: none;">'
+        for h in historico:
+            body+=f'<li>{h.dh_execucao.strftime('%H:%M')} | {h.contexto.capitalize()} | {h.de.capitalize()} > {h.para.capitalize()}</li>'
+            match h.contexto:
+                case 'estoque':            
+                    estoque = log_estoque.buscar_id(log_id=h.id)
+                    if not estoque:
+                        body+='<ul><li>Detalhamento não encontrado</li></ul>'
+                    else:
+                        body+='<ul>'
+                        for e in estoque:
+                            if bool(e.status_estoque):
+                                continue
+                            body+=f'<li>{e.obs}</li>'
+                        body+='</ul>'
+                case 'pedido':
+                    pedido = log_pedido.buscar_id(log_id=h.id)
+                    if not pedido:
+                        body+='<ul><li>Detalhamento não encontrado</li></ul>'
+                    else:
+                        body+='<ul>'
+                        for pd in pedido:
+                            if bool(pd.status):
+                                continue
+                            body+=f'<li>{pd.obs}</li>'
+                        body+='</ul>'
+                case 'produto':
+                    produto = log_produto.buscar_id(log_id=h.id)
+                    if not produto:
+                        body+='<ul><li>Detalhamento não encontrado</li></ul>'
+                    else:
+                        body+='<ul>'
+                        for p in produto:
+                            if bool(p.sucesso):
+                                continue
+                            body+=f'<li>{p.obs}</li>'
+                        body+='</ul>'
+        body+='</ul>'
+
+        return body
+
     async def enviar(self,destinatario:str=None, corpo=None, assunto:str=None):
         """
         Envia um e-mail usando SMTP
@@ -58,25 +103,13 @@ class Email:
             logger.error("Arquivo não encontrado em %s.",self.email_body_path)            
         else:
             with open(file=self.email_body_path, mode='r', encoding='utf-8') as f:
-                body = f.read() 
+                estrutura = f.read()
 
-        if not os.path.exists(self.path_logs):
-            logger.error("Arquivo não encontrado em %s.",self.path_logs)            
-        else:
-            with open(file=self.path_logs, mode='r', encoding='utf-8') as f:
-                log_data = f.readlines()
+        body = self.buscar_historico()
 
-        match tipo:
-            case 'erro':
-                assunto = os.getenv('SUBJECT_ERROR').get('text')
-                cor = os.getenv('SUBJECT_ERROR').get('color')
-            case 'alerta':
-                assunto = os.getenv('SUBJECT_WARN').get('text')
-                cor = os.getenv('SUBJECT_WARN').get('color')
-            case _:
-                None
+        assunto = os.getenv('MAIL_SUBJECT')
+        cor = os.getenv('MAIL_COLOR')
         
-        if body and log_data and assunto:
-            await self.enviar(destinatario=destinatario or self.default_to,
-                              corpo=body.format(cor,log_data[-1]),
-                              assunto=assunto)
+        await self.enviar(destinatario=destinatario or self.default_to,
+                          corpo=estrutura.format(cor,body),
+                          assunto=assunto)
