@@ -2,7 +2,7 @@ from database.database import SessionLocal
 from database.models import LogPedido
 from datetime import datetime
 
-def criar(log_id:int,id_loja:int,id_pedido:int,pedido_ecommerce:str,evento:str='I',nunota_pedido:int=0,status:bool=False,obs:str=None):
+def criar(log_id:int,id_loja:int,id_pedido:int,pedido_ecommerce:str,evento:str='I',nunota_pedido:int=0,status:bool=True,obs:str=None):
     session = SessionLocal()
     novo_log = LogPedido(log_id=log_id,
                          dh_atualizacao=datetime.now(),
@@ -18,6 +18,12 @@ def criar(log_id:int,id_loja:int,id_pedido:int,pedido_ecommerce:str,evento:str='
     session.refresh(novo_log)
     session.close()
     return True
+
+def buscar_id(log_id: int):
+    session = SessionLocal()
+    log = session.query(LogPedido).filter(LogPedido.log_id == log_id).all()
+    session.close()
+    return log
 
 def buscar_id_pedido(id_pedido: int):
     session = SessionLocal()

@@ -2,13 +2,14 @@ from database.database import SessionLocal
 from database.models import LogEstoque
 from datetime import datetime
 
-def criar(log_id:int,codprod:int,idprod:int,qtdmov:int=0,obs:str=None):
+def criar(log_id:int,codprod:int,idprod:int,status_estoque:bool=True,qtdmov:int=0,obs:str=None):
     session = SessionLocal()
     novo_log = LogEstoque(log_id=log_id,
                           dh_atualizacao=datetime.now(),
                           codprod=codprod,
                           idprod=idprod,
                           qtdmov=qtdmov,
+                          status_estoque=status_estoque,
                           obs=obs)
     session.add(novo_log)
     session.commit()
@@ -24,6 +25,12 @@ def buscar_codprod(codprod: int):
 
 def buscar_status_false(log_id: int):
     session = SessionLocal()
-    log = session.query(LogEstoque).filter(LogEstoque.log_id == log_id, LogEstoque.status_estoque.is_(False)).first()
+    log = session.query(LogEstoque).filter(LogEstoque.log_id == log_id, LogEstoque.status_estoque != 1).first()
+    session.close()
+    return log
+
+def buscar_id(log_id: int):
+    session = SessionLocal()
+    log = session.query(LogEstoque).filter(LogEstoque.log_id == log_id).all()
     session.close()
     return log
