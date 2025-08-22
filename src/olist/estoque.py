@@ -99,7 +99,7 @@ class Estoque:
                                          "Content-Type":"application/json",
                                          "Accept":"application/json"},
                                 json=data)
-            if res.status_code in [200,201]:
+            if res.status_code == 200:
                 data['sucesso'] = True
             else:
                 print(f"Erro {res.status_code}: {res.json()} cod {id}")
@@ -129,11 +129,11 @@ class Estoque:
                                         "Content-Type":"application/json",
                                         "Accept":"application/json"
                                     },
-                                    json=payload)
-                if res.status_code in [200,201]:                    
+                                    json=payload)                
+                if res.status_code == 200:
                     dados['sucesso'] = True
                 else:
                     dados['sucesso'] = False
-                    print(f"Erro {res.status_code}: {res.json()} cod {id}")
-                    logger.error("Erro %s: %s cod %s", res.status_code, res.json(), id)
+                    print(f"Erro {res.status_code}: cod {id_produto}")
+                    logger.error("Erro %s: cod %s", res.status_code, id_produto)
             return lista_dados
