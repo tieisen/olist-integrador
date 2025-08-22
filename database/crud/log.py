@@ -1,6 +1,6 @@
 from database.database import SessionLocal
 from database.models import Log
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def criar(de:str, para:str, contexto:str=None):
     session = SessionLocal()
@@ -14,7 +14,7 @@ def criar(de:str, para:str, contexto:str=None):
     session.close()
     return novo_log.id
 
-def atualizar(id:int, sucesso:bool):
+def atualizar(id:int, sucesso:bool=True):
     session = SessionLocal()
     log = session.query(Log).filter(Log.id == id).first()
     if not log:
@@ -40,7 +40,15 @@ def buscar_id(id: int):
 
 def buscar_para_contexto(para: str, contexto: str):
     session = SessionLocal()
-    log = session.query(Log).filter(Log.para == para, Log.contexto == contexto).order_by(Log.id.desc()).first()
+    log = session.query(Log).filter(Log.para == para,
+                                    Log.contexto == contexto).order_by(Log.id.desc()).first()
+    session.close()
+    return log
+
+def buscar_falhas():
+    session = SessionLocal()
+    log = session.query(Log).filter(Log.sucesso.isnot(1),
+                                    Log.dh_execucao >= datetime.now().replace(minute=0, second=0, microsecond=0)-timedelta(hours=1)).order_by(Log.dh_execucao).all()
     session.close()
     return log
   
