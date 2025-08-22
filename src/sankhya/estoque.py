@@ -34,6 +34,7 @@ class Estoque:
         try:
             token = self.con.get_token()
         except Exception as e:
+            print(f"Erro relacionado ao token de acesso. {e}")
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False        
 
@@ -67,7 +68,6 @@ class Estoque:
             })
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
-            # print(res.json())
             return self.formatter.return_format(res.json())
         else:
             logger.error("Erro ao buscar saldo de estoque do item %s. %s",codprod,res.json())
@@ -130,6 +130,7 @@ class Estoque:
         try:
             token = self.con.get_token()
         except Exception as e:
+            print(f"Erro relacionado ao token de acesso. {e}")
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False      
 
@@ -141,7 +142,8 @@ class Estoque:
             for produto in lista_produtos:
                 if produto.get('sucesso'):
                     filter.append({"CODPROD": f"{produto['ajuste_estoque'].get('codprod')}"})
-
+        
+        print("Enviando dados para remoção")
         res = requests.get(
             url=url,
             headers={ 'Authorization': token },
@@ -213,7 +215,6 @@ class Estoque:
             })
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
-            # print(res.json())
             return self.formatter.return_format(res.json())
         else:
             logger.error("Erro validar estoque do item %s na empresa 31. %s",codprod,res.json())

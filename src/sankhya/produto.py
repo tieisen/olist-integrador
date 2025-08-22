@@ -258,7 +258,7 @@ class Produto:
                 }
             })
 
-        if res.status_code in (200,201) and res.json().get('status')=='1':
+        if res.status_code in (200,201) and res.json().get('status') in ('0','1'):
             return True
         else:
             logger.error("Erro ao remover alterações pendentes. %s",res.json())

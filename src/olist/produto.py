@@ -194,7 +194,7 @@ class Produto:
 
         return itens
     
-    async def busca_alteracoes(self,todo_historico:bool=False) -> list:
+    async def buscar_alteracoes(self,todo_historico:bool=False) -> list:
         try:
             token = self.con.get_token()
         except Exception as e:
