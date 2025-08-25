@@ -116,8 +116,14 @@ class Faturamento:
 
             if qtd_transferir:
                 # Se o item tem agrupamento mínimo configurado, utiliza esse valor pra transferência
-                if qtd_transferir < int(estoque.get('agrupmin')):
-                    qtd_transferir = int(estoque.get('agrupmin'))
+                if int(estoque.get('agrupmin')) != 0:
+                    if qtd_transferir < int(estoque.get('agrupmin')):
+                        qtd_transferir = int(estoque.get('agrupmin'))
+                    else:
+                        multiplo = int(estoque.get('agrupmin'))
+                        while multiplo <= qtd_transferir:
+                            multiplo += int(estoque.get('agrupmin'))                        
+                        qtd_transferir = multiplo
 
                 lista_transferir.append({
                     "codprod": pedido.get('codprod'),
