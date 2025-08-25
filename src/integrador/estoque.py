@@ -49,6 +49,11 @@ class Estoque:
                 for produto_olist in estoque_olist:
                     if int(produto_snk.get('ad_mkp_idprod')) == produto_olist.get('id'):                        
                         break
+
+                if not produto_olist.get('depositos'):
+                    logger.error("Não é possível atualizar estoque do produto %s",produto_olist.get('id'))
+                    print(f"Não é possível atualizar estoque do produto {produto_olist.get('id')}")
+                    continue                    
                 
                 if int(produto_olist.get('disponivel')) == int(produto_snk.get('disponivel')):
                     result.append({
