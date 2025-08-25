@@ -496,9 +496,10 @@ class Faturamento:
                 ack = await nota_snk.confirmar(nunota=nunota)
                 if not ack:
                     print(f"Erro ao confirmar nota {nunota}")
-                    logger.error("Erro ao confirmar nota %s",nunota)
-                venda.atualizar_confirmada_nota_lote(nunota_nota=nunota)
-                print(f"-> Confirmação da Nota {nunota} concluída!")                
+                    logger.error("Erro ao confirmar nota %s",nunota)                    
+                else:
+                    venda.atualizar_confirmada_nota_lote(nunota_nota=nunota)
+                    print(f"-> Confirmação da Nota {nunota} concluída!")                
 
             print("=====================================================")
             print("-> PROCESSO CONCLUÍDO!")
