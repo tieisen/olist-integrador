@@ -245,7 +245,13 @@ class Pedido:
                     }
                     res_item.append(kit_item)                            
                 return True, res_item
+            elif res.json().get('tipo') == 'V':
+                logger.error("Produto %s ID %s é uma variação. Ajuste o pedido no Olist", res.json().get('descricao'), id)
+                print(f"Produto {res.json().get('descricao')} ID {id} é uma variação. Ajuste o pedido no Olist")
+                return False, {}
             else:
+                logger.error("Produto %s ID %s não é kit nem variação.", res.json().get('descricao'), id)
+                print(f"Produto {res.json().get('descricao')} ID {id} não é kit nem variação.")
                 return False, {}
         else:                      
             print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} cod {id}")
