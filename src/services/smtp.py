@@ -28,6 +28,9 @@ class Email:
     def buscar_historico(self):
         historico = log.buscar_falhas()
 
+        if not historico:
+            return False
+
         body = ''
 
         body+='<ul style="list-style: none;">'
@@ -92,12 +95,18 @@ class Email:
             servidor = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port)
             servidor.login(self.email, self.pwd)
             servidor.send_message(msg)
-            servidor.quit()        
+            servidor.quit()
+            return True
         except Exception as e:
             logger.error("Falha ao enviar e-mail: %s",e)
+            return False
 
     async def notificar(self, destinatario:str=None, tipo:str='erro'):
 
+        body = self.buscar_historico()
+        if not body:
+            return False
+        
         assunto = None
         if not os.path.exists(self.email_body_path):
             logger.error("Arquivo não encontrado em %s.",self.email_body_path)            
@@ -105,11 +114,11 @@ class Email:
             with open(file=self.email_body_path, mode='r', encoding='utf-8') as f:
                 estrutura = f.read()
 
-        body = self.buscar_historico()
-
         assunto = os.getenv('MAIL_SUBJECT')
         cor = os.getenv('MAIL_COLOR')
         
         await self.enviar(destinatario=destinatario or self.default_to,
                           corpo=estrutura.format(cor,body),
                           assunto=assunto)
+        
+        return True
