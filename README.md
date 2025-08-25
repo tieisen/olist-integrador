@@ -38,7 +38,8 @@ olist-integrador/
 │   ├── sankhya/     # Funções para interação com a API Sankhya
 │   ├── services/    # Serviços de busca de CEP e envio de E-mail
 │   └── utils/       # Funções auxiliares
-├── __init__.py      # Inicia o integrador como API
+├── app.py           # Configura o integrador como API
+├── __main__.py      # Inicializa o servidor
 ├── .gitignore
 ├── README.md
 └── requirements.txt
@@ -73,13 +74,14 @@ Utilize o arquivo `example.env` como base.
 
 ## ▶️ Uso
 
-Para executar a integração, utilize o script principal:
+Para rodar a integração, execute o arquivo `__main__.py`:
 
 ```bash
-# Exemplo de como executar o script
-uvicorn __init__:app --host=[IP] --port=[PORTA] --reload
+cd olist-integrador
+call venv\Scripts\activate
+python .
 ```
-Acesse `http://[IP]:[PORTA]/docs` para buscar a documentação da API com a funcão de cada rota.
+Teste acessando o endereço `http://[IP]:[PORTA]/docs`. Você deve visualizar a documentação da API com a funcão de cada rota.
 
 Recomenda-se agendar a execução dos scripts na pasta `run` utilizando ferramentas como o `cron` (Linux/macOS) ou o Agendador de Tarefas (Windows) para manter os sistemas sincronizados em intervalos regulares.
 
