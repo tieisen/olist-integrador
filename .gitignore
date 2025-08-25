@@ -9,3 +9,4 @@ vscode
 *.ipynb
 *.csv
 *.sql
+*.test.*
