@@ -71,7 +71,7 @@ class Pedido:
             
         return dados_sankhya, lista_itens
     
-    def to_sankhya_lote(self, lista_pedidos:list, lista_itens:list) -> tuple[dict,list]:
+    def to_sankhya_lote(self, lista_pedidos:list, lista_itens:list) -> tuple[dict,list,int]:
 
         def formatar_pedidos(lista_pedidos):
             linhas = [f"- {pedido['numero']}/{pedido['codigo']}" for pedido in lista_pedidos]
@@ -99,16 +99,20 @@ class Pedido:
         dados_cabecalho['OBSERVACAO'] = {"$":observacao}
 
         for item in lista_itens:
-            dados_item = {}
-            codprod = re.search(r'^\d{8}', item.get('codprod'))
-            dados_item['NUNOTA'] = {},
-            dados_item['CODPROD'] = {"$":codprod.group()}
-            dados_item['QTDNEG'] = {"$":item.get('qtdneg')}
-            dados_item['VLRUNIT'] = {"$":item.get('vlrunit') if item.get('vlrunit') > 0 else 0.01}
-            dados_item['PERCDESC'] = {"$":'0'}
-            dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
-            dados_item['CODVOL'] = {"$":"UN"}
-            dados_item['CODLOCALORIG'] = {"$":self.codlocalorig}
-            dados_itens.append(dados_item)
+            try:
+                dados_item = {}
+                dados_item['NUNOTA'] = {},
+                dados_item['CODPROD'] = {"$":item.get('codprod')}
+                dados_item['QTDNEG'] = {"$":item.get('qtdneg')}
+                dados_item['VLRUNIT'] = {"$":item.get('vlrunit') if item.get('vlrunit') > 0 else 0.01}
+                dados_item['PERCDESC'] = {"$":'0'}
+                dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
+                dados_item['CODVOL'] = {"$":"UN"}
+                dados_item['CODLOCALORIG'] = {"$":self.codlocalorig}
+                dados_itens.append(dados_item)
+            except Exception as e:
+                logger.error("Item %s. Erro: %s",item.get('codprod'),e)
+                print(f"Item {item.get('codprod')}. Erro: {e}")
+                continue
 
-        return dados_cabecalho, dados_itens
+        return dados_cabecalho, dados_itens, origem
