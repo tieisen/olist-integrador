@@ -27,7 +27,7 @@ class Pedido:
                 "CODCENCUS", "CODCIDORIGEM", "CODEMP", "CODEMPNEGOC", "CODNAT", "CODPARC", "CODTIPOPER",
                 "CODTIPVENDA", "CODUFDESTINO", "CODUFENTREGA", "CODUSU", "CODUSUINC",
                 "CODVEND", "CONFIRMADA", "DHTIPOPER", "DHTIPVENDA", "DTMOV", "DTNEG", "NUNOTA",
-                "NUMNOTA", "OBSERVACAO", "PENDENTE", "PESO", "PESOBRUTO", "QTDVOL", "TIPMOV",
+                "NUMNOTA", "OBSERVACAO", "PENDENTE", "PESO", "PESOBRUTO", "QTDVOL", "STATUSNOTA", "TIPMOV",
                 "VLRDESCTOT", "VLRDESCTOTITEM", "VLRFRETE", "VLRICMS", "VLRICMSDIFALDEST",
                 "VLRICMSDIFALREM", "VLRICMSFCP", "VLRICMSFCPINT", "VLRIPI", "VLRIRF", "VLRISS",
                 "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
@@ -95,9 +95,6 @@ class Pedido:
                     }
                 ]
             }
-
-        # print("Buscando pedido...")
-        # print(f"Critério: {criteria}")
 
         res = requests.get(
             url=url,
