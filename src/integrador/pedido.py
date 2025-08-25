@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import logging
 from dotenv import load_dotenv
@@ -114,7 +115,7 @@ class Pedido:
 
         return True
 
-    async def receber(self, lista_pedidos:list=None, atual:bool=True) -> bool:
+    async def receber(self, lista_pedidos:list=None, atual:bool=True, num_pedido:int=None) -> bool:
         """ Recebe pedidos do Olist e os adiciona à base de dados.
         Args:
             lista_pedidos (list, optional): Lista de IDs de pedidos a serem recebidos. Se None, busca todos os pedidos novos.            
@@ -122,9 +123,62 @@ class Pedido:
             bool: True se os pedidos foram recebidos com sucesso, False caso contrário.
         """
 
-        print("Recebendo pedidos...")
-
         ped_olist = PedidoOlist()
+
+        if num_pedido:
+            # Importando pedido único
+            print(f"Recebendo pedido {num_pedido}...")
+            dados_pedido = await ped_olist.buscar(numero=num_pedido)
+            if not dados_pedido:
+                obs = f"Erro ao buscar dados do pedido {num_pedido} no Olist"
+                print(obs)
+                logger.error(obs)
+                log_pedido.criar(log_id=self.log_id,
+                                 id_loja=0,
+                                 id_pedido=0,
+                                 pedido_ecommerce='',
+                                 status=False,
+                                 obs=obs)                
+                return False
+
+            if dados_pedido.get('situacao') == 8:
+                obs = f"Pedido {dados_pedido.get('numeroPedido')} dados incompletos"
+                print(obs)
+                logger.error(obs)
+                log_pedido.criar(log_id=self.log_id,
+                                 id_loja=dados_pedido['ecommerce'].get('id'),
+                                 id_pedido=dados_pedido.get('id'),
+                                 pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
+                                 status=False,
+                                 obs=obs)
+                return False
+
+            ack = venda.criar(id_loja=dados_pedido['ecommerce'].get('id'),
+                              id_pedido=dados_pedido.get('id'),
+                              cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
+                              num_pedido=dados_pedido.get('numeroPedido'))
+            if not ack:
+                obs = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
+                print(obs)
+                logger.error(obs)
+                log_pedido.criar(log_id=self.log_id,
+                                 id_loja=dados_pedido['ecommerce'].get('id'),
+                                 id_pedido=dados_pedido.get('id'),
+                                 pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
+                                 status=False,
+                                 obs=obs)
+                return False
+
+            log_pedido.criar(log_id=self.log_id,
+                             id_loja=dados_pedido['ecommerce'].get('id'),
+                             id_pedido=dados_pedido.get('id'),
+                             pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'))
+            
+            print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
+            return True
+        
+        # Importando pedidos em lote
+        print("Recebendo pedidos...")        
         if not lista_pedidos:
             ack, lista = await ped_olist.buscar_novos(atual=atual)            
             if not ack:
@@ -529,7 +583,8 @@ class Pedido:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
-
+                obs = None
+            
             print(f"Buscando pedido {index + 1}/{len(novos_pedidos)}: {pedido.get('numero')}")
             
             # Busca os dados do pedido no Olist
@@ -548,7 +603,9 @@ class Pedido:
                     ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
                     if ack:
                         itens_pedido_validado+=kit_desmembrado
-            
+                    else:
+                        ack = kit_desmembrado = None
+
             if not itens_pedido_validado:
                 obs = "Erro ao validar itens/desmembrar kits"
                 continue
@@ -567,14 +624,21 @@ class Pedido:
         itens = []
         
         for pedido in lista_pedidos:
-            pedidos.append({
-                "numero":pedido.get('numeroPedido'),
-                "origem":pedido['ecommerce'].get('id'),
-                "codigo":pedido['ecommerce'].get('numeroPedidoEcommerce')
-            })
-
+            ack_itens = True
             itens_pedido = pedido.get('itens')
             for item_pedido in itens_pedido:
+                if not ack_itens:
+                    continue
+
+                try:
+                    codprod = re.search(r'^\d{8}', item_pedido['produto'].get('sku'))
+                    codprod = codprod.group()
+                except Exception as e:
+                    logger.error("Código do produto inválido: %s", item_pedido['produto'].get('sku'))
+                    print(f"Código do produto inválido: {item_pedido['produto'].get('sku')}")
+                    ack_itens = False
+                    continue
+
                 valor = {
                     'codprod': item_pedido['produto'].get('sku'),
                     'qtdneg': item_pedido.get('quantidade'),
@@ -592,6 +656,13 @@ class Pedido:
                     continue
 
                 aux['qtdneg']+=valor.get('qtdneg')
+            
+            if ack_itens:
+                pedidos.append({
+                    "numero":pedido.get('numeroPedido'),
+                    "origem":pedido['ecommerce'].get('id'),
+                    "codigo":pedido['ecommerce'].get('numeroPedidoEcommerce')
+                })
 
         return pedidos, itens
 
@@ -632,13 +703,13 @@ class Pedido:
         # Converte para o formato da API do Sankhya
         parser = ParserPedido()
         print("Convertendo para o formato da API do Sankhya...")        
-        cabecalho, itens = parser.to_sankhya_lote(lista_pedidos=dados_pedidos,lista_itens=dados_itens)
+        cabecalho, itens, id_origem = parser.to_sankhya_lote(lista_pedidos=dados_pedidos,lista_itens=dados_itens)
 
         if not cabecalho and not itens:
             print("Erro ao converter dados do pedido para o formato da API do Sankhya")
             logger.error("Erro ao converter dados do pedido para o formato da API do Sankhya")
             log_pedido.criar(log_id=self.log_id,
-                             id_loja=dados_pedidos.get('origem'),
+                             id_loja=id_origem,
                              id_pedido=0,
                              pedido_ecommerce='varios',
                              status=False,
@@ -653,7 +724,7 @@ class Pedido:
             print("Erro ao inserir pedido no Sankhya.")
             logger.error("Erro ao inserir pedido no Sankhya.")
             log_pedido.criar(log_id=self.log_id,
-                             id_loja=dados_pedidos.get('origem'),
+                             id_loja=id_origem,
                              id_pedido=0,
                              pedido_ecommerce='varios',
                              status=False,
@@ -669,7 +740,7 @@ class Pedido:
             print("Erro ao enviar número único para os pedidos no Olist.")
             logger.error("Erro ao enviar número único para os pedidos no Olist.")
             log_pedido.criar(log_id=self.log_id,
-                             id_loja=dados_pedidos.get('origem'),
+                             id_loja=id_origem,
                              id_pedido=0,
                              pedido_ecommerce='varios',
                              nunota_pedido=pedido_incluido,
@@ -679,7 +750,7 @@ class Pedido:
         
         print(f"Pedidos importados no código {pedido_incluido}")
         log_pedido.criar(log_id=self.log_id,
-                         id_loja=dados_pedidos.get('origem'),
+                         id_loja=id_origem,
                          id_pedido=0,
                          pedido_ecommerce='varios',
                          nunota_pedido=pedido_incluido)        
@@ -729,7 +800,7 @@ class Pedido:
 
             # Verifica se o pedido já foi confirmado e só não foi atualizado na base do integrador
             validacao = await snk.buscar(nunota=pedido)
-            if validacao.get('statusnota' == 'L'):
+            if validacao.get('statusnota') == 'L':
                 print(f"Pedido {pedido} já foi confirmado.")
                 venda.atualizar_confirmada_lote(nunota_pedido=pedido,
                                                 dh_confirmado=validacao.get('dtmov'))
