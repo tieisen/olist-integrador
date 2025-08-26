@@ -38,18 +38,21 @@ class Faturamento:
         item_transf = ItemTransfSnk()
         parser = ParserTransferencia()
 
+        print("Buscando itens conferidos no dia...")
         saldo_pedidos = await faturamento.buscar_itens()
         if not saldo_pedidos:
             logger.error("Erro ao buscar itens conferidos no dia.")
             print("Erro ao buscar itens conferidos no dia.")
             return False
 
+        print("Buscando saldo de estoque...")
         saldo_estoque = await estoque.buscar_saldo_por_lote(lista_produtos=saldo_pedidos)
         if not saldo_estoque:
             logger.error("Erro ao buscar saldo de estoque.")
             print("Erro ao buscar saldo de estoque.")
             return False
 
+        print("Comparando saldos...")
         itens_venda_interna = await faturamento.compara_saldos(saldo_estoque=saldo_estoque,
                                                                saldo_pedidos=saldo_pedidos)
 
@@ -58,6 +61,7 @@ class Faturamento:
             print("Nenhum item para lançar venda interna.")
             return True
 
+        print("Buscando valores de transferência...")
         codigos_produtos = [item.get('codprod') for item in itens_venda_interna]
         valores_produtos = await item_transf.busca_valor_transferencia(lista_itens=codigos_produtos)
         if not valores_produtos:
@@ -71,33 +75,30 @@ class Faturamento:
                     item['valor'] = float(valor.get('valor')) if valor.get('valor') else 0.1
                     break
 
+        print("Convertendo para o formato da API Sankhya...")
         cabecalho, itens = parser.to_sankhya(objeto='nota',
                                              itens_transferencia=itens_venda_interna)
-        
         if not all([cabecalho, itens]):
             logger.error("Erro ao preparar dados da nota de transferência.")
             print("Erro ao preparar dados da nota de transferência.")
             return False
-        
+
+        print("Lançando nota de transferência...")
         ack, nunota = await transferencia.criar(cabecalho=cabecalho,
-                                                itens=itens)
-        
+                                                itens=itens)        
         if not ack:
             logger.error("Erro ao lançar nota de transferência.")
             print("Erro ao lançar nota de transferência.")
             return False
         
-        print("Nota de venda entre empresas lançada com sucesso.")
-        logger.info("Nota de venda entre empresas lançada com sucesso.")
-        
+        print("Confirmando nota de transferência...")
         ack = await transferencia.confirmar(nunota=nunota)
         if not ack:
             logger.error("Erro ao confirmar nota de transferência.")
             print("Erro ao confirmar nota de transferência.")
             return False
         
-        print("Nota de venda entre empresas confirmada com sucesso.")
-        logger.info("Nota de venda entre empresas confirmada com sucesso.")        
+        print("VENDA ENTRE EMPRESAS REALIZADA COM SUCESSO!")        
         
         return True
 
