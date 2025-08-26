@@ -23,9 +23,9 @@ class Produto:
 
     def to_sankhya(self, data_olist:dict=None, data_sankhya:dict=None, type:str='update') -> tuple[list,dict]:
 
-        if not type or type not in ['update', 'insert']:
+        if not type or type not in ['update', 'insert', 'delete']:
             logger.error(f"Tipo de operação inválido: {type}")
-            print(f"Tipo de operação inválido. Deve ser 'update' ou 'insert'")
+            print(f"Tipo de operação inválido. Deve ser 'update' ou 'insert' ou 'delete'")
             return [], {}
 
         new_data = {}
@@ -107,7 +107,7 @@ class Produto:
             updates.append({'campo':'ad_mkp_integrado',
                             'valorOld':'S',
                             'valorNew':'N'})
-            new_data['ad_mkp_categoria'] = new_data['ad_mkp_descricao'] = new_data['ad_mkp_dhatualizado'] = new_data['ad_mkp_estpol'] = new_data['ad_mkp_idprod'] = new_data['ad_mkp_idprodpai'] = new_data['ad_mkp_marca'] = new_data['ad_mkp_nome'] = new_data['ad_mkp_integrado'] = None
+            new_data['ad_mkp_categoria'] = new_data['ad_mkp_descricao'] = new_data['ad_mkp_dhatualizado'] = new_data['ad_mkp_estpol'] = new_data['ad_mkp_idprod'] = new_data['ad_mkp_idprodpai'] = new_data['ad_mkp_marca'] = new_data['ad_mkp_nome'] = new_data['ad_mkp_integrado'] = ''
             new_data['ad_mkp_integrado'] = 'N'
 
         return updates, new_data
