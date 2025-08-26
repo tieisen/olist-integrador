@@ -73,7 +73,9 @@ class Pedido:
             print("Nenhum pedido pendente de cancelamento encontrado.")
             logger.info("Nenhum pedido pendente de cancelamento encontrado.")
 
-        pedidos_pendente_cancelar_snk = venda.buscar_importadas_cancelar()
+        #pedidos_pendente_cancelar_snk = venda.buscar_importadas_cancelar()
+        # TODO: importadas_cancelar
+        pedidos_pendente_cancelar_snk = None
         if pedidos_pendente_cancelar_snk:
             print(f"Pedidos pendentes de cancelamento no Sankhya: {len(pedidos_pendente_cancelar_snk)}")            
             snk = PedidoSnk()
