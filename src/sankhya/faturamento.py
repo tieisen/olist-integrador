@@ -116,7 +116,7 @@ class Faturamento:
 
             if qtd_transferir:
                 # Se o item tem agrupamento mínimo configurado, utiliza esse valor pra transferência
-                if int(estoque.get('agrupmin')) != 0:
+                if int(estoque.get('agrupmin')) < 1:
                     if qtd_transferir < int(estoque.get('agrupmin')):
                         qtd_transferir = int(estoque.get('agrupmin'))
                     else:
