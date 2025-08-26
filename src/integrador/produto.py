@@ -43,6 +43,8 @@ class Produto:
 
         try:
             for alteracao in alteracoes_raw:
+                if not alteracao.get('sku'):
+                    continue
                 hist_produto = crudProduto.buscar_snk(cod_snk=alteracao.get('sku'))
                 if not hist_produto:
                     obs = f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} não pode ser alterado pois não foi encontrado"
