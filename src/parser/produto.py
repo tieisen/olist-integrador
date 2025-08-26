@@ -55,7 +55,7 @@ class Produto:
                     updates.append({'campo':'ad_mkp_idprodpai',
                                     'valorOld':data_sankhya.get('ad_mkp_idprodpai'),
                                     'valorNew':None})
-                    new_data['ad_mkp_idprodpai'] = None
+                    new_data['ad_mkp_idprodpai'] = ''
 
             if data_sankhya['ad_mkp_marca'] != str(data_olist['marca'].get('id')):
                 updates.append({'campo':'ad_mkp_marca',
