@@ -45,3 +45,12 @@ def faturar_pedidos():
     if not asyncio.run(faturamento.faturar_lote()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True
+
+@router.get("/receber/{numero}")
+def receber_pedido(numero:int):
+    """
+    Busca um pedido específico do Olist
+    """
+    if not asyncio.run(pedido.receber(num_pedido=numero)):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao buscar pedido {numero}")
+    return True
