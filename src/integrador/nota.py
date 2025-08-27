@@ -101,7 +101,7 @@ class Nota:
         except:
             return False
         
-    async def _emitir(self):
+    async def emitir_legado(self):
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
@@ -183,7 +183,7 @@ class Nota:
         except:
             return False
 
-    async def _receber_notas(self):
+    async def receber_notas_legado(self):
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         obs = None
         # Busca notas pendentes
@@ -482,12 +482,12 @@ class Nota:
                 print(f"Financeiro da nota {nota.num_nota} baixado com sucesso no Olist")
 
                 log_pedido.criar(log_id=log_id,
-                                 id_loja=notas_pendentes[i-1].id_loja,
-                                 id_pedido=notas_pendentes[i-1].id_pedido,
-                                 pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                 nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                 nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                 id_nota=notas_pendentes[i-1].id_nota,
+                                 id_loja=nota.id_loja,
+                                 id_pedido=nota.id_pedido,
+                                 pedido_ecommerce=nota.cod_pedido,
+                                 nunota_pedido=nota.nunota_pedido,
+                                 nunota_nota=nota.nunota_nota,
+                                 id_nota=nota.id_nota,
                                  evento=evento,
                                  status=True)
             
