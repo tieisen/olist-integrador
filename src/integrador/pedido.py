@@ -599,7 +599,11 @@ class Pedido:
             itens_pedido_original = dados_pedido_olist.get('itens')
             itens_pedido_validado = []
             for item in itens_pedido_original:
-                if item['produto'].get('sku'):
+                codprod = item['produto'].get('sku')
+                if len(codprod) > 8:
+                    codprod = None   
+                                     
+                if codprod:
                     itens_pedido_validado.append(item)
                 else:
                     ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
