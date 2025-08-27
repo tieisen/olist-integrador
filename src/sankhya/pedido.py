@@ -388,15 +388,9 @@ class Pedido:
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
-    async def cancelar(self, nunota:int=None, num_pedido:int=None) -> bool:
+    async def devolver(self, nunota:int, itens:list) -> bool:
 
-        if not all([nunota, num_pedido]):
-            print("Dados não informados.")
-            logger.error("Dados não informados.")
-            return False
-        
-        #url = os.getenv('SANKHYA_URL_CANCELA_PEDIDO')
-        url = os.getenv('SANKHYA_URL_DELETE')
+        url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
@@ -409,35 +403,38 @@ class Pedido:
             return False
 
         body = {
-            "serviceName": "DatasetSP.removeRecord",
+            "serviceName": "SelecaoDocumentoSP.faturar",
             "requestBody": {
-                "entityName": "CabecalhoNota",
-                "offsetPage": "0",        
-                "standAlone": False,
-                "pks": [
-                    {
-                        "NUNOTA": f"{nunota}"
-                    }
-                ]
+                "notas": {
+                    "codTipOper": int(os.getenv('SANKHYA_CODTIPOPER_DEVOLUCAO')),
+                    "serie": os.getenv('SANKHYA_SERIE_NF'),
+                    "tipoFaturamento": "FaturamentoNormal",
+                    "dataValidada": True,
+                    "faturarTodosItens": False,
+                    "notasComMoeda": {},
+                    "nota": [
+                        {
+                            "NUNOTA":nunota,
+                            "itens":{
+                                "item":itens
+                            }
+                        }
+                    ]
+                }
             }
         }
 
-        res = requests.get(
+        res = requests.post(
             url=url,
             headers={ 'Authorization': token },
             json=body)
         
-        if res.status_code != 200:
-            print(f"Erro do servidor ao cancelar pedido {num_pedido}. Nunota {nunota}. {res.text}")
-            logger.error("Erro do servidor ao cancelar pedido %s. Nunota %s. %s",num_pedido,nunota,res.text)
-            return False
-        
-        if res.status_code == 200 and res.json().get('status') != '1':
-            print(f"Erro ao cancelar pedido {num_pedido}. Nunota {nunota}. {res.text}")
-            logger.error("Erro ao cancelar pedido %s. Nunota %s. %s",num_pedido,nunota,res.text)
-            return False
-        
-        return True
+        if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
+            return True, int(res.json().get('responseBody').get('notas').get('nota').get('$'))
+        else:
+            print(f"Erro ao devolver pedidos. Nunota {nunota}. {res.text}")
+            logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
+            return False, None
 
 class Itens(Pedido):
     def __init__(self):
