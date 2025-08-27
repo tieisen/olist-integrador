@@ -101,7 +101,7 @@ class Pedido:
         for item in lista_itens:
             try:
                 dados_item = {}
-                dados_item['NUNOTA'] = {},
+                dados_item['NUNOTA'] = {}
                 dados_item['CODPROD'] = {"$":item.get('codprod')}
                 dados_item['QTDNEG'] = {"$":item.get('qtdneg')}
                 dados_item['VLRUNIT'] = {"$":item.get('vlrunit') if item.get('vlrunit') > 0 else 0.01}
