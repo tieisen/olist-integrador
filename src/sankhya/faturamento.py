@@ -100,9 +100,11 @@ class Faturamento:
             for i, estoque in enumerate(saldo_estoque):
                 if estoque.get('codprod') == pedido.get('codprod') and estoque.get('controle') == pedido.get('controle'):
                     break
+                # Verifica se passou por todo o saldo de estoque e não encontrou nada, assume a quantidade conferida
                 if i == len(saldo_estoque)-1:
                     i = -1
             
+            # Assume a quantidade conferida se passou por todo o saldo de estoque e não encontrou nada
             if i == -1:
                 lista_transferir.append({
                     "codprod": pedido.get('codprod'),
@@ -110,21 +112,24 @@ class Faturamento:
                     "quantidade": pedido.get('qtdtotalunit')
                 })  
                 continue
-                
+
+            # Verifica se precisa transferência    
             if estoque.get('qtd') < pedido.get('qtdtotalunit'):
                 qtd_transferir = pedido.get('qtdtotalunit') - estoque.get('qtd')
 
             if qtd_transferir:
                 # Se o item tem agrupamento mínimo configurado, utiliza esse valor pra transferência
-                if int(estoque.get('agrupmin')) < 1:
-                    if qtd_transferir < int(estoque.get('agrupmin')):
+                if int(estoque.get('agrupmin')) > 1:
+                    print("Item com agrupamento mínimo")
+                    if qtd_transferir <= int(estoque.get('agrupmin')):
                         qtd_transferir = int(estoque.get('agrupmin'))
                     else:
+                        # Valida múltiplos do agrupamento mínimo
                         multiplo = int(estoque.get('agrupmin'))
-                        while multiplo <= qtd_transferir:
+                        while multiplo < qtd_transferir:
                             multiplo += int(estoque.get('agrupmin'))                        
                         qtd_transferir = multiplo
-
+                        
                 lista_transferir.append({
                     "codprod": pedido.get('codprod'),
                     "controle": pedido.get('controle'),
