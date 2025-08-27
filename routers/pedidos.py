@@ -22,15 +22,15 @@ def integrar_pedidos():
     Confirma o pedido no Sankhya.
     """
     if not asyncio.run(pedido.receber()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")
     if not asyncio.run(pedido.validar_cancelamentos()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
     if not asyncio.run(separacao.receber()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
     if not asyncio.run(pedido.importar_lote()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao importar pedidos")
     if not asyncio.run(pedido.confirmar_lote()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao confirmar pedidos")
     return True
 
 @router.get("/faturar")

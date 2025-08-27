@@ -268,13 +268,13 @@ class Pedido:
                 }
             })
         if res.status_code in (200,201):
-            if res.json().get('status')=='0':
-                print(res.text)
+            if res.json().get('status')=='0':                
+                logger.error("Erro ao lançar pedido. %s",res.text)
                 return 0
             if res.json().get('status')=='1':
                 return self.extrai_nunota(res.json())
             if res.json().get('status')=='2':
-                print(res.text)
+                logger.error("Pedido %s lançado com erro. %s",self.extrai_nunota(res.json()),res.text)                
                 return self.extrai_nunota(res.json())
         else:
             logger.error("Erro ao lançar pedido #%s. %s",dados_cabecalho.get('AD_MKP_NUMPED'),res.text)
