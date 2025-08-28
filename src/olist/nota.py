@@ -333,13 +333,11 @@ class Nota:
         )
 
         if res.status_code == 409:
-            logger.error("Financeiro da nota já foi baixado")
-            print(f"Financeiro da nota já foi baixado")
+            # Financeiro da nota já foi baixado
             return None
         
         if res.status_code == 204:
-            logger.info("Financeiro da nota baixado com sucesso")
-            print(f"Financeiro da nota baixado com sucesso")
+            # Financeiro baixado com sucesso            
             return True
         
         if res.status_code not in (409,204):
