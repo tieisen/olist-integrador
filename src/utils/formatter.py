@@ -82,17 +82,15 @@ class Formatter:
             return result
 
         if res['responseBody']['entities']['total'] == '0':
-            return {}
+            return [404]
 
         res_formatted = {}        
         columns = res['responseBody']['entities']['metadata']['fields']['field']
         if isinstance(columns, dict):
             columns = [columns]
-        # print(columns)
 
         if res['responseBody']['entities']['total'] == '1':
             rows = [res['responseBody']['entities']['entity']]
-            # print(rows)
             try:            
                 for row in rows:
                     for i, column in enumerate(columns):                        
