@@ -411,55 +411,6 @@ class Pedido:
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
-    async def devolver(self, nunota:int, itens:list) -> bool:
-
-        url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
-        if not url:
-            print(f"Erro relacionado à url. {url}")
-            logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
-        body = {
-            "serviceName": "SelecaoDocumentoSP.faturar",
-            "requestBody": {
-                "notas": {
-                    "codTipOper": int(os.getenv('SANKHYA_CODTIPOPER_DEVOLUCAO')),
-                    "serie": os.getenv('SANKHYA_SERIE_NF'),
-                    "tipoFaturamento": "FaturamentoNormal",
-                    "dataValidada": True,
-                    "faturarTodosItens": False,
-                    "notasComMoeda": {},
-                    "nota": [
-                        {
-                            "NUNOTA":nunota,
-                            "itens":{
-                                "item":itens
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-
-        res = requests.post(
-            url=url,
-            headers={ 'Authorization': token },
-            json=body)
-        
-        if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
-            return True, int(res.json().get('responseBody').get('notas').get('nota').get('$'))
-        else:
-            print(f"Erro ao devolver pedidos. Nunota {nunota}. {res.text}")
-            logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
-            return False, None
-
     async def alterar_observacao(self, nunota:int, observacao:str) -> bool:
 
         url = os.getenv('SANKHYA_URL_SAVE')
