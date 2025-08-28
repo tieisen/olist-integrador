@@ -75,7 +75,7 @@ class Pedido:
 
         def formatar_pedidos(lista_pedidos):
             linhas = [f"- {pedido['numero']}/{pedido['codigo']}" for pedido in lista_pedidos]
-            return "Referente aos pedidos:\n" + "\n".join(linhas)        
+            return f"Referente à {len(lista_pedidos)} pedidos:\n" + "\n".join(linhas)        
 
         dados_cabecalho = {}
         dados_itens = []       
@@ -116,3 +116,29 @@ class Pedido:
                 continue
 
         return dados_cabecalho, dados_itens, origem
+    
+    def to_sankhya_devolucao(self, dados_olist:list, dados_sankhya:list) -> list:
+        dados_itens = []
+
+        try:
+            for item_olist in dados_olist:
+                # Procura o item devolvido na lista de itens da nota do Sankhya
+                for item_snk in dados_sankhya:                
+                    if int(item_olist.get('sku'))==int(item_snk.get('codprod')):
+                        break
+
+                # Verifica se o item já está na lista de retorno e soma a quantidade                    
+                for item in dados_itens:
+                    if item.get('$') == item_snk.get('sequencia'):
+                        item['QTDFAT'] = item['QTDFAT']+item_olist.get('quantidade')
+                        continue            
+
+                # Adiciona o novo item na lista de retorno
+                dados_itens.append({
+                    "$": item_snk.get('sequencia'),
+                    "QTDFAT": item_olist.get('quantidade'),
+                })
+        except Exception as e:
+            logger.error("Erro ao converter dados de devolução do item %s. %s",item_olist,e)
+        finally:
+            return dados_itens
