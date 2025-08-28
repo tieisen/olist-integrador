@@ -315,6 +315,7 @@ class Produto:
                         obs = f"Produto {produto.cod_snk} com a situação {dados_produto_olist.get('situacao')} no Olist"
                         setattr(produto,"sucesso",True)
                         logger.warning(obs)
+                        crudProduto.atualizar(cod_snk=produto.cod_snk,pendencia=False)
                         continue
                 
                 print("Convertendo para o formato API Sankhya...")
