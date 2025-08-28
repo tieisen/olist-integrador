@@ -7,6 +7,7 @@ from src.olist.pedido import Pedido as PedidoOlist
 from src.olist.nota import Nota as NotaOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
 from src.parser.pedido import Pedido as ParserPedido
+from src.sankhya.nota import Nota as NotaSnk
 from src.sankhya.conferencia import Conferencia as ConferenciaSnk
 from src.parser.conferencia import Conferencia as ParserConferencia
 from src.services.viacep import Viacep
@@ -72,43 +73,6 @@ class Pedido:
         else:
             print("Nenhum pedido pendente de cancelamento encontrado.")
             logger.info("Nenhum pedido pendente de cancelamento encontrado.")
-
-        #pedidos_pendente_cancelar_snk = venda.buscar_importadas_cancelar()
-        # TODO: importadas_cancelar
-        pedidos_pendente_cancelar_snk = None
-        if pedidos_pendente_cancelar_snk:
-            print(f"Pedidos pendentes de cancelamento no Sankhya: {len(pedidos_pendente_cancelar_snk)}")            
-            snk = PedidoSnk()
-            obs = None
-            for i, pedido in enumerate(pedidos_pendente_cancelar_snk):
-                if obs:
-                    log_pedido.criar(log_id=self.log_id,
-                                     id_loja=pedidos_pendente_cancelar_snk[i-1].id_loja,
-                                     id_pedido=pedidos_pendente_cancelar_snk[i-1].id_pedido,
-                                     pedido_ecommerce=pedidos_pendente_cancelar_snk[i-1].cod_pedido,
-                                     status=False,
-                                     obs=obs)
-                    obs = None
-                time.sleep(self.req_time_sleep)  # Evita rate limit
-                dados_pedido_snk = await snk.buscar(nunota=pedido.nunota_pedido)
-                if not dados_pedido_snk:
-                    print("Pedido já foi excluido")
-                    venda.atualizar_cancelada(id_pedido=pedido.id_pedido)
-                else:                    
-                    print(f"Cancelando pedido #{pedido.num_pedido} no Sankhya")
-                    ack = await snk.cancelar(nunota=pedido.nunota_pedido,
-                                             num_pedido=pedido.num_pedido)
-                    if not ack:
-                        obs = f"Erro ao cancelar pedido #{pedido.num_pedido} no Sankhya"
-                        logger.error("Erro ao cancelar pedido %s no Sankhya", pedido.num_pedido)
-                    else:                     
-                        print(f"Pedido #{pedido.num_pedido} cancelado no Sankhya")
-                        logger.info("Pedido %s cancelado no Sankhya", pedido.num_pedido)
-                venda.atualizar_cancelada(id_pedido=pedido.id_pedido)
-            print("Pedidos atualizados no Sankhya com sucesso!")
-        else:
-            print("Nenhum pedido pendente de cancelamento encontrado.")
-            logger.info("Nenhum pedido pendente de cancelamento encontrado.")            
 
         print("Validação de pedidos cancelados concluída!")
 
@@ -836,4 +800,184 @@ class Pedido:
         status_log = False if obs else True
         log.atualizar(id=self.log_id, sucesso=status_log)
         print(f"-> Processo de confirmação de pedidos concluído!")
+        return True
+
+    async def devolver_lote(self):
+        """ Emite devolução no Sankhya dos pedidos cancelados após emissão da nota fiscal. """
+
+        def extrair_devolucoes(lista_pedidos:list) -> tuple[list,list]:
+            itens = []
+            try:
+                for pedido in lista_pedidos:
+                    # Extrai a lista de itens
+                    for item in pedido.get('itens'):
+                        for it in itens:
+                            if it.get('sku') == item['produto'].get('sku'):
+                                it['quantidade'] = it.get('quantidade')+item.get('quantidade')
+                                continue
+                        itens.append({
+                            "sku":item['produto'].get('sku'),
+                            "quantidade":item.get('quantidade')
+                        })
+            except Exception as e:
+                logger.error("Erro: %s",e)
+                print(f"Erro: {e}")
+            finally:
+                return itens
+        
+        def filtrar_pedidos_devolver(nunota:int,lista_pedidos_cancelados:list) -> list:
+            pedidos_filtrados = []
+            for pedido in lista_pedidos_cancelados:
+                if pedido.nunota_pedido == nunota:
+                    pedidos_filtrados.append(pedido)            
+            return pedidos_filtrados
+
+        # Busca pedidos cancelados depois de já terem sido faturados
+        print("Buscando pedidos cancelados após faturamento...")
+        lista_pedidos_cancelados = venda.buscar_importadas_cancelar()
+        if not lista_pedidos_cancelados:
+            print("Sem devoluções pendentes")
+            log.atualizar(id=self.log_id)
+            print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")            
+            return True  
+              
+        pedidos_pendente_cancelar_snk = list(set([p.nunota_pedido for p in lista_pedidos_cancelados]))
+        print(f"Pedidos pendentes de cancelamento no Sankhya: {len(pedidos_pendente_cancelar_snk)}")
+
+        olist = PedidoOlist()
+        snk = PedidoSnk()
+        nota = NotaSnk()
+        parser = ParserPedido()
+        obs:str=None
+        status:bool=None
+        obs_olist:str=None
+        status_olist:bool=None 
+
+        for i, pedido_snk in enumerate(pedidos_pendente_cancelar_snk):
+
+            if obs:
+                # Cria um log de erro se houver observação
+                print(obs)
+                if status:
+                    logger.warning(obs)
+                else:
+                    logger.error(obs)                
+                log_pedido.criar(log_id=self.log_id,
+                                 id_loja=0,
+                                 id_pedido=0,
+                                 pedido_ecommerce='',
+                                 nunota_pedido=pedido_snk,
+                                 evento='F',
+                                 status=status,
+                                 obs=obs)
+                obs = None
+                status = None
+            
+            print("")
+            print(f"Pedido {i+1}/{len(pedidos_pendente_cancelar_snk)}: {pedido_snk}")
+            pedidos = []
+            itens_olist = []
+            dados_pedidos_cancelar = []
+
+            # Busca dados do faturamento do pedido lançado no Sankhya
+            print("Buscando dados do faturamento do pedido lançado no Sankhya...")
+            dados_snk = await snk.buscar_nota_do_pedido(nunota=pedido_snk)
+
+            if dados_snk==0:
+                obs = f"Pedido {pedido_snk} não encontrado no Sankhya"
+                status = True
+                continue
+            
+            if not dados_snk:
+                obs = f"Erro ao buscar dados do faturamento do pedido {pedido_snk} no Sankhya"
+                status = False
+                continue            
+
+            pedidos_olist = filtrar_pedidos_devolver(pedido_snk,lista_pedidos_cancelados)
+
+            for j, pedido in enumerate(pedidos_olist):
+                if obs_olist:
+                    # Cria um log de erro se houver observação
+                    print(obs_olist)
+                    if status_olist:
+                        logger.warning(obs_olist)
+                    else:
+                        logger.error(obs_olist)     
+
+                    log_pedido.criar(log_id=self.log_id,
+                                     id_loja=pedidos_olist[j-1].id_loja,
+                                     id_pedido=pedidos_olist[j-1].id_pedido,
+                                     pedido_ecommerce=pedidos_olist[j-1].pedido_ecommerce,
+                                     nunota_pedido=pedidos_olist[j-1].nunota_pedido,
+                                     evento='F',
+                                     status=status_olist,
+                                     obs=obs_olist)
+                    obs_olist = None
+                    status_olist = None
+
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                # Busca dados dos pedidos no Olist
+                print("Buscando dados dos pedidos no Olist...")                
+                dados_pedido_olist = await olist.buscar(id=pedido.id_pedido)
+                if not dados_pedido_olist:
+                    obs_olist = f"Erro ao buscar dados do pedido {pedido.num_pedido} no Olist"
+                    status_olist = False
+                    continue
+                
+                dados_pedidos_cancelar.append(dados_pedido_olist)
+
+            itens_olist = extrair_devolucoes(dados_pedidos_cancelar)
+            if not itens_olist:
+                obs = f"Erro ao extrair dados da devolucao do pedido {pedido_snk}"
+                status = False
+                continue
+
+            # Converte para o formato da API do Sankhya
+            print("Convertendo dados para o formato da API do Sankhya...")
+            dados_formatados = parser.to_sankhya_devolucao(dados_olist=itens_olist,
+                                                           dados_sankhya=dados_snk.get('itens'))
+            if not dados_formatados:
+                obs = f"Erro ao converter dados da devolucao do pedido {pedido_snk} para o formato da API do Sankhya"
+                status = False
+                continue
+        
+            # Lança devolução
+            print(f"Lançando devolução do pedido {pedido_snk}/nota {dados_snk.get('nunota')}...")
+            ack, nunota_devolucao = await nota.devolver(nunota=dados_snk.get('nunota'),
+                                                        itens=dados_formatados)
+            if not ack:
+                obs = f"Erro ao lançar devolução do pedido {pedido_snk}/nota {dados_snk.get('nunota')}"
+                status = False
+                continue
+            
+            # Informa observação
+            print(f"Atualizando campo da observação...")
+            observacao = 'Devolução de ecommerce referente ao(s) pedido(s):\n'+',\n'.join(list(set([str(p.num_pedido) for p in pedidos_olist])))
+            ack = await nota.alterar_observacao(nunota=nunota_devolucao,
+                                                observacao=observacao)
+            if not ack:
+                obs_olist = f"Erro ao atualizar observação da nota {nunota_devolucao}"
+                status_olist = False
+                continue                       
+            
+            # Confirma a devolução
+            print("Confirmando devolução...")
+            ack = await nota.confirmar(nunota=nunota_devolucao)
+            if not ack:
+                obs_olist = f"Erro ao confirmar devolução {nunota_devolucao}"
+                status_olist = False
+                continue  
+
+            # Registra log que os pedidos foram devolvidos
+            for pedido in pedidos_olist:
+                venda.atualizar_devolvido(id_pedido=pedido.id_pedido)
+                log_pedido.criar(log_id=self.log_id,
+                                 id_loja=pedido.id_loja,
+                                 id_pedido=pedido.id_pedido,
+                                 pedido_ecommerce=pedido.cod_pedido,
+                                 nunota_pedido=pedido.nunota_pedido,
+                                 evento='F')      
+
+        print("================================")
+        print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")
         return True
