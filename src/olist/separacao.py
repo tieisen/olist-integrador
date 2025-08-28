@@ -53,9 +53,11 @@ class Separacao:
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
-        url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
-                self.endpoint+"/?situacao=2",  # Separada
-                self.endpoint+"/?situacao=4" ] # Em Separacao
+        # url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
+        #         self.endpoint+"/?situacao=2",  # Separada
+        #         self.endpoint+"/?situacao=4" ] # Em Separacao
+
+        url = [ self.endpoint+"/?situacao=1" ] # Aguardando Separacao
         
         if not url:
             print(f"Erro relacionado à url. {url}")
