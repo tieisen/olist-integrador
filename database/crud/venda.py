@@ -76,8 +76,8 @@ def buscar_idseparacao(cod_pedido:int):
 def buscar_importadas_cancelar():
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.nunota_pedido.isnot(None),
-                                        Venda.nunota_nota.is_(None),
-                                        Venda.dh_cancelamento_pedido.isnot(None)).order_by(Venda.num_pedido).all()
+                                        Venda.dh_cancelamento_pedido.isnot(None),
+                                        Venda.dh_cancelamento_nota.is_(None)).order_by(Venda.num_pedido).all()
     session.close()
     return venda
 
@@ -294,6 +294,17 @@ def atualizar_cancelada(id_pedido:int):
         session.close()
         return False
     setattr(venda, "dh_cancelamento_pedido", datetime.now())
+    session.commit()
+    session.close()
+    return True
+
+def atualizar_devolvido(id_pedido:int):
+    session = SessionLocal()
+    venda = session.query(Venda).filter(Venda.id_pedido == id_pedido).first()
+    if not venda:
+        session.close()
+        return False
+    setattr(venda, "dh_cancelamento_nota", datetime.now())
     session.commit()
     session.close()
     return True
