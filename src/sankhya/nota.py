@@ -35,7 +35,7 @@ class Nota:
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, pendentes:bool=False, offset:int=0) -> dict:
+    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, pendentes:bool=False, offset:int=0, itens:bool=False) -> dict:
 
         if not any([nunota, id_olist, codpedido, pendentes]):
             print("Nenhum critério de busca informado. Nenhum dado será retornado.")
@@ -131,11 +131,14 @@ class Nota:
             })
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
-            #if any([nunota, id_olist, codpedido]) and not pendentes:
-            if isinstance(self.formatter.return_format(res.json()), list):
-                return self.formatter.return_format(res.json())[0]
-            else:
-                return self.formatter.return_format(res.json())            
+            retorno_formatado = self.formatter.return_format(res.json())
+            if isinstance(retorno_formatado, list):
+                dados_nota = retorno_formatado[0]            
+            if itens:
+                dados_itens = await Itens().buscar(nunota=int(dados_nota.get('nunota')))
+                dados_nota['itens'] = dados_itens
+            return dados_nota                
+
             #return self.formatter.return_format(res.json())
         else:
             if nunota:
