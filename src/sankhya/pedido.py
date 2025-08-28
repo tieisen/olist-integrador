@@ -5,6 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from src.sankhya.connect import Connect
 from src.utils.formatter import Formatter
+from src.sankhya.nota import Nota as NotaSnk
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -50,9 +51,7 @@ class Pedido:
             return False
         
         try:
-            # print("Buscando token...")
             token = self.con.get_token()
-            # print(f"Token encontrado.")
         except Exception as e:
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
@@ -119,13 +118,17 @@ class Pedido:
         if res.status_code in (200,201) and res.json().get('status')=='1':
             try:
                 dados_pedido = self.formatter.return_format(res.json())[0]
+                if isinstance(dados_pedido,int) and dados_pedido==404:
+                    # Pedido não encontrado
+                    return 0
                 if itens:
-                    dados_itens = await Itens().buscar(token=token, nunota=int(dados_pedido.get('nunota')))
+                    dados_itens = await Itens().buscar(nunota=int(dados_pedido.get('nunota')))
                     dados_pedido['itens'] = dados_itens
                 return dados_pedido
-            except:
-                return False
-          
+            except Exception as e:
+                print(f"Erro ao formatar retorno da API para o pedido {nunota}. {e}")
+                logger.error("Erro ao formatar retorno da API para o pedido %s. %s",nunota,e)                
+                return False          
         else:
             if nunota:
                 print(f"Erro ao buscar pedido. Nunota {nunota}. {res.text}")
@@ -174,6 +177,26 @@ class Pedido:
             logger.error("Erro ao buscar número da nota. %s",res.json())
             print(f"Erro ao buscar número da nota. {res.json()}")
             return False
+
+    async def buscar_nota_do_pedido(self, nunota:int) -> dict:
+        
+        nunota_nota = await self.buscar_nunota_nota(nunota=nunota)
+        if not nunota_nota:
+            #print(f"Pedido {nunota_nota} sem Nota vinculada")
+            logger.warning("Pedido %s sem Nota vinculada",nunota_nota)
+            return 0
+        nunota_nota = nunota_nota[0].get('nunota')
+        
+        nota_snk = NotaSnk()
+        dados_nota = await nota_snk.buscar(nunota=nunota_nota,
+                                           itens=True)
+        
+        if not dados_nota:
+            print(f"Erro ao buscar dados da nota {nunota_nota} vinculada ao pedido {nunota}")
+            logger.error("Erro ao buscar dados da nota %s vinculada ao pedido %s", nunota_nota, nunota)
+            return False
+        
+        return dados_nota
 
     async def buscar_cidade(self, ibge:int=None) -> dict:
 
