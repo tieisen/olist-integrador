@@ -411,52 +411,6 @@ class Pedido:
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
-    async def alterar_observacao(self, nunota:int, observacao:str) -> bool:
-
-        url = os.getenv('SANKHYA_URL_SAVE')
-        if not url:
-            print(f"Erro relacionado à url. {url}")
-            logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
-        body = {
-            "serviceName": "DatasetSP.save",
-            "requestBody": {
-                "entityName": "CabecalhoNota",
-                "standAlone": False,
-                "fields": ["OBSERVACAO"],
-                "records": [
-                    {
-                        "pk": {
-                            "NUNOTA": nunota
-                        },
-                        "values": {
-                            "0": observacao
-                        }
-                    }
-                ]
-            }
-        }
-
-        res = requests.post(
-            url=url,
-            headers={ 'Authorization': token },
-            json=body)
-        
-        if res.status_code == 200 and res.json().get('status') == '1':
-            return True
-        else:
-            print(f"Erro ao informar campo observacao. Nunota {nunota}. {res.text}")
-            logger.error("Erro ao informar campo observacao. Nunota %s. %s",nunota,res.text)
-            return False
-
 class Itens(Pedido):
     def __init__(self):
         self.formatter = Formatter()
