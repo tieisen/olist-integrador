@@ -108,9 +108,7 @@ class Pedido:
                 return False
 
             if dados_pedido.get('situacao') == 8:
-                obs = f"Pedido {dados_pedido.get('numeroPedido')} dados incompletos"
-                print(obs)
-                logger.error(obs)
+                obs = f"Pedido {dados_pedido.get('numeroPedido')} dados incompletos"                
                 log_pedido.criar(log_id=self.log_id,
                                  id_loja=dados_pedido['ecommerce'].get('id'),
                                  id_pedido=dados_pedido.get('id'),
