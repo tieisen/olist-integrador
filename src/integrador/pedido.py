@@ -185,8 +185,7 @@ class Pedido:
                 continue
 
             if dados_pedido.get('situacao') == 8:
-                print(f"Pedido {dados_pedido.get('numeroPedido')} dados incompletos")
-                logger.warning("Pedido %s dados incompletos", dados_pedido.get('numeroPedido'))
+                # Pedido status Dados Incompletos
                 continue
 
             ack = venda.criar(id_loja=dados_pedido['ecommerce'].get('id'),
