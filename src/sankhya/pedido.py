@@ -353,7 +353,7 @@ class Pedido:
             "requestBody":{
                 "notas":{
                     "codTipOper":os.getenv('SANKHYA_CODTIPOPER_NOTA'),
-                    "serie":"2",
+                    "serie":os.getenv('SANKHYA_SERIE_NF'),
                     "dtFaturamento":data_faturamento,
                     "tipoFaturamento":"FaturamentoNormal",
                     "dataValidada":"true",
@@ -399,6 +399,7 @@ class Pedido:
         try:
             token = self.con.get_token()
         except Exception as e:
+            print(f"Erro relacionado ao token de acesso. {e}")
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
