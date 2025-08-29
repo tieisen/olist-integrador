@@ -97,7 +97,7 @@ def buscar_sem_nota():
     session.close()
     return venda
 
-def buscar_financeiro():
+def buscar_financeiro_pendente():
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.id_nota.isnot(None),
                                         Venda.dh_cancelamento_pedido.is_(None),
@@ -120,13 +120,6 @@ def buscar_separacao_idpedido(id_pedido:int):
                                         Venda.id_separacao.is_(None),
                                         Venda.dh_cancelamento_pedido.is_(None),
                                         Venda.dh_confirmacao_nota_snk.is_(None)).order_by(Venda.num_pedido).all()
-    session.close()
-    return venda
-
-def buscar_financeiro_pendente():
-    session = SessionLocal()
-    venda = session.query(Venda).filter(Venda.id_financeiro.is_(None),
-                                        Venda.id_nota.isnot(None)).order_by(Venda.num_pedido).all()
     session.close()
     return venda
 
