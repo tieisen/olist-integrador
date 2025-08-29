@@ -64,8 +64,7 @@ class Produto:
                     dados_produto_olist = await self.produto_olist.buscar(id=alteracao.get('id'))
                     if dados_produto_olist.get('situacao') == 'A':
                         crudProduto.criar(cod_snk=alteracao.get('sku'),
-                                          cod_olist=alteracao.get('id'),
-                                          pendencia=True)
+                                          cod_olist=alteracao.get('id'))
                         crudLogProd.criar(log_id=log_id,
                                           codprod=alteracao.get('sku'),
                                           idprod=alteracao.get('id'),
