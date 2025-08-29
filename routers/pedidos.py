@@ -16,11 +16,14 @@ def default():
 @router.get("/integrar")
 def integrar_pedidos():
     """
+    Valida devoluções.
     Busca os pedidos novos do Olist que estão com status Preparando Envio.
     Valida pedidos cancelados.
     Importa os pedidos pendentes do Olist em um único pedido no Sankhya.
     Confirma o pedido no Sankhya.
     """
+    if not asyncio.run(pedido.devolver_lote()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
     if not asyncio.run(pedido.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")
     if not asyncio.run(pedido.validar_cancelamentos()):
