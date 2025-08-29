@@ -26,17 +26,14 @@ class Separacao:
         separacao = SeparacaoOlist()
         lista_separacoes = await separacao.listar()
         if not lista_separacoes:
-            print("Nenhuma separacao pendente encontrada.")
-            logger.info("Nenhuma separacao pendente encontrada.")
+            # Nenhuma separacao pendente encontrada
             return True
         
         print(f"Separacoes pendentes: {len(lista_separacoes)}")
 
         for item in lista_separacoes:
             if venda.buscar_separacao_idpedido(id_pedido=item.get('id_pedido')):
-                if venda.atualizar_separacao(id_pedido=item.get('id_pedido'), id_separacao=item.get('id_separacao')):
-                    print("Separacao atualizada com sucesso!")
-                else:
+                if not venda.atualizar_separacao(id_pedido=item.get('id_pedido'), id_separacao=item.get('id_separacao')):
                     print(f"Erro ao atualizar separacao do pedido ID {item.get('id_pedido')}.")
                     logger.error("Erro ao atualizar separacao do pedido ID %s.",item.get('id_pedido'))
 
@@ -51,8 +48,7 @@ class Separacao:
         lista_checkout = venda.buscar_separacao()
 
         if not lista_checkout:
-            print("Nenhum checkout pendente encontrado.")
-            logger.info("Nenhum checkout pendente encontrado.")
+            # Nenhum checkout pendente encontrado
             return True
         
         print(f"Checkouts pendentes: {len(lista_checkout)}")
@@ -62,13 +58,11 @@ class Separacao:
             for item in lista_checkout:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
                 if not await separacao.concluir(id=item.id_separacao):
-                    ack = False
                     print(f"Erro ao concluir checkout do pedido ID {item.id_pedido}.")
                     logger.error("Erro ao concluir checkout do pedido ID %s.",item.id_pedido)
                     continue
 
             print("Checkout dos pedidos concluído!")
-
             return True
         except:
             return False
@@ -78,8 +72,7 @@ class Separacao:
         print("Buscando pedidos para separar...")
         lista_checkout = venda.buscar_separacao()
         if not lista_checkout:
-            print("Nenhuma separacao pendente encontrada.")
-            logger.info("Nenhuma separacao pendente encontrada.")
+            # Nenhuma separacao pendente encontrada
             return True
         
         print(f"Separacoes pendentes: {len(lista_checkout)}")
@@ -89,7 +82,6 @@ class Separacao:
             for item in lista_checkout:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
                 if not await separacao.separar(id=item.id_separacao):
-                    ack = False
                     print(f"Erro ao separar pedido {item.num_pedido}.")
                     logger.error("Erro ao separar pedido %s.",item.num_pedido)
                     continue
