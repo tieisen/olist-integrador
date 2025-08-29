@@ -306,6 +306,18 @@ def atualizar_devolvido(id_pedido:int):
         session.close()
         return False
     setattr(venda, "dh_cancelamento_nota", datetime.now())
+    setattr(venda, "id_separacao", None)
+    setattr(venda, "num_nota", None)
+    setattr(venda, "id_nota", None)
+    setattr(venda, "dh_nota_emissao", None)
+    setattr(venda, "id_financeiro", None)
+    setattr(venda, "dh_baixa_financeiro", None)
+    setattr(venda, "nunota_pedido", None)
+    setattr(venda, "dh_importacao_pedido_snk", None)
+    setattr(venda, "dh_confirmacao_pedido_snk", None)
+    setattr(venda, "dh_faturamento_snk", None)
+    setattr(venda, "nunota_nota", None)
+    setattr(venda, "dh_confirmacao_nota_snk", None)
     session.commit()
     session.close()
     return True
