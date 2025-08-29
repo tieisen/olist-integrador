@@ -280,7 +280,7 @@ def atualizar_financeiro(num_nota:int, id_financeiro:int, dh_baixa:str=None):
         return False
     setattr(venda, "id_financeiro", id_financeiro)
     if dh_baixa:
-        setattr(venda, "dh_baixa_financeiro", datetime.strptime(dh_baixa,'%Y-%m-%d %H:%M:%S'))
+        setattr(venda, "dh_baixa_financeiro", datetime.strptime(dh_baixa,'%Y-%m-%d'))
     else:
         setattr(venda, "dh_baixa_financeiro", datetime.now())    
     session.commit()
