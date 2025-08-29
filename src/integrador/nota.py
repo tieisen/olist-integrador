@@ -447,6 +447,7 @@ class Nota:
                 if obs:
                     # Cria um log de erro se houver observação
                     print(obs)
+                    logger.error(obs)
                     log_pedido.criar(log_id=log_id,
                                      id_loja=contas_pendentes[i-1].id_loja,
                                      id_pedido=contas_pendentes[i-1].id_pedido,
@@ -509,5 +510,6 @@ class Nota:
             log.atualizar(id=log_id, sucesso=status_log)
             print(f"-> Processo de baixa de contas a receber concluído! Status do log: {status_log}")
             return True
-        except:
+        except Exception as e:
+            logger.error(e)
             return False
