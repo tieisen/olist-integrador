@@ -20,6 +20,7 @@ class Nota:
 
     def __init__(self):
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
+        self.serie_nfe = os.getenv('SANKHYA_SERIE_NF',1)
 
     async def emitir(self):
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
@@ -425,21 +426,20 @@ class Nota:
         obs = None
         # Busca notas pendentes
         print("Busca notas pendentes")
-        notas_pendentes = venda.buscar_financeiro()
-        if not notas_pendentes:
-            obs = "Nenhuma nota pendente"
+        contas_pendentes = venda.buscar_financeiro_pendente()
+        if not contas_pendentes:
+            obs = "Nenhum financeiro pendente"
             print(obs)
             return True
         
-        print(f"{len(notas_pendentes)} notas pendentes encontradas")
+        print(f"{len(contas_pendentes)} contas a receber pendentes encontradas")
         evento = 'F'
         obs = None
         first = True 
         nota_olist = NotaOlist()
 
         try:
-
-            for i, nota in enumerate(notas_pendentes):
+            for i, nota in enumerate(contas_pendentes):
                 if not first:
                     time.sleep(self.req_time_sleep)  # Evita rate limit
                 first = False
@@ -448,32 +448,46 @@ class Nota:
                     # Cria um log de erro se houver observação
                     print(obs)
                     log_pedido.criar(log_id=log_id,
-                                     id_loja=notas_pendentes[i-1].id_loja,
-                                     id_pedido=notas_pendentes[i-1].id_pedido,
-                                     pedido_ecommerce=notas_pendentes[i-1].cod_pedido,
-                                     nunota_pedido=notas_pendentes[i-1].nunota_pedido,
-                                     nunota_nota=notas_pendentes[i-1].nunota_nota,
-                                     id_nota=notas_pendentes[i-1].id_nota,
+                                     id_loja=contas_pendentes[i-1].id_loja,
+                                     id_pedido=contas_pendentes[i-1].id_pedido,
+                                     pedido_ecommerce=contas_pendentes[i-1].cod_pedido,
+                                     nunota_pedido=contas_pendentes[i-1].nunota_pedido,
+                                     nunota_nota=contas_pendentes[i-1].nunota_nota,
+                                     id_nota=contas_pendentes[i-1].id_nota,
                                      evento=evento,
                                      status=False,
                                      obs=obs)
                     obs = None
                                 
                 print("")
-                print(f"Baixando financeiro da nota {i+1}/{len(notas_pendentes)}: {nota.num_nota}")
+                print(f"Baixando financeiro da nota {i+1}/{len(contas_pendentes)}: {nota.num_nota}")
                 
-                dados_financeiro = await nota_olist.buscar_financeiro(serie='2', numero=str(nota.num_nota).zfill(6))
+                dados_financeiro = await nota_olist.buscar_financeiro(serie=str(self.serie_nfe),
+                                                                      numero=str(nota.num_nota).zfill(6))
                 if not dados_financeiro:
                     obs = f"Erro ao buscar financeiro da nota {nota.num_nota} no Olist"
                     print(obs)
                     continue
                 
+                if dados_financeiro.get('dataLiquidacao'):
+                    print(f"Financeiro da nota {nota.num_nota} já está baixado no Olist")
+                    venda.atualizar_financeiro(num_nota=nota.num_nota,
+                                               id_financeiro=dados_financeiro.get('id'),
+                                               dh_baixa=dados_financeiro.get('dataLiquidacao'))
+                    log_pedido.criar(log_id=log_id,
+                                     id_loja=nota.id_loja,
+                                     id_pedido=nota.id_pedido,
+                                     pedido_ecommerce=nota.cod_pedido,
+                                     nunota_pedido=nota.nunota_pedido,
+                                     nunota_nota=nota.nunota_nota,
+                                     id_nota=nota.id_nota,
+                                     evento=evento,
+                                     status=True)                    
+                    continue
+
                 ack_financeiro = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),
                                                                     valor=dados_financeiro.get('valor'))
-                if ack_financeiro is None:
-                    print(f"Financeiro da nota {nota.num_nota} já está baixado no Olist")
-                    continue
-                if ack_financeiro is False:
+                if not ack_financeiro:
                     obs = f"Erro ao baixar financeiro da nota {nota.num_nota} no Olist"
                     continue
                 
@@ -493,7 +507,7 @@ class Nota:
             
             status_log = False if obs else True
             log.atualizar(id=log_id, sucesso=status_log)
-            print(f"-> Processo de baixa do financeiro das notas concluído! Status do log: {status_log}")
+            print(f"-> Processo de baixa de contas a receber concluído! Status do log: {status_log}")
             return True
         except:
             return False
