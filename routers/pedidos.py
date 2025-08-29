@@ -49,6 +49,17 @@ def faturar_pedidos():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True
 
+@router.get("/faturar/sankhya")
+def faturar_sankhya():
+    """
+    Cria e confirma a nota de transferência no Sankhya.
+    Fatura o pedido no Sankhya.
+    Confirma a nota gerada no Sankhya.
+    """    
+    if not asyncio.run(faturamento.faturar_sankhya()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
+    return True
+
 @router.get("/receber/{numero}")
 def receber_pedido(numero:int):
     """
