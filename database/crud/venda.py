@@ -123,6 +123,13 @@ def buscar_separacao_idpedido(id_pedido:int):
     session.close()
     return venda
 
+def buscar_financeiro_pendente():
+    session = SessionLocal()
+    venda = session.query(Venda).filter(Venda.id_financeiro.is_(None),
+                                        Venda.id_nota.isnot(None)).order_by(Venda.num_pedido).all()
+    session.close()
+    return venda
+
 def validar_cancelamentos(lista_ids:list):
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.id_pedido.in_(lista_ids),
