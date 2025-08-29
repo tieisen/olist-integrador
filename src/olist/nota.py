@@ -331,16 +331,12 @@ class Nota:
             },
             json=payload
         )
-
-        if res.status_code == 409:
-            # Financeiro da nota já foi baixado
-            return None
-        
-        if res.status_code == 204:
-            # Financeiro baixado com sucesso            
-            return True
         
         if res.status_code not in (409,204):
             logger.error("Erro %s: %s fin %s", res.status_code, res.text, id)            
             print(f"Erro {res.status_code}: {res.text}")
             return False
+        
+        # Financeiro baixado com sucesso (204) ou
+        # Financeiro da nota já foi baixado (409)
+        return True        
