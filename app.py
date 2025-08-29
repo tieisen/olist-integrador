@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import estoque, pedidos, produtos
+from routers import estoque, pedidos, produtos, notas
 
 app = FastAPI(title="Integrador Olist x Sankhya",
               description="Integrador Olist x Sankhya",
@@ -14,9 +14,10 @@ app.add_middleware(
     allow_headers=["*"],  # Permite todos os headers
 )
 
+app.include_router(produtos.router, prefix="/produtos", tags=["Produtos"])
 app.include_router(estoque.router, prefix="/estoque", tags=["Estoque"])
 app.include_router(pedidos.router, prefix="/pedidos", tags=["Pedidos"])
-app.include_router(produtos.router, prefix="/produtos", tags=["Produtos"])
+app.include_router(notas.router, prefix="/notas", tags=["Notas"])
 
 @app.get("/",include_in_schema=False)
 def read_root():
