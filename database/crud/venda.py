@@ -101,6 +101,7 @@ def buscar_financeiro_pendente():
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.id_nota.isnot(None),
                                         Venda.dh_cancelamento_pedido.is_(None),
+                                        Venda.num_pedido > 4000,
                                         Venda.id_financeiro.is_(None)).order_by(Venda.num_pedido).all()
     session.close()
     return venda
