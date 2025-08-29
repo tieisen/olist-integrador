@@ -42,19 +42,36 @@ class Produto:
         print(f"{len(alteracoes_raw)} produtos com alteracoes pendentes")
 
         try:
-            for alteracao in alteracoes_raw:
-                if not alteracao.get('sku'):
-                    continue
-                hist_produto = crudProduto.buscar_snk(cod_snk=alteracao.get('sku'))
-                if not hist_produto:
-                    obs = f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} não pode ser alterado pois não foi encontrado"
+            obs = None
+            for i, alteracao in enumerate(alteracoes_raw):
+                if obs:
                     logger.error(obs)
                     print(obs)
                     crudLogProd.criar(log_id=log_id,
-                                      codprod=alteracao.get('sku'),
-                                      idprod=alteracao.get('id'),
+                                      codprod=alteracoes_raw[i-1].get('sku',0),
+                                      idprod=alteracoes_raw[i-1].get('id',0),
                                       sucesso=False,
                                       obs=obs)                    
+                
+                if not alteracao.get('sku'):
+                    # Produto tipo simples porém sem SKU no cadastro do Olist
+                    obs = f"Produto sem SKU. {alteracao}"
+                    continue
+
+                hist_produto = crudProduto.buscar_snk(cod_snk=alteracao.get('sku'))
+                if not hist_produto:
+                    # Se o produto estiver ativo, adiciona ele na base
+                    dados_produto_olist = await self.produto_olist.buscar(id=alteracao.get('id'))
+                    if dados_produto_olist.get('situacao') == 'A':
+                        crudProduto.criar(cod_snk=alteracao.get('sku'),
+                                          cod_olist=alteracao.get('id'),
+                                          pendencia=True)
+                        crudLogProd.criar(log_id=log_id,
+                                          codprod=alteracao.get('sku'),
+                                          idprod=alteracao.get('id'),
+                                          sucesso=True)
+                    else:
+                        obs = f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} não pode ser alterado pois não foi encontrado"               
                     continue
 
                 ultima_alteracao = datetime.strptime(alteracao.get('dh_alter'),'%Y-%m-%d %H:%M:%S')
