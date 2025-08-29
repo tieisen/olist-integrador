@@ -187,6 +187,7 @@ class Estoque:
             FROM TGFEST EST
                 INNER JOIN TGFPRO PRO ON EST.CODPROD = PRO.CODPROD
             WHERE EST.CODEMP = 31
+                AND EST.CODLOCAL IN (101,911)
                 AND EST.CODPROD = {codprod}
                 AND EST.CONTROLE = '{controle}'
             GROUP BY EST.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
@@ -199,6 +200,7 @@ class Estoque:
                 FROM TGFEST EST
                     INNER JOIN TGFPRO PRO ON EST.CODPROD = PRO.CODPROD
                 WHERE EST.CODEMP = 31
+                    AND EST.CODLOCAL IN (101,911)
                     AND TRIM(EST.CONTROLE) IS NOT NULL
                     AND EST.CODPROD IN ({','.join(map(str,produtos))})
                 GROUP BY EST.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
