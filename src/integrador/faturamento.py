@@ -508,3 +508,78 @@ class Faturamento:
             return True
         except:
             return False
+        
+    async def faturar_sankhya(self):        
+
+        # Busca os pedidos pendentes de faturamento
+        pedidos_faturar = venda.buscar_faturar()
+        if not pedidos_faturar:
+            print("Nenhum pedido para faturamento.")
+            return True
+
+        print(f"Pedidos para faturamento: {len(pedidos_faturar)}")
+
+        try:
+            pedidos_sankhya = list(set([p.nunota_pedido for p in pedidos_faturar]))
+            pedido_snk = PedidoSnk()
+            nota_snk = NotaSnk()
+
+            # Verifica se o pedido foi faturado ou trancou
+            print("Verificando se o pedido foi faturado...")
+            val = 0
+            for nunota in pedidos_sankhya:
+                status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
+                if status_faturamento:
+                    val+=1
+                    print(f"Pedido {nunota} já foi faturado.")
+                    # Atualiza base de dados
+                    venda.atualizar_faturada_lote(nunota_pedido=nunota,
+                                                  nunota_nota=status_faturamento[0].get('nunota'))                    
+                    venda.atualizar_confirmada_nota_lote(nunota_nota=status_faturamento[0].get('nunota'))
+            if val != 0:
+                print("=====================================================")
+                print("-> PROCESSO CONCLUÍDO!")                
+                return True
+            
+            # Se o pedido não foi faturado...
+            # Faz a nota de transferência
+            print("Gerando a nota de transferência...")
+            if not await self.venda_entre_empresas_em_lote():
+                logger.error("Erro ao gerar a nota de transferência.")
+                print("Erro ao gerar a nota de transferência.")
+                return False
+
+            # Fatura no Sankhya
+            nunotas_nota = []
+            for nunota in pedidos_sankhya:
+                print(f"Faturando pedido {nunota} no Sankhya...")
+                ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
+                if not ack:
+                    print(f"Erro ao faturar pedido {nunota}")
+                    logger.error("Erro ao faturar pedido %s",nunota)
+                    continue
+                nunotas_nota.append(nunota_nota)
+                venda.atualizar_faturada_lote(nunota_pedido=nunota,
+                                              nunota_nota=nunota_nota)
+            if not nunotas_nota:
+                print("Erro ao faturar pedido(s) no Sankhya")
+                logger.error("Erro ao faturar pedido(s) no Sankhya")
+                return False
+
+            # Confirma Nota(s) no Sankhya
+            for nunota in nunotas_nota:
+                print(f"Confirmando Nota {nunota} no Sankhya...")
+                ack = await nota_snk.confirmar(nunota=nunota)
+                if not ack:
+                    print(f"Erro ao confirmar nota {nunota}")
+                    logger.error("Erro ao confirmar nota %s",nunota)                    
+                else:
+                    venda.atualizar_confirmada_nota_lote(nunota_nota=nunota)
+                    print(f"-> Confirmação da Nota {nunota} concluída!")                
+
+            print("=====================================================")
+            print("-> PROCESSO CONCLUÍDO!")
+
+            return True
+        except:
+            return False
