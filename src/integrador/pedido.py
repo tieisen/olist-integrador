@@ -57,8 +57,7 @@ class Pedido:
         cancelados = await olist.buscar(cancelados=True)
 
         if not cancelados:
-            print("Nenhum pedido cancelado encontrado.")
-            logger.info("Nenhum pedido cancelado encontrado.")
+            # Nenhum pedido cancelado encontrado
             return False
 
         print(f"Pedidos dos últimos 3 dias cancelados no Olist: {len(cancelados)}")
@@ -71,8 +70,8 @@ class Pedido:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
             print("Pedidos atualizados no integrador com sucesso!")
         else:
-            print("Nenhum pedido pendente de cancelamento encontrado.")
-            logger.info("Nenhum pedido pendente de cancelamento encontrado.")
+            # Nenhum pedido pendente de cancelamento encontrado
+            pass
 
         print("Validação de pedidos cancelados concluída!")
 
