@@ -24,8 +24,8 @@ async def criar(log_id:int,codprod:int,idprod:int,campo:str,valor_old:str=None,v
                               valor_new=str(valor_new),
                               obs=obs)
         session.add(novo_log)
-        session.commit()
-        session.refresh(novo_log)
+        await session.commit()
+        await session.refresh(novo_log)
         return True
 
 async def buscar_status_false(log_id: int):
