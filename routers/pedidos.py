@@ -22,12 +22,12 @@ def integrar_pedidos():
     Importa os pedidos pendentes do Olist em um único pedido no Sankhya.
     Confirma o pedido no Sankhya.
     """
+    if not asyncio.run(pedido.validar_cancelamentos()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
     if not asyncio.run(pedido.devolver_lote()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
     if not asyncio.run(pedido.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")
-    if not asyncio.run(pedido.validar_cancelamentos()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
     if not asyncio.run(separacao.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
     if not asyncio.run(pedido.importar_lote()):
@@ -76,4 +76,17 @@ def buscar_separacao():
     """
     if not asyncio.run(separacao.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
+    return True
+
+@router.get("/devolver")
+def devolver_pedidos():
+    """
+    Valida devoluções e cancelamentos
+    """
+    if not asyncio.run(pedido.validar_cancelamentos()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
+    if not asyncio.run(pedido.devolver_lote()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
+    if not asyncio.run(pedido.receber()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")    
     return True
