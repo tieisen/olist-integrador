@@ -1,54 +1,44 @@
-from database.database import SessionLocal
-from database.models import Log
+from database.database import AsyncSessionLocal
 from datetime import datetime, timedelta
+from database.models import Log
+from src.utils.log import Log as LogEventos
+import os
+import logging
+from dotenv import load_dotenv
 
-def criar(de:str, para:str, contexto:str=None):
-    session = SessionLocal()
-    novo_log = Log(dh_execucao=datetime.now(),
-                   de=de,
-                   para=para,
-                   contexto=contexto)
-    session.add(novo_log)
-    session.commit()
-    session.refresh(novo_log)
-    session.close()
+load_dotenv('keys/.env')
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename=LogEventos().buscar_path(),
+                    encoding='utf-8',
+                    format=os.getenv('LOGGER_FORMAT'),
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    level=logging.INFO)
+
+async def criar(empresa_id:int, de:str, para:str, contexto:str):
+    async with AsyncSessionLocal() as session:
+        novo_log = Log(empresa_id=empresa_id,
+                       de=de,
+                       para=para,
+                       contexto=contexto)
+        session.add(novo_log)
+        await session.commit()
+        await session.refresh(novo_log)
     return novo_log.id
 
-def atualizar(id:int, sucesso:bool=True):
-    session = SessionLocal()
-    log = session.query(Log).filter(Log.id == id).first()
-    if not log:
-        session.close()
-        return False
-    setattr(log, "sucesso", sucesso)
-    session.commit()
-    session.refresh(log)
-    session.close()
-    return True
+async def atualizar(id:int, sucesso:bool=True):
+    async with AsyncSessionLocal() as session:
+        log = await session.query(Log).filter(Log.id == id).first()
+        if not log:
+            return False
+        setattr(log, "sucesso", sucesso)
+        await session.commit()
+        await session.refresh(log)
+        return True
 
-def buscar_de(de: str):
-    session = SessionLocal()
-    log = session.query(Log).filter(Log.de == de).first()
-    session.close()
-    return log
-
-def buscar_id(id: int):
-    session = SessionLocal()
-    log = session.query(Log).filter(Log.id == id).first()
-    session.close()
-    return log
-
-def buscar_para_contexto(para: str, contexto: str):
-    session = SessionLocal()
-    log = session.query(Log).filter(Log.para == para,
-                                    Log.contexto == contexto).order_by(Log.id.desc()).first()
-    session.close()
-    return log
-
-def buscar_falhas():
-    session = SessionLocal()
-    log = session.query(Log).filter(Log.sucesso.isnot(1),
-                                    Log.dh_execucao >= datetime.now().replace(minute=0, second=0, microsecond=0)-timedelta(hours=1)).order_by(Log.dh_execucao).all()
-    session.close()
-    return log
+async def buscar_falhas(empresa_id:int):
+    async with AsyncSessionLocal() as session:
+        log = await session.query(Log).filter(Log.sucesso.isnot(1),
+                                              Log.dh_execucao >= datetime.now().replace(minute=0, second=0, microsecond=0)-timedelta(hours=1),
+                                              Log.empresa_id == empresa_id).order_by(Log.dh_execucao).all()
+        return log
   
