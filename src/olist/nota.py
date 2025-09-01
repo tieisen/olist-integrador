@@ -1,6 +1,7 @@
 import os
 import logging
 import requests
+from datetime import datetime
 from dotenv import load_dotenv
 from src.olist.connect import Connect
 from src.utils.log import Log
@@ -77,6 +78,36 @@ class Nota:
             print("Nota cancelada")
             logger.error("Nota cancelada")
             return False
+        
+    async def buscar_canceladas(self) -> bool:
+
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False
+
+        url = self.endpoint+f"/?situacao=3&tipo=S&dataInicial={datetime.now().strftime('%Y-%m-%d')}&dataFinal={datetime.now().strftime('%Y-%m-%d')}"
+
+        res = requests.get(
+            url = url,
+            headers = {
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        if res.status_code != 200:
+            logger.error("Erro %s: %s", res.status_code, res.text)
+            print(f"Erro {res.status_code}: {res.text}")
+            return False
+        
+        if not res.json().get('itens'):
+            return []
+
+        lista_canceladas = [r.get('id') for r in res.json().get('itens')]
+        return lista_canceladas
 
     async def buscar_legado(self, id:int=None, id_ecommerce:str=None) -> bool:
 
