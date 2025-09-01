@@ -1,4 +1,4 @@
-from database.database2 import AsyncSessionLocal
+from database.database import AsyncSessionLocal
 from datetime import datetime
 from database.models import Empresa
 from src.utils.log import Log
