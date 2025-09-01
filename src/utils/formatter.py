@@ -65,11 +65,13 @@ class Formatter:
 
     def return_format(self, res) -> list:
 
+        # RETORNO DE CONSULTA PELO DBEXPLORER
         if res.get('serviceName') == 'DbExplorerSP.executeQuery':
             field_names = [field['name'].lower() for field in res['responseBody']['fieldsMetadata']]
             result = [dict(zip(field_names, row)) for row in res['responseBody']['rows']]
             return result
         
+        # RETORNO DE CONSULTA DE VIEW
         if res.get('serviceName') == 'CRUDServiceProvider.loadView':
             result = []
             aux = res['responseBody']['records']['record']
@@ -81,14 +83,19 @@ class Formatter:
                 result.append({str.lower(chave): valor['$'] for chave, valor in aux.items()})
             return result
 
+        # RETORNO VAZIO DE CONSULTA DE ENTIDADES
         if res['responseBody']['entities']['total'] == '0':
-            return [404]
+            return []
 
-        res_formatted = {}        
+        # RETORNO DE CONSULTA DE ENTIDADES
+        res_formatted = {}
+
+        # Extrai as colunas
         columns = res['responseBody']['entities']['metadata']['fields']['field']
         if isinstance(columns, dict):
             columns = [columns]
 
+        # Extrai retorno de 1 linha (dicionario)
         if res['responseBody']['entities']['total'] == '1':
             rows = [res['responseBody']['entities']['entity']]
             try:            
@@ -100,9 +107,11 @@ class Formatter:
             finally:
                 return [res_formatted]
         else:
+        # Extrai retorno de várias linhas (lista de dicionarios)
             new_res = []
             rows = res['responseBody']['entities']['entity']
 
+            # Se columns for uma lista, extrai no formato chave:valor
             if isinstance(columns, list):
                 try:
                     for row in rows:
@@ -114,7 +123,8 @@ class Formatter:
                     logger.error("Erro ao formatar dados da resposta. %s",e)
                 finally:
                     return new_res
-                
+
+            # Se columns for um dicionario, extrai no formato chave:[valores]
             if isinstance(columns, dict):
                 values = []
                 try:            
