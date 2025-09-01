@@ -1,4 +1,4 @@
-from database.database import SessionLocal
+from database.database import AsyncSessionLocal
 from datetime import datetime
 from database.models import Produto
 from src.utils.log import Log
@@ -14,71 +14,55 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-def criar(cod_snk:int, cod_olist:int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    if produto:
-        session.close()
-        return False        
-    novo_produto = Produto(cod_snk=cod_snk,
-                           cod_olist=cod_olist,
-                           dh_cadastro=datetime.now())
-    session.add(novo_produto)
-    session.commit()
-    session.refresh(novo_produto)
-    session.close()
+async def criar(cod_snk:int, cod_olist:int):
+    async with AsyncSessionLocal() as session:
+        produto = await session.execute(Produto.query.where(Produto.cod_snk == cod_snk)).first()
+        if produto:
+            return False
+        novo_produto = Produto(cod_snk=cod_snk,
+                               cod_olist=cod_olist)
+        session.add(novo_produto)
+        await session.commit()
+        await session.refresh(novo_produto)
     return True
 
-def atualizar(cod_snk: int, pendencia: bool):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    if not produto:
-        session.close()
-        return False
-    setattr(produto, "pendencia", pendencia)
-    if not pendencia:
-        setattr(produto, "dh_atualizado", datetime.now())
-    session.commit()
-    session.close()
-    return True
+async def atualizar(cod_snk: int, pendencia: bool):
+    async with AsyncSessionLocal() as session:
+        produto = await session.execute(Produto.query.where(Produto.cod_snk == cod_snk)).first()
+        if not produto:
+            return False
+        setattr(produto, "pendencia", pendencia)
+        if not pendencia:
+            setattr(produto, "dh_atualizado", datetime.now())
+        await session.commit()
+        await session.close()
+        return True
 
-def buscar_todos():
-    session = SessionLocal()
-    produto = session.query(Produto).all()
-    session.close()
-    return produto
+async def buscar_pendencias():
+    async with AsyncSessionLocal() as session:
+        produto = await session.execute(Produto.query.filter(Produto.pendencia.is_(True)).all())
+        return produto
 
-def buscar_pendencias():
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.pendencia.is_(True)).all()
-    session.close()
-    return produto
+async def buscar_olist(cod_olist: int):
+    async with AsyncSessionLocal() as session:
+        produto = await session.execute(Produto.query.filter(Produto.cod_olist == cod_olist).first())
+        return produto
 
-def buscar_olist(cod_olist: int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_olist == cod_olist).first()
-    session.close()
-    return produto    
+async def buscar_snk(cod_snk: int):
+    async with AsyncSessionLocal() as session:
+        produto = await session.execute(Produto.query.filter(Produto.cod_snk == cod_snk).first())
+        return produto
 
-def buscar_snk(cod_snk: int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    session.close()
-    return produto
-
-def excluir(cod_snk: int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    if not produto:
-        session.close()
-        return False
-    try:
-        session.delete(produto)
-        session.commit()
-        session.close()
-        return True        
-    except Exception as e:
-        logger.error("Erro ao excluir produtos no banco de dados: %s",e)
-        session.close()
-        return False   
-
+async def excluir(cod_snk: int):
+    async with AsyncSessionLocal() as session:
+        produto = await session.execute(Produto.query.filter(Produto.cod_snk == cod_snk).first())
+        if not produto:
+            return False
+        try:
+            await session.delete(produto)
+            await session.commit()
+            return True
+        except Exception as e:
+            logger.error("Erro ao excluir produtos no banco de dados: %s",e)
+            return False
+        
