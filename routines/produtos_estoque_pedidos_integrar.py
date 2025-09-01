@@ -4,7 +4,7 @@ from src.integrador.produto   import Produto
 from src.integrador.pedido    import Pedido
 from src.integrador.separacao import Separacao
 
-# ROTINA A SER EXECUTADA EM DIAS ÚTEIS, A CADA 10 MINUTOS
+# ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 15 MINUTOS
 
 if __name__=="__main__":    
     
