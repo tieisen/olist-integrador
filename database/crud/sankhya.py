@@ -21,8 +21,8 @@ async def criar(empresa_id:int, token_criptografado:str,dh_expiracao_token:str):
                                token_criptografado=token_criptografado,
                                dh_expiracao_token=dh_expiracao_token)
             session.add(novo_token)
-            session.commit()
-            session.refresh(novo_token)
+            await session.commit()
+            await session.refresh(novo_token)
             return novo_token.token_criptografado
         except Exception as e:
             logger.error("Erro ao salvar token no banco de dados: %s",e)
