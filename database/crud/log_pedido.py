@@ -21,7 +21,7 @@ async def criar(log_id:int,pedido_id:int,evento:str,status:bool=True,obs:str=Non
                              status=status,
                              obs=obs)
         session.add(novo_log)
-        session.commit()
+        await session.commit()
         return True
 
 async def buscar_id(log_id: int):
