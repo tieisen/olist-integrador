@@ -52,26 +52,29 @@ class Pedido:
     async def validar_cancelamentos(self):
 
         print("Validando pedidos cancelados...")
-        olist = PedidoOlist()
+        pedido = PedidoOlist()
+        nota = NotaOlist()
 
-        cancelados = await olist.buscar(cancelados=True)
+        pedidos_cancelados = await pedido.buscar(cancelados=True)
+        notas_canceladas = await nota.buscar_canceladas()
 
-        if not cancelados:
-            # Nenhum pedido cancelado encontrado
-            return False
+        if not all([pedidos_cancelados, notas_canceladas]):
+            # Nenhum pedido ou nota cancelada encontrado
+            return True
 
-        print(f"Pedidos dos últimos 3 dias cancelados no Olist: {len(cancelados)}")
-
-        pedidos_pendente_cancelar_integrador = venda.validar_cancelamentos(lista_ids=cancelados)
+        pedidos_pendente_cancelar_integrador = venda.validar_cancelamentos(lista_ids=pedidos_cancelados)
         if pedidos_pendente_cancelar_integrador:
             print(f"Pedidos pendentes de cancelamento no integrador: {len(pedidos_pendente_cancelar_integrador)}")
             for pedido in pedidos_pendente_cancelar_integrador:
-                venda.atualizar_cancelada(id_pedido=pedido.id_pedido)
-                time.sleep(self.req_time_sleep)  # Evita rate limit
+                venda.atualizar_cancelada(id_pedido=pedido.id_pedido)                
             print("Pedidos atualizados no integrador com sucesso!")
-        else:
-            # Nenhum pedido pendente de cancelamento encontrado
-            pass
+
+        if notas_canceladas:
+            print(f"Notas canceladas no Olist: {len(notas_canceladas)}")
+            for nota_cancelada in notas_canceladas:
+                print(nota_cancelada)
+                venda.atualizar_cancelada(id_nota=nota_cancelada)                
+            print("Notas atualizadas no integrador com sucesso!")
 
         print("Validação de pedidos cancelados concluída!")
 
