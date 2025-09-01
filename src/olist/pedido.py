@@ -42,7 +42,7 @@ class Pedido:
         if numero:
             url = self.endpoint+f"/?numero={numero}"
         if cancelados:
-            url = self.endpoint+f"/?situacao=2&dataInicial={(datetime.today()-timedelta(days=7)).strftime('%Y-%m-%d')}"            
+            url = self.endpoint+f"/?situacao=2&dataInicial={(datetime.today()-timedelta(days=4)).strftime('%Y-%m-%d')}"            
 
         if not url:
             print(f"Erro relacionado à url. {url}")
