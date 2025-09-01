@@ -37,3 +37,14 @@ async def atualizar(ecommerce_id:int, **kwargs):
         await session.commit()
         await session.refresh(ecommerce)
         return True
+
+async def atualizar(ecommerce_id:int, **kwargs):
+    async with AsyncSessionLocal() as session:
+        ecommerce = await session.query(Ecommerce.id == ecommerce_id).first()
+        if not ecommerce:
+            return False
+        for key, value in kwargs.items():
+            setattr(ecommerce, key, value)
+        await session.commit()
+        await session.refresh(ecommerce)
+        return True
