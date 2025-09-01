@@ -288,10 +288,13 @@ def atualizar_financeiro(num_nota:int, id_financeiro:int, dh_baixa:str=None):
     session.close()
     return True
 
-def atualizar_cancelada(id_pedido:int):
+def atualizar_cancelada(id_pedido:int=None, id_nota:int=None):
     session = SessionLocal()
-    venda = session.query(Venda).filter(Venda.id_pedido == id_pedido).first()
-    if not venda:
+    if id_pedido:
+        venda = session.query(Venda).filter(Venda.id_pedido == id_pedido).first()
+    elif id_nota:
+        venda = session.query(Venda).filter(Venda.id_nota == id_nota).first()
+    else:
         session.close()
         return False
     setattr(venda, "dh_cancelamento_pedido", datetime.now())
