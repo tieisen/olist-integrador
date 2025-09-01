@@ -15,7 +15,7 @@ class Empresa(Base):
     client_secret = Column(String, nullable=False)
     admin_email = Column(String, nullable=False)
     admin_senha = Column(String, nullable=False)
-    status = Column(Boolean, default=True)
+    ativo = Column(Boolean, default=True)
     
     log = relationship("Log", back_populates="empresa", cascade="all, delete-orphan")
     produto = relationship("Produto", back_populates="empresa", cascade="all, delete-orphan")
@@ -31,7 +31,7 @@ class Produto(Base):
     cod_snk = Column(Integer, nullable=False) 
     cod_olist = Column(Integer, nullable=True)
     dh_cadastro = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_DATE'))
-    dh_atualizado = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_DATE'))
+    dh_atualizado = Column(DateTime(timezone=True), nullable=True)
     pendencia = Column(Boolean, default=False)
     empresa_id = Column(Integer, ForeignKey("empresa.id"), nullable=False)
 
@@ -93,13 +93,14 @@ class Pedido(Base):
 
     ecommerce = relationship("Ecommerce", back_populates="venda")
     nota = relationship("Nota", back_populates="pedido", cascade="all, delete-orphan")
+    log = relationship("LogPedido", back_populates="pedido", cascade="all, delete-orphan")
 
 class Nota(Base):
     __tablename__ = "nota"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     id_nota = Column(Integer, nullable=True)
-    dh_nota_emissao = Column(DateTime(timezone=True), nullable=True)
+    dh_nota_emissao = Column(DateTime(timezone=True), nullable=False)
     num_nota = Column(Integer, nullable=True)
     id_financeiro = Column(Integer, nullable=True)
     dh_baixa_financeiro = Column(DateTime(timezone=True), nullable=True)
@@ -134,20 +135,16 @@ class LogPedido(Base):
         CheckConstraint("evento IN ('R', 'I', 'C', 'F', 'N', 'D')", name='ck_log_pedido_evento'),
     )
 
-    id = Column(Integer, primary_key=True, index=True)    
-    id_loja = Column(Integer)
-    id_pedido = Column(Integer)
-    pedido_ecommerce = Column(String)
-    id_nota = Column(Integer, nullable=True)
-    nunota_pedido = Column(Integer, nullable=True)
-    nunota_nota = Column(Integer, nullable=True)    
+    id = Column(Integer, primary_key=True, index=True)
     dh_atualizacao = Column(DateTime(timezone=True), server_default=text('CURRENT_DATE'))
     evento = Column(String, nullable=False)
     status = Column(Boolean, default=True)
     obs = Column(String, nullable=True)
     log_id = Column(Integer, ForeignKey("log.id"))
+    pedido_id = Column(Integer, ForeignKey("pedido.id"))    
 
     log = relationship("Log", back_populates="pedido")
+    pedido = relationship("Pedido", back_populates="log")
 
 class LogProduto(Base):
     __tablename__ = "log_produto"
@@ -169,10 +166,10 @@ class Log(Base):
     __tablename__ = "log"
 
     id = Column(Integer, primary_key=True, index=True)
-    dh_execucao = Column(DateTime(timezone=True))
-    contexto = Column(String)
-    de = Column(String)
-    para = Column(String)
+    dh_execucao = Column(DateTime(timezone=True), server_default=text('CURRENT_DATE'))
+    contexto = Column(String, nullable=False)
+    de = Column(String, nullable=False)
+    para = Column(String, nullable=False)
     sucesso = Column(Boolean)
     empresa_id = Column(Integer, ForeignKey("empresa.id"), nullable=False)
 
