@@ -117,10 +117,12 @@ class Pedido:
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
             try:
-                dados_pedido = self.formatter.return_format(res.json())[0]
-                if isinstance(dados_pedido,int) and dados_pedido==404:
+                dados_pedido = self.formatter.return_format(res.json())
+                if isinstance(dados_pedido,list) and not dados_pedido:
                     # Pedido não encontrado
                     return 0
+                
+                dados_pedido = dados_pedido[0]
                 if itens:
                     dados_itens = await Itens().buscar(nunota=int(dados_pedido.get('nunota')))
                     dados_pedido['itens'] = dados_itens
