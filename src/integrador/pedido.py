@@ -30,8 +30,6 @@ class Pedido:
         """ Inicializa a classe Pedido com a conexão ao Olist e o endpoint de pedidos. """
         self.contexto = 'pedido'
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
-        # Cria um log para o processo
-        self.log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
 
     def validar_existentes(self, lista_pedidos: list) -> list:
         """ Valida se os pedidos já existem na base de dados.
@@ -58,10 +56,12 @@ class Pedido:
         pedidos_cancelados = await pedido.buscar(cancelados=True)
         notas_canceladas = await nota.buscar_canceladas()
 
-        if not all([pedidos_cancelados, notas_canceladas]):
+        if not any([pedidos_cancelados, notas_canceladas]):
             # Nenhum pedido ou nota cancelada encontrado
+            print("Nenhum pedido ou nota cancelada encontrado.")
             return True
 
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         pedidos_pendente_cancelar_integrador = venda.validar_cancelamentos(lista_ids=pedidos_cancelados)
         if pedidos_pendente_cancelar_integrador:
             print(f"Pedidos pendentes de cancelamento no integrador: {len(pedidos_pendente_cancelar_integrador)}")
@@ -78,8 +78,7 @@ class Pedido:
 
         print("Validação de pedidos cancelados concluída!")
 
-        status_log = False if log_pedido.buscar_status_false(log_id=self.log_id) else True
-        log.atualizar(id=self.log_id, sucesso=status_log)
+        log.atualizar(id=log_id, sucesso=True)
 
         return True
 
@@ -94,6 +93,7 @@ class Pedido:
         ped_olist = PedidoOlist()
 
         if num_pedido:
+            log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
             # Importando pedido único
             print(f"Recebendo pedido {num_pedido}...")
             dados_pedido = await ped_olist.buscar(numero=num_pedido)
@@ -101,7 +101,7 @@ class Pedido:
                 obs = f"Erro ao buscar dados do pedido {num_pedido} no Olist"
                 print(obs)
                 logger.error(obs)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=0,
                                  id_pedido=0,
                                  pedido_ecommerce='',
@@ -111,7 +111,7 @@ class Pedido:
 
             if dados_pedido.get('situacao') == 8:
                 obs = f"Pedido {dados_pedido.get('numeroPedido')} dados incompletos"                
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=dados_pedido['ecommerce'].get('id'),
                                  id_pedido=dados_pedido.get('id'),
                                  pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
@@ -127,7 +127,7 @@ class Pedido:
                 obs = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
                 print(obs)
                 logger.error(obs)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=dados_pedido['ecommerce'].get('id'),
                                  id_pedido=dados_pedido.get('id'),
                                  pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
@@ -135,7 +135,7 @@ class Pedido:
                                  obs=obs)
                 return False
 
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=dados_pedido['ecommerce'].get('id'),
                              id_pedido=dados_pedido.get('id'),
                              pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'))
@@ -144,13 +144,14 @@ class Pedido:
             return True
         
         # Importando pedidos em lote
-        print("Recebendo pedidos...")        
+        print("Recebendo pedidos...")
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         if not lista_pedidos:
             ack, lista = await ped_olist.buscar_novos(atual=atual)            
             if not ack:
                 print("Nenhum pedido encontrado.")
                 logger.info("Nenhum pedido encontrado.")
-                log.atualizar(id=self.log_id,sucesso=False)
+                log.atualizar(id=log_id,sucesso=False)
                 return False
             print(f"Pedidos encontrados: {len(lista)}")
             lista_pedidos = self.validar_existentes(lista)
@@ -158,7 +159,7 @@ class Pedido:
             if not lista_pedidos:
                 print("Todos os pedidos já existem na base de dados.")
                 logger.info("Todos os pedidos já existem na base de dados.")
-                log.atualizar(id=self.log_id,sucesso=True)
+                log.atualizar(id=log_id,sucesso=True)
                 return True
         
         print(f"Pedidos a serem recebidos: {len(lista_pedidos)}")
@@ -172,7 +173,7 @@ class Pedido:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=dados_pedido['ecommerce'].get('id'),
                                  id_pedido=dados_pedido.get('id'),
                                  pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
@@ -199,7 +200,7 @@ class Pedido:
                 logger.error("Erro ao adicionar pedido %s à base de dados.", dados_pedido.get('numeroPedido'))
                 continue
 
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=dados_pedido['ecommerce'].get('id'),
                              id_pedido=dados_pedido.get('id'),
                              pedido_ecommerce=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'))
@@ -215,10 +216,13 @@ class Pedido:
         obs = None
         evento = 'I'
 
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        
         # Busca novos pedidos
         novos_pedidos = venda.buscar_importar()
         if not novos_pedidos:
             print("Nenhum novo pedido encontrado.")
+            log.atualizar(id=log_id, sucesso=True)
             return True
         
         print(f"Novos pedidos encontrados: {len(novos_pedidos)}")
@@ -239,7 +243,7 @@ class Pedido:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=dados_pedido_olist['ecommerce'].get('id'),
                                  id_pedido=pedido.get('id'),
                                  pedido_ecommerce=dados_pedido_olist['ecommerce'].get('numeroPedidoEcommerce'),
@@ -281,14 +285,18 @@ class Pedido:
             print("Valida itens e desmembra kits")
             itens_pedido_original = dados_pedido_olist.get('itens')
             itens_pedido_validado = []
-            for item in itens_pedido_original:
-                if item['produto'].get('sku'):
-                    itens_pedido_validado.append(item)
-                else:
-                    ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
-                    if ack:
-                        itens_pedido_validado+=kit_desmembrado
-            
+            try:
+                for item in itens_pedido_original:
+                    if item['produto'].get('sku'):
+                        itens_pedido_validado.append(item)
+                    else:
+                        ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
+                        if ack:
+                            itens_pedido_validado+=kit_desmembrado
+            except Exception as e:
+                obs = f"Erro: {e}"
+                continue
+
             if not itens_pedido_validado:
                 obs = "Erro ao validar itens/desmembrar kits"
                 continue
@@ -309,7 +317,7 @@ class Pedido:
                 obs = f"Erro ao inserir pedido no Sankhya."
                 continue
 
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=dados_pedido_olist['ecommerce'].get('id'),
                              id_pedido=pedido.get('id'),
                              pedido_ecommerce=dados_pedido_olist['ecommerce'].get('numeroPedidoEcommerce'),
@@ -330,8 +338,8 @@ class Pedido:
                 obs = "Erro ao enviar nunota do pedido para Olist"
                 continue
                         
-        status_log = False if log_pedido.buscar_status_false(log_id=self.log_id) else True
-        log.atualizar(id=self.log_id, sucesso=status_log)
+        status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+        log.atualizar(id=log_id, sucesso=status_log)
         print(f"-> Processo de importação de pedidos concluído! Status do log: {status_log}")
         return True
 
@@ -340,10 +348,12 @@ class Pedido:
         obs = None
         evento = 'C'
         
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)        
         # Busca pedidos pendentes de confirmação
         pedidos_confirmar = venda.buscar_confirmar()
         if not pedidos_confirmar:
             print("Nenhum pedido para confirmar.")
+            log.atualizar(id=log_id)        
             return True
 
         print(f"Pedidos para confirmar: {len(pedidos_confirmar)}")
@@ -362,7 +372,7 @@ class Pedido:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=0,
                                  id_pedido=0,
                                  pedido_ecommerce='',
@@ -394,7 +404,7 @@ class Pedido:
                 obs = f"Erro ao confirmar pedido {pedido.get('nunota')} no Sankhya"
                 continue
             
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=0,
                              id_pedido=0,
                              pedido_ecommerce='',
@@ -406,7 +416,7 @@ class Pedido:
             print(f"Pedido {pedido.get('nunota')} confirmado com sucesso!")
 
         status_log = False if obs else True
-        log.atualizar(id=self.log_id, sucesso=status_log)
+        log.atualizar(id=log_id, sucesso=status_log)
         print(f"-> Processo de confirmação de pedidos concluído! Status do log: {status_log}")
         return True
 
@@ -527,13 +537,15 @@ class Pedido:
 
     async def buscar_lote(self):
         # Busca novos pedidos
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         novos_pedidos = venda.buscar_importar()
         if not novos_pedidos:
             print("Nenhum novo pedido encontrado.")
+            log.atualizar(id=log_id)
             return True
         
         print(f"Novos pedidos encontrados: {len(novos_pedidos)}")
-        novos_pedidos = [{'id': pedido.id_pedido, 'numero': pedido.num_pedido} for pedido in novos_pedidos]        
+        novos_pedidos = [{'id': pedido.id_pedido, 'numero': pedido.num_pedido, 'loja': pedido.id_loja, 'codigo': pedido.cod_pedido} for pedido in novos_pedidos]        
 
         # Inicia as classes de integração
         olist = PedidoOlist()
@@ -548,6 +560,13 @@ class Pedido:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
+                logger.error(obs)
+                log_pedido.criar(log_id=log_id,
+                                 id_loja=pedido.get('loja'),
+                                 id_pedido=pedido.get('id'),
+                                 pedido_ecommerce=pedido.get('codigo'),
+                                 status=False,
+                                 obs=obs)                
                 obs = None
             
             print(f"Buscando pedido {index + 1}/{len(novos_pedidos)}: {pedido.get('numero')}")
@@ -581,6 +600,16 @@ class Pedido:
             
             dados_pedido_olist['itens'] = itens_pedido_validado
             lote_pedidos.append(dados_pedido_olist)
+        
+            log_pedido.criar(log_id=log_id,
+                             id_loja=pedido.get('loja'),
+                             id_pedido=pedido.get('id'),
+                             pedido_ecommerce=pedido.get('codigo'),
+                             status=True)
+            
+        status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+        log.atualizar(id=log_id, sucesso=status_log)
+        print(f"-> Processo de busca de pedidos concluído! Status do log: {status_log}")
         return lote_pedidos
     
     def unificar(self, lista_pedidos:list[dict]) -> tuple[int, list,list]:
@@ -662,7 +691,9 @@ class Pedido:
         print("Buscando pedidos em lote...")
         pedidos_lote = await self.buscar_lote()
 
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         if pedidos_lote is True:
+            log.atualizar(id=log_id)
             return pedidos_lote
         
         # Unifica os pedidos
@@ -677,7 +708,7 @@ class Pedido:
         if not cabecalho and not itens:
             print("Erro ao converter dados do pedido para o formato da API do Sankhya")
             logger.error("Erro ao converter dados do pedido para o formato da API do Sankhya")
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=id_origem,
                              id_pedido=0,
                              pedido_ecommerce='varios',
@@ -692,7 +723,7 @@ class Pedido:
         if pedido_incluido == 0:
             print("Erro ao inserir pedido no Sankhya.")
             logger.error("Erro ao inserir pedido no Sankhya.")
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=id_origem,
                              id_pedido=0,
                              pedido_ecommerce='varios',
@@ -708,7 +739,7 @@ class Pedido:
         if not ack:
             print("Erro ao enviar número único para os pedidos no Olist.")
             logger.error("Erro ao enviar número único para os pedidos no Olist.")
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=id_origem,
                              id_pedido=0,
                              pedido_ecommerce='varios',
@@ -718,7 +749,7 @@ class Pedido:
             return False
         
         print(f"Pedidos importados no código {pedido_incluido}")
-        log_pedido.criar(log_id=self.log_id,
+        log_pedido.criar(log_id=log_id,
                          id_loja=id_origem,
                          id_pedido=0,
                          pedido_ecommerce='varios',
@@ -732,9 +763,10 @@ class Pedido:
         
         # Busca pedidos pendentes de confirmação
         pedidos_confirmar = venda.buscar_confirmar()
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
         if not pedidos_confirmar:
             print("Nenhum pedido para confirmar.")
-            log.atualizar(id=self.log_id)
+            log.atualizar(id=log_id)
             return True
 
         id_loja = list(set([p.id_loja for p in pedidos_confirmar]))
@@ -754,7 +786,7 @@ class Pedido:
             if obs:
                 # Cria um log de erro se houver observação
                 print(obs)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=id_loja[0],
                                  id_pedido=0,
                                  pedido_ecommerce='',
@@ -773,7 +805,7 @@ class Pedido:
                 print(f"Pedido {pedido} já foi confirmado.")
                 venda.atualizar_confirmada_lote(nunota_pedido=pedido,
                                                 dh_confirmado=validacao.get('dtmov'))
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=id_loja[0],
                                  id_pedido=0,
                                  pedido_ecommerce='',
@@ -787,7 +819,7 @@ class Pedido:
                 obs = f"Erro ao confirmar pedido {pedido} no Sankhya"
                 continue
             
-            log_pedido.criar(log_id=self.log_id,
+            log_pedido.criar(log_id=log_id,
                              id_loja=id_loja[0],
                              id_pedido=0,
                              pedido_ecommerce='varios',
@@ -797,7 +829,7 @@ class Pedido:
             print(f"Pedido {pedido} confirmado com sucesso!")
 
         status_log = False if obs else True
-        log.atualizar(id=self.log_id, sucesso=status_log)
+        log.atualizar(id=log_id, sucesso=status_log)
         print(f"-> Processo de confirmação de pedidos concluído!")
         return True
 
@@ -834,9 +866,10 @@ class Pedido:
         # Busca pedidos cancelados depois de já terem sido faturados
         print("Buscando pedidos cancelados após faturamento...")
         lista_pedidos_cancelados = venda.buscar_importadas_cancelar()
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)        
         if not lista_pedidos_cancelados:
             print("Sem devoluções pendentes")
-            log.atualizar(id=self.log_id)
+            log.atualizar(id=log_id)
             print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")            
             return True  
               
@@ -861,7 +894,7 @@ class Pedido:
                     logger.warning(obs)
                 else:
                     logger.error(obs)                
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=0,
                                  id_pedido=0,
                                  pedido_ecommerce='',
@@ -903,7 +936,7 @@ class Pedido:
                     else:
                         logger.error(obs_olist)     
 
-                    log_pedido.criar(log_id=self.log_id,
+                    log_pedido.criar(log_id=log_id,
                                      id_loja=pedidos_olist[j-1].id_loja,
                                      id_pedido=pedidos_olist[j-1].id_pedido,
                                      pedido_ecommerce=pedidos_olist[j-1].pedido_ecommerce,
@@ -970,7 +1003,7 @@ class Pedido:
             # Registra log que os pedidos foram devolvidos
             for pedido in pedidos_olist:
                 venda.atualizar_devolvido(id_pedido=pedido.id_pedido)
-                log_pedido.criar(log_id=self.log_id,
+                log_pedido.criar(log_id=log_id,
                                  id_loja=pedido.id_loja,
                                  id_pedido=pedido.id_pedido,
                                  pedido_ecommerce=pedido.cod_pedido,
