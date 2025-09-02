@@ -29,17 +29,23 @@ async def criar(pedido_id:int, id_nota:int, numero:int, serie:str):
 
 async def buscar_baixar_financeiro():
     async with AsyncSessionLocal() as session:
-        notas = await session.query(Nota).filter(Nota.dh_baixa_financeiro == None).all()
+        notas = await session.query(Nota).filter(Nota.dh_baixa_financeiro.is_(None)).all()
         return notas
 
 async def buscar_atualizar_nunota():
-    pass
+    async with AsyncSessionLocal() as session:
+        notas = await session.query(Nota).filter(Nota.nunota.is_(None)).all()
+        return notas
 
 async def buscar_faturar():
-    pass
+    async with AsyncSessionLocal() as session:
+        notas = await session.query(Nota).filter(Nota.dh_faturamento.is_(None)).all()
+        return notas
 
 async def buscar_confirmar():
-    pass
+    async with AsyncSessionLocal() as session:
+        notas = await session.query(Nota).filter(Nota.dh_confirmacao.is_(None)).all()
+        return notas
 
 async def atualizar_autorizada(id_nota:int):
     async with AsyncSessionLocal() as session:
