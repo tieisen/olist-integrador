@@ -158,7 +158,7 @@ class Pedido:
             if not lista_pedidos:
                 print("Todos os pedidos já existem na base de dados.")
                 logger.info("Todos os pedidos já existem na base de dados.")
-                log.atualizar(id=log_id,sucesso=True)
+                log.atualizar(id=log_id)
                 return True
         
         print(f"Pedidos a serem recebidos: {len(lista_pedidos)}")
@@ -206,6 +206,8 @@ class Pedido:
             
             print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
         
+        status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+        log.atualizar(id=log_id, sucesso=status_log)
         print("Recebimento de pedidos concluído!")
 
         return True    
