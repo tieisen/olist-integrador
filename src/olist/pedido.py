@@ -155,6 +155,72 @@ class Pedido:
         
         return True
 
+    async def remover_nunota(self,id:int=None):
+
+        import re
+
+        if not id:
+            logger.error("Pedido não informado.")
+            print("Pedido não informado.")
+            return False
+
+        try:
+            token = self.con.get_token()
+        except Exception as e:
+            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False  
+        
+        url = self.endpoint+f"/{id}"
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+
+        res_get = requests.get(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+        if res_get.status_code != 200:
+            print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
+            logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
+            return False
+        observacao = res_get.json().get('observacao')
+
+        regex = r"[|].+"
+        nova_observacao = re.sub(regex, '', observacao)
+
+        payload = {
+            "dataPrevista": None,
+            "dataEnvio": None,
+            "observacoes": nova_observacao,
+            "observacoesInternas": None,
+            "pagamento": {
+                "parcelas": []
+            }
+        }
+
+        res_put = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload
+        )
+
+        if res_put.status_code != 204:
+            print(f"Erro {res_put.status_code}: {res_put.text} pedido {id}")
+            logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
+            return False
+        
+        return True
+
     async def gerar_nf(self,id:int=None):
 
         if not id:
