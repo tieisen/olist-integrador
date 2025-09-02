@@ -330,3 +330,16 @@ def atualizar_devolvido(id_pedido:int):
     session.commit()
     session.close()
     return True
+
+def atualizar_anulado(id_pedido:int):
+    session = SessionLocal()
+    venda = session.query(Venda).filter(Venda.id_pedido == id_pedido).first()
+    if not venda:
+        session.close()
+        return False
+    setattr(venda, "nunota_pedido", None)
+    setattr(venda, "dh_importacao_pedido_snk", None)
+    setattr(venda, "dh_confirmacao_pedido_snk", None)
+    session.commit()
+    session.close()
+    return True
