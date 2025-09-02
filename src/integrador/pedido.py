@@ -1005,13 +1005,18 @@ class Pedido:
 
             # Registra log que os pedidos foram devolvidos
             for pedido in pedidos_olist:
-                venda.atualizar_devolvido(id_pedido=pedido.id_pedido)
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                dados_olist = await olist.buscar(id=pedido.id_pedido)
+                if dados_olist.get('situacao') == 2:
+                    venda.atualizar_devolvido(id_pedido=pedido.id_pedido)
+                else:
+                    venda.resetar_pedido(id_pedido=pedido.id_pedido)
                 log_pedido.criar(log_id=log_id,
                                  id_loja=pedido.id_loja,
                                  id_pedido=pedido.id_pedido,
                                  pedido_ecommerce=pedido.cod_pedido,
                                  nunota_pedido=pedido.nunota_pedido,
-                                 evento='F')  
+                                 evento='F')
                     
         status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
         log.atualizar(id=log_id, sucesso=status_log)
