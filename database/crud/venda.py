@@ -124,6 +124,12 @@ def buscar_separacao_idpedido(id_pedido:int):
     session.close()
     return venda
 
+def buscar_nunota_pedido(nunota_pedido:int):
+    session = SessionLocal()
+    vendas = session.query(Venda).filter(Venda.nunota_pedido == nunota_pedido).order_by(Venda.num_pedido).all()
+    session.close()
+    return vendas
+
 def validar_cancelamentos(lista_ids:list):
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.id_pedido.in_(lista_ids),
