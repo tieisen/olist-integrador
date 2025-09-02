@@ -27,6 +27,20 @@ async def criar(pedido_id:int, id_nota:int, numero:int, serie:str):
         await session.commit()
         return True
 
+async def buscar_baixar_financeiro():
+    async with AsyncSessionLocal() as session:
+        notas = await session.query(Nota).filter(Nota.dh_baixa_financeiro == None).all()
+        return notas
+
+async def buscar_atualizar_nunota():
+    pass
+
+async def buscar_faturar():
+    pass
+
+async def buscar_confirmar():
+    pass
+
 async def atualizar_autorizada(id_nota:int):
     async with AsyncSessionLocal() as session:
         nota = await session.query(Nota).filter(Nota.id == id_nota).first()
