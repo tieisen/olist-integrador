@@ -28,7 +28,6 @@ class Pedido:
 
     def __init__(self):
         """ Inicializa a classe Pedido com a conexão ao Olist e o endpoint de pedidos. """
-        self.contexto = 'pedido'
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     def validar_existentes(self, lista_pedidos: list) -> list:
@@ -61,7 +60,7 @@ class Pedido:
             print("Nenhum pedido ou nota cancelada encontrado.")
             return True
 
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_cancelamentos')
         pedidos_pendente_cancelar_integrador = venda.validar_cancelamentos(lista_ids=pedidos_cancelados)
         if pedidos_pendente_cancelar_integrador:
             print(f"Pedidos pendentes de cancelamento no integrador: {len(pedidos_pendente_cancelar_integrador)}")
@@ -93,7 +92,7 @@ class Pedido:
         ped_olist = PedidoOlist()
 
         if num_pedido:
-            log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+            log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_receber')
             # Importando pedido único
             print(f"Recebendo pedido {num_pedido}...")
             dados_pedido = await ped_olist.buscar(numero=num_pedido)
@@ -145,7 +144,7 @@ class Pedido:
         
         # Importando pedidos em lote
         print("Recebendo pedidos...")
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_receber')
         if not lista_pedidos:
             ack, lista = await ped_olist.buscar_novos(atual=atual)            
             if not ack:
@@ -216,8 +215,8 @@ class Pedido:
         obs = None
         evento = 'I'
 
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
-        
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_importar')
+
         # Busca novos pedidos
         novos_pedidos = venda.buscar_importar()
         if not novos_pedidos:
@@ -347,8 +346,8 @@ class Pedido:
         """ Confirma pedidos importados do Olist no Sankhya. """
         obs = None
         evento = 'C'
-        
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)        
+
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_confirmar')
         # Busca pedidos pendentes de confirmação
         pedidos_confirmar = venda.buscar_confirmar()
         if not pedidos_confirmar:
@@ -537,7 +536,7 @@ class Pedido:
 
     async def buscar_lote(self):
         # Busca novos pedidos
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_buscar_lote')
         novos_pedidos = venda.buscar_importar()
         if not novos_pedidos:
             print("Nenhum novo pedido encontrado.")
@@ -691,7 +690,7 @@ class Pedido:
         print("Buscando pedidos em lote...")
         pedidos_lote = await self.buscar_lote()
 
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_importar_lote')
         if pedidos_lote is True:
             log.atualizar(id=log_id)
             return pedidos_lote
@@ -765,7 +764,7 @@ class Pedido:
         
         # Busca pedidos pendentes de confirmação
         pedidos_confirmar = venda.buscar_confirmar()
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_confirmar_lote')
         if not pedidos_confirmar:
             print("Nenhum pedido para confirmar.")
             log.atualizar(id=log_id)
@@ -868,7 +867,7 @@ class Pedido:
         # Busca pedidos cancelados depois de já terem sido faturados
         print("Buscando pedidos cancelados após faturamento...")
         lista_pedidos_cancelados = venda.buscar_importadas_cancelar()
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)        
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_devolver_lote')
         if not lista_pedidos_cancelados:
             print("Sem devoluções pendentes")
             log.atualizar(id=log_id)
@@ -1026,7 +1025,7 @@ class Pedido:
         # Validando pedido no Sankhya
         print("Validando pedido no Sankhya...")
         dados_snk = await snk.buscar_nota_do_pedido(nunota=nunota)
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO)
+        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_anular')
         if not dados_snk:
             obs = f"Pedido {nunota} não encontrado no Sankhya"
             print(obs)
