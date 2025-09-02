@@ -90,3 +90,12 @@ def devolver_pedidos():
     if not asyncio.run(pedido.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")    
     return True
+
+@router.get("/anular/{nunota}")
+def anular_pedidos(nunota: int):
+    """
+    Exclui pedido não faturado do Sankhya
+    """
+    if not asyncio.run(pedido.anular(nunota=nunota)):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao anular pedido")
+    return True
