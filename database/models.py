@@ -112,6 +112,7 @@ class Nota(Base):
     nunota = Column(Integer, nullable=True)
     dh_confirmacao = Column(DateTime(timezone=True), nullable=True)
     dh_cancelamento = Column(DateTime(timezone=True), nullable=True)
+    cancelado_sankhya = Column(Boolean, default=False)
     pedido_id = Column(Integer, ForeignKey("pedido.id"), nullable=False)
 
     pedido_ = relationship("Pedido", back_populates="nota_")
