@@ -47,30 +47,27 @@ def fake_sankhya():
 # ================= ECOMMERCE =================
 def fake_ecommerce():
     return dict(
-        id_loja=fake.random_int(min=1000, max=9999),
+        id_loja=fake.random_int(min=6, max=10),
         nome=fake.company(),
         empresa_id=fake.random_int(min=1, max=5)
     )
 
 # ================= PEDIDO =================
 def fake_pedido():
-    return dict(
-        id_loja=fake.random_int(min=1, max=5),
+    return dict(        
+        id_loja=fake.random_int(min=6, max=10),
         id_pedido=fake.random_int(min=100000, max=999999),
         cod_pedido=fake.uuid4(),
         num_pedido=fake.random_int(min=1, max=9999)        
     )
 
 # ================= NOTA =================
-def fake_nota():
+def fake_nota(pedidos:list):
     return dict(
         id_nota=fake.random_int(min=1000, max=9999),
-        dh_emissao=datetime.now(),
         numero=fake.random_int(min=1000, max=9999),
-        serie=fake.random_int(min=1, max=100),
-        id_financeiro=fake.random_int(min=1000, max=9999),
-        nunota=fake.random_int(min=1000, max=9999),
-        pedido_id=fake.random_int(min=1, max=5)
+        serie=random.choice(['1','2','U']),
+        pedido_id=random.choice(pedidos)
     )
 
 # ================= DEVOLUCAO =================
@@ -79,7 +76,7 @@ def fake_devolucao():
         id_nota=fake.random_int(min=1000, max=9999),
         dh_emissao=datetime.now(),
         numero=fake.random_int(min=1000, max=9999),
-        serie=fake.random_int(min=1, max=100),
+        serie=random.choice(['1','2','U']),
         chave_acesso=fake.bothify(text='####################'),        
         nunota=fake.random_int(min=1000, max=9999),
         nota_id=fake.random_int(min=1, max=5)
