@@ -31,7 +31,7 @@ async def criar(
             return False
 
         result = await session.execute(
-            select(Ecommerce).where(Ecommerce.id == id_loja) # TODO: Alterar para id_loja=id_loja
+            select(Ecommerce).where(Ecommerce.id_loja == id_loja)
         )
         ecommerce = result.scalar_one_or_none()
         if not ecommerce:
@@ -45,8 +45,7 @@ async def criar(
                                  ecommerce_id=ecommerce.id)
             session.add(novo_pedido)
             await session.commit()
-            await session.refresh(novo_pedido)
-            print(f"Pedido {novo_pedido.id_pedido} criado com sucesso no ID {novo_pedido.id}")
+            await session.refresh(novo_pedido)            
             return True
         except Exception as e:
             print(f"Erro ao criar pedido {id_pedido}: {e}")
