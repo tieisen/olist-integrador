@@ -1,6 +1,7 @@
 from database.database import AsyncSessionLocal
 from database.models import Olist
 from datetime import datetime, timedelta
+from sqlalchemy.future import select
 from src.utils.log import Log
 import os
 import logging
@@ -14,8 +15,15 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-async def criar(empresa_id:int, token_criptografado:str,dh_expiracao_token:str,refresh_token_criptografado:str,dh_expiracao_refresh_token:str,id_token_criptografado:str):
-    async with AsyncSessionLocal() as session:    
+async def criar(
+        empresa_id:int,
+        token_criptografado:str,
+        dh_expiracao_token:str,
+        refresh_token_criptografado:str,
+        dh_expiracao_refresh_token:str,
+        id_token_criptografado:str
+    ):
+    async with AsyncSessionLocal() as session:
         try:
             novo_token = Olist(empresa_id=empresa_id,
                                token_criptografado=token_criptografado,
@@ -33,13 +41,20 @@ async def criar(empresa_id:int, token_criptografado:str,dh_expiracao_token:str,r
 
 async def buscar(empresa_id:int):
     async with AsyncSessionLocal() as session:
-        token = await session.query(Olist).filter(Olist.empresa_id == empresa_id).order_by(Olist.id.desc()).first()
-        return token
+        result = await session.execute(
+            select(Olist).where(Olist.empresa_id == empresa_id).order_by(Olist.id.desc()).fetch(1)
+        )
+        token = result.scalar_one_or_none()
+        return token.token_criptografado if token else None
 
 async def excluir(id:int):
     async with AsyncSessionLocal() as session:
-        token = await session.query(Olist).filter(Olist.id == id).first()
+        result = await session.execute(
+            select(Olist).where(Olist.id == id)
+        )
+        token = result.scalar_one_or_none()
         if not token:
+            print("Token não encontrado")
             return False
         try:
             await session.delete(token)
@@ -49,11 +64,14 @@ async def excluir(id:int):
             logger.error("Erro ao excluir token do banco de dados: %s", e)
             return False
 
-async def excluir_cache(empresa_id:int):
+async def excluir_cache(dias:int=7):
     async with AsyncSessionLocal() as session:
-        tokens = await session.query(Olist).filter(Olist.empresa_id == empresa_id,
-                                                   Olist.dh_solicitacao < (datetime.now()-timedelta(days=7))).all()
+        result = await session.execute(
+            select(Olist).where(Olist.dh_solicitacao < (datetime.now()-timedelta(days=dias)))
+        )
+        tokens = result.scalars().all()
         if not tokens:
+            print("Tokens não encontrados")
             return False
         try:
             for token in tokens:
