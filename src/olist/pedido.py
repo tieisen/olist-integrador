@@ -333,19 +333,20 @@ class Pedido:
         """
 
         dataInicial = None
+        dias_busca = os.getenv('DIAS_BUSCA_PEDIDOS',1)
+        situacao_buscar = os.getenv('OLIST_SITUACAO_PEDIDO_BUSCAR',4)  # 4 - Preparando envio
 
         # Busca a data da última importação de pedidos
         # Se não houver, define a data inicial como 3 dias atrás
-        if atual:
-            dataInicial = (datetime.today()-timedelta(days=3)).strftime('%Y-%m-%d')
-        else:
-            #dataInicial = '2025-07-20'  # Data fixa para buscar pedidos
-            dataInicial = '2025-08-08'  # Data fixa para buscar pedidos
-            
-        if not dataInicial:
-            print("Erro ao buscar a data da última venda.")
-            logger.error("Erro ao buscar a data da última venda.")
-            return False, []
+        # if atual:
+        #     dataInicial = (datetime.today()-timedelta(days=3)).strftime('%Y-%m-%d')
+        # else:
+        #     #dataInicial = '2025-07-20'  # Data fixa para buscar pedidos
+        #     dataInicial = '2025-08-08'  # Data fixa para buscar pedidos            
+        # if not dataInicial:
+        #     print("Erro ao buscar a data da última venda.")
+        #     logger.error("Erro ao buscar a data da última venda.")
+        #     return False, []
 
         try:
             token = self.con.get_token()
@@ -362,11 +363,13 @@ class Pedido:
             if paginacao:        
                 if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
                     offset = paginacao["limit"] + paginacao["offset"]
-                    url = self.endpoint+f"?dataInicial={dataInicial}&offset={offset}"
+                    #url = self.endpoint+f"?dataInicial={dataInicial}&offset={offset}"
+                    url = self.endpoint+f"?situacao={situacao_buscar}&offset={offset}"
                 else:
                     url = None
             else:
-                url = self.endpoint+f"?dataInicial={dataInicial}"
+                #url = self.endpoint+f"?dataInicial={dataInicial}"
+                url = self.endpoint+f"?situacao={situacao_buscar}"
             if url:
                 res = requests.get(url=url,
                                    headers={
