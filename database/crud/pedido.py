@@ -64,7 +64,7 @@ async def atualizar_separacao(id_pedido: int, id_separacao: int):
         setattr(pedido, "id_separacao", id_separacao)    
         await session.commit()
         return True        
-        
+
 async def buscar_importar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -116,7 +116,7 @@ async def atualizar_confirmado(nunota:int, dh_confirmado: str=None):
             setattr(pedido, "dh_confirmacao", datetime.strptime(dh_confirmado,'%d/%m/%Y') if dh_confirmado else datetime.now())
         await session.commit()
         return True
-    
+
 async def buscar_faturar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -156,7 +156,6 @@ async def atualizar_cancelado(id_pedido:int, dh_cancelamento: str=None):
         setattr(pedido, "dh_cancelamento", datetime.strptime(dh_cancelamento,'%d/%m/%Y') if dh_cancelamento else datetime.now())
         await session.commit()
         return True
-    
 
 async def resetar(id_pedido:int):
     async with AsyncSessionLocal() as session:
@@ -185,9 +184,3 @@ async def buscar_cancelar(ecommerce_id:int):
         )
         pedidos = result.scalars().all()
         return pedidos
-
-async def validar_nao_cancelados(lista_ids:list):
-    async with AsyncSessionLocal() as session:
-        pedidos_nao_cancelados = await session.query(Pedido).filter(Pedido.id_pedido.in_(lista_ids),
-                                                                    Pedido.dh_cancelamento.is_(None)).order_by(Pedido.num_pedido).all()
-        return pedidos_nao_cancelados
