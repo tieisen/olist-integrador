@@ -1,5 +1,4 @@
 from database.database import AsyncSessionLocal
-from sqlalchemy.ext.asyncio import AsyncSession
 from database.models import Empresa
 from src.utils.log import Log
 from sqlalchemy.future import select
