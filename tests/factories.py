@@ -67,6 +67,7 @@ def fake_nota():
         id_nota=fake.random_int(min=1000, max=9999),
         dh_emissao=datetime.now(),
         numero=fake.random_int(min=1000, max=9999),
+        serie=fake.random_int(min=1, max=100),
         id_financeiro=fake.random_int(min=1000, max=9999),
         nunota=fake.random_int(min=1000, max=9999),
         pedido_id=fake.random_int(min=1, max=5)
@@ -78,6 +79,8 @@ def fake_devolucao():
         id_nota=fake.random_int(min=1000, max=9999),
         dh_emissao=datetime.now(),
         numero=fake.random_int(min=1000, max=9999),
+        serie=fake.random_int(min=1, max=100),
+        chave_acesso=fake.bothify(text='####################'),        
         nunota=fake.random_int(min=1000, max=9999),
         nota_id=fake.random_int(min=1, max=5)
     )
