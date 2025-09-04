@@ -102,10 +102,10 @@ class Nota(Base):
     __tablename__ = "nota"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    id_nota = Column(Integer, nullable=True)
+    id_nota = Column(Integer, nullable=False)
     dh_emissao = Column(DateTime(timezone=True), nullable=True)
-    numero = Column(Integer, nullable=True)
-    serie = Column(String, nullable=True)
+    numero = Column(Integer, nullable=False)
+    serie = Column(String, nullable=False)
     chave_acesso = Column(String, nullable=True)
     id_financeiro = Column(Integer, nullable=True)
     dh_baixa_financeiro = Column(DateTime(timezone=True), nullable=True)
@@ -121,15 +121,15 @@ class Devolucao(Base):
     __tablename__ = "devolucao"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    id_nota = Column(Integer, nullable=True)
+    id_nota = Column(Integer, nullable=False)
     dh_emissao = Column(DateTime(timezone=True), nullable=True)
-    numero = Column(Integer, nullable=True)
-    serie = Column(String, nullable=True)
+    numero = Column(Integer, nullable=False)
+    serie = Column(String, nullable=False)
     chave_acesso = Column(String, nullable=True)
     nunota = Column(Integer, nullable=True)
     dh_confirmacao = Column(DateTime(timezone=True), nullable=True)
     dh_cancelamento = Column(DateTime(timezone=True), nullable=True)
-    nota_id = Column(Integer, ForeignKey("nota.id"), nullable=True)
+    nota_id = Column(Integer, ForeignKey("nota.id"), nullable=False)
 
     nota_ = relationship("Nota", back_populates="devolucao_")
 
