@@ -28,7 +28,6 @@ def fake_produto():
 # ================= OLIST =================
 def fake_olist():
     return dict(
-        dh_solicitacao=datetime.now(),
         token_criptografado=fake.sha256(),
         dh_expiracao_token=datetime.now() + timedelta(days=7),
         refresh_token_criptografado=fake.sha256(),
@@ -40,7 +39,6 @@ def fake_olist():
 # ================= SANKHYA =================
 def fake_sankhya():
     return dict(
-        dh_solicitacao=datetime.now(),
         token_criptografado=fake.sha256(),
         dh_expiracao_token=datetime.now() + timedelta(days=7),
         empresa_id=fake.random_int(min=1, max=5)
@@ -57,10 +55,10 @@ def fake_ecommerce():
 # ================= PEDIDO =================
 def fake_pedido():
     return dict(
+        id_loja=fake.random_int(min=1, max=5),
         id_pedido=fake.random_int(min=100000, max=999999),
         cod_pedido=fake.uuid4(),
-        num_pedido=fake.random_int(min=1, max=9999),
-        ecommerce_id=fake.random_int(min=1, max=5)
+        num_pedido=fake.random_int(min=1, max=9999)        
     )
 
 # ================= NOTA =================
