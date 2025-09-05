@@ -29,11 +29,11 @@ class Criptografia:
         """
         return self.fernet.encrypt(mensagem.encode())
 
-    def descriptografar(self, mensagem_criptografada: bytes) -> str:
+    def descriptografar(self, mensagem: bytes) -> str:
         """
         Descriptografa a mensagem e retorna como string.
         """
-        return self.fernet.decrypt(mensagem_criptografada).decode()
+        return self.fernet.decrypt(mensagem).decode()
     
     def salvar_key(self) -> bool:
         """
@@ -58,17 +58,3 @@ class Criptografia:
         except Exception as e:
             print(f"Erro ao ler a chave: {e}")
             return None
-
-# # Exemplo de uso
-# if __name__ == "__main__":
-#     # cria objeto (gera uma nova chave automaticamente)
-#     cripto = Criptografia()
-
-#     print("Chave gerada:", cripto.get_chave())
-
-#     mensagem = "Segredo ultra confidencial"
-#     criptografada = cripto.criptografar(mensagem)
-#     print("Mensagem criptografada:", criptografada)
-
-#     original = cripto.descriptografar(criptografada)
-#     print("Mensagem original:", original)
