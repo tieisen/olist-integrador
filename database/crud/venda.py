@@ -303,6 +303,9 @@ def atualizar_cancelada(id_pedido:int=None, id_nota:int=None):
     else:
         session.close()
         return False
+    if not venda:
+        session.close()
+        return False
     setattr(venda, "dh_cancelamento_pedido", datetime.now())
     session.commit()
     session.close()
