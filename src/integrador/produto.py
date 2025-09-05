@@ -161,7 +161,7 @@ class Produto:
                     print("Enviando dados para o Olist...")
                     ack_olist, dados_produto_olist = await self.produto_olist.incluir(data=dados_formato_olist)
                     if not ack_olist:
-                        obs = 'Erro ao incluir produto no Olist'
+                        obs = f'Erro ao incluir produto no Olist. {dados_produto_olist}'
                         produto['sucesso'] = False
                         continue
 
