@@ -4,6 +4,7 @@ venv
 vscode
 .vscode
 .env
+*.key
 *.db
 *.log
 *.ipynb
