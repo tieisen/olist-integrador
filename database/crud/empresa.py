@@ -93,3 +93,23 @@ async def buscar_codigo(codigo_snk:int):
             print(f"Empresa não encontrada. Parâmetro: {codigo_snk}")
             return False
         return empresa.__dict__
+
+async def excluir(id:int):
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Empresa).where(Empresa.id == id)
+        )
+        empresa = result.scalar_one_or_none()
+        if not empresa:
+            print(f"Empresa não encontrada. Parâmetro: {id}")
+            return False
+        try:
+            await session.delete(empresa)
+            await session.commit()
+            return True
+        except Exception as e:
+            await session.rollback()
+            print("Erro ao excluir empresa no banco de dados: %s", e)
+            logger.error("Erro ao excluir empresa no banco de dados: %s", e)
+            return False
