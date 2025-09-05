@@ -85,10 +85,9 @@ def fake_devolucao():
 # ================= LOG =================
 def fake_log():
     return dict(
-        contexto=fake.word(),
-        de=fake.word(),
-        para=fake.word(),
-        sucesso=fake.boolean(),
+        contexto=random.choice(['pedido', 'produto', 'estoque', 'nota', 'devolucao']),
+        de=random.choice(['sankhya', 'olist']),
+        para=random.choice(['sankhya', 'olist']),
         empresa_id=fake.random_int(min=1, max=5)
     )
 
@@ -97,11 +96,12 @@ def fake_log_estoque():
     return dict(
         codprod=fake.random_int(min=1000, max=9999),
         idprod=fake.random_int(min=1000, max=9999),
-        qtdmov=fake.random_int(min=1, max=100),
+        qtdmov=fake.random_int(min=-50, max=50),
         status_estoque=fake.boolean(),
         status_lotes=fake.boolean(),
-        obs=fake.sentence(),
-        log_id=fake.random_int(min=1, max=5)
+        obs=fake.sentence(nb_words=10),
+        #log_id=fake.random_int(min=1, max=10)
+        log_id=random.choice([3,1,7,9])
     )
 
 # ================= LOG PEDIDO =================
@@ -110,8 +110,9 @@ def fake_log_pedido():
         evento=random.choice(['R', 'I', 'C', 'F', 'N', 'D']),
         status=fake.boolean(),
         obs=fake.sentence(),
-        log_id=fake.random_int(min=1, max=5),
-        pedido_id=fake.random_int(min=1, max=5)
+        #log_id=fake.random_int(min=1, max=10),
+        log_id=random.choice([10,6]),
+        pedido_id=fake.random_int(min=1, max=20)
     )
 
 # ================= LOG PRODUTO =================
@@ -124,6 +125,7 @@ def fake_log_produto():
         valor_new=fake.word(),
         sucesso=fake.boolean(),
         obs=fake.sentence(),
-        log_id=fake.random_int(min=1, max=5),
+        #log_id=fake.random_int(min=1, max=10),
+        log_id=8,
         produto_id=fake.random_int(min=1, max=5)
     )
