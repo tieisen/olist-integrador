@@ -264,7 +264,7 @@ class Produto:
             new_data['unidade'] = str(data_sankhya.get('codvol'))
             new_data['unidadePorCaixa'] = 1
             new_data['ncm'] = re.sub(r"(\d{4})(\d{2})(\d{2})", r"\1.\2.\3", data_sankhya.get('ncm'))
-            new_data['gtin'] = str(data_sankhya.get('referencia'))
+            new_data['gtin'] = str(data_sankhya.get('referencia')) if data_sankhya.get('referencia') else None
             new_data['origem'] = int(data_sankhya.get('origprod'))
             new_data['codigoEspecificadorSubstituicaoTributaria'] = str(data_sankhya.get('codespecst'))
             new_data['garantia'] = ''
@@ -282,7 +282,7 @@ class Produto:
                                         'diametro': None,
                                         'pesoLiquido': float(data_sankhya.get('pesoliq')) if data_sankhya.get('pesoliq') else None,
                                         'pesoBruto': float(data_sankhya.get('pesobruto')) if data_sankhya.get('pesobruto') else None}
-            new_data['tributacao'] = {'gtinEmbalagem': str(data_sankhya.get('referencia')),
+            new_data['tributacao'] = {'gtinEmbalagem': str(data_sankhya.get('referencia')) if data_sankhya.get('referencia') else None,
                                         'valorIPIFixo': 0,
                                         'classeIPI': None}
             new_data['seo'] = {'titulo': None,
