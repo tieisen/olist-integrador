@@ -1,5 +1,6 @@
 from database.database import AsyncSessionLocal
 from database.models import Empresa
+from src.services.criptografia import Criptografia
 from src.utils.log import Log
 from sqlalchemy.future import select
 import os
@@ -13,21 +14,61 @@ logging.basicConfig(filename=Log().buscar_path(),
                     format=os.getenv('LOGGER_FORMAT'),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
-  
-async def criar(
-        codigo_snk: int,
-        nome: str,
-        cnpj: str,
-        client_id: str,
-        client_secret: str,
-        admin_email: str,
-        admin_senha: str,
-        serie_nfe: str
-    ):
+
+def valida_criptografia(kwargs):
+    colunas_criptografadas = [
+        'client_secret',
+        'olist_admin_senha',
+        'snk_token',
+        'snk_appkey',
+        'snk_admin_senha'
+    ]    
+    # Criptografa os dados sensíveis
+    cripto = Criptografia()
+    for key, value in kwargs.items():
+        if key in colunas_criptografadas:
+            kwargs[key] = cripto.criptografar(value)
+    
+    return kwargs
+        
+def valida_colunas_existentes(kwargs):
+    colunas_do_banco = [
+        'serie_nfe','client_id','client_secret',
+        'olist_admin_email','olist_admin_senha',
+        'olist_idfornecedor_padrao','olist_iddeposito_padrao',
+        'olist_dias_busca_pedidos','olist_situacao_busca_pedidos',
+        'snk_token','snk_appkey','snk_admin_email',
+        'snk_admin_senha','snk_timeout_token_min',
+        'snk_top_pedido','snk_top_venda','snk_top_devolucao',
+        'snk_codvend','snk_codcencus','snk_codnat',
+        'snk_codtipvenda','snk_codusu_integracao','snk_codtab_transf',
+        'snk_cod_local_estoque','snk_codparc'
+    ]
+
+    # Verifica se existe coluna no banco para os dados informados
+    for _ in kwargs.keys():
+        if _ not in colunas_do_banco:
+            kwargs.pop(_)
+            erro = f"Coluna {_} não encontrada no banco de dados."
+            logger.warning(erro)
+    
+    return kwargs
+
+async def criar(snk_codemp:int,
+                nome:str,
+                cnpj:str,
+                **kwargs):
+
+    kwargs = valida_colunas_existentes(kwargs)
+    if not kwargs:
+        print("Colunas informadas não existem no banco de dados.")
+        return False
+    
+    kwargs = valida_criptografia(kwargs)
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Empresa).where(Empresa.codigo_snk == codigo_snk)
+            select(Empresa).where(Empresa.snk_codemp == snk_codemp)
         )
         empresa = result.scalar_one_or_none()
 
@@ -36,15 +77,10 @@ async def criar(
             return False
 
         nova_empresa = Empresa(
-            codigo_snk=codigo_snk,
+            snk_codemp=snk_codemp,
             nome=nome,
             cnpj=cnpj,
-            client_id=client_id,
-            client_secret=client_secret,
-            admin_email=admin_email,
-            admin_senha=admin_senha,
-            serie_nfe=serie_nfe,
-            ativo=True
+            **kwargs
         )
 
         session.add(nova_empresa)
@@ -53,6 +89,13 @@ async def criar(
         return True
 
 async def atualizar_id(empresa_id:int,**kwargs):
+
+    kwargs = valida_colunas_existentes(kwargs)
+    if not kwargs:
+        print("Colunas informadas não existem no banco de dados.")
+        return False
+    
+    kwargs = valida_criptografia(kwargs)
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -67,11 +110,18 @@ async def atualizar_id(empresa_id:int,**kwargs):
         await session.refresh(empresa)
         return True
 
-async def atualizar_codigo(codigo_snk:int,**kwargs):
+async def atualizar_codigo(snk_codemp:int,**kwargs):
+
+    kwargs = valida_colunas_existentes(kwargs)
+    if not kwargs:
+        print("Colunas informadas não existem no banco de dados.")
+        return False
+    
+    kwargs = valida_criptografia(kwargs)
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Empresa).where(Empresa.codigo_snk == codigo_snk)
+            select(Empresa).where(Empresa.snk_codemp == snk_codemp)
         )
         empresa = result.scalar_one_or_none()
         if not empresa:
@@ -82,19 +132,19 @@ async def atualizar_codigo(codigo_snk:int,**kwargs):
         await session.refresh(empresa)
         return True
 
-async def buscar_codigo(codigo_snk:int):
+async def buscar_codigo(snk_codemp:int):
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Empresa).where(Empresa.codigo_snk == codigo_snk)
+            select(Empresa).where(Empresa.snk_codemp == snk_codemp)
         )
         empresa = result.scalar_one_or_none()
         if not empresa:
-            print(f"Empresa não encontrada. Parâmetro: {codigo_snk}")
+            print(f"Empresa não encontrada. Parâmetro: {snk_codemp}")
             return False
         return empresa.__dict__
 
-async def excluir(id:int):
+async def excluir_id(id:int):
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -103,6 +153,26 @@ async def excluir(id:int):
         empresa = result.scalar_one_or_none()
         if not empresa:
             print(f"Empresa não encontrada. Parâmetro: {id}")
+            return False
+        try:
+            await session.delete(empresa)
+            await session.commit()
+            return True
+        except Exception as e:
+            await session.rollback()
+            print("Erro ao excluir empresa no banco de dados: %s", e)
+            logger.error("Erro ao excluir empresa no banco de dados: %s", e)
+            return False
+
+async def excluir_codigo(snk_codemp:int):
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Empresa).where(Empresa.snk_codemp == snk_codemp)
+        )
+        empresa = result.scalar_one_or_none()
+        if not empresa:
+            print(f"Empresa não encontrada. Parâmetro: {snk_codemp}")
             return False
         try:
             await session.delete(empresa)
