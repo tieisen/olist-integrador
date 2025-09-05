@@ -1,5 +1,6 @@
 from database.database import AsyncSessionLocal
 from database.models import LogPedido
+from sqlalchemy.future import select
 from src.utils.log import Log
 import os
 import logging
@@ -26,11 +27,19 @@ async def criar(log_id:int,pedido_id:int,evento:str,status:bool=True,obs:str=Non
 
 async def buscar_id(log_id: int):
     async with AsyncSessionLocal() as session:
-        log = await session.query(LogPedido).filter(LogPedido.log_id == log_id).all()
+        result = await session.execute(
+            select(LogPedido)
+            .where(LogPedido.log_id == log_id)
+        )
+        log = result.scalars().all()
         return log
 
-async def buscar_status_false(log_id: int):
+async def buscar_falhas(log_id: int):
     async with AsyncSessionLocal() as session:
-        log = await session.query(LogPedido).filter(LogPedido.log_id == log_id,
-                                                    LogPedido.status.is_(False)).first()
+        result = await session.execute(
+            select(LogPedido)
+            .where(LogPedido.log_id == log_id,
+                   LogPedido.sucesso.is_(False))
+        )
+        log = result.scalars().all()
         return log
