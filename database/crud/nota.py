@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from database.database import AsyncSessionLocal
-from database.models import Nota, Pedido, Ecommerce
+from database.models import Nota, Pedido
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
