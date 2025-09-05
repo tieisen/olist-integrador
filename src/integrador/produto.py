@@ -119,6 +119,8 @@ class Produto:
             for i, produto in enumerate(alteracoes_pendentes):
                 if obs:
                     # Registro no log
+                    logger.error(obs)
+                    print(obs)
                     crudLogProd.criar(log_id=log_id,
                                       codprod=alteracoes_pendentes[i-1].get('codprod'),
                                       idprod=alteracoes_pendentes[i-1].get('sku'),
