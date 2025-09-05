@@ -96,7 +96,7 @@ class Produto:
             token = self.con.get_token()
         except Exception as e:
             logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+            return False, {}
         
         url = self.endpoint
         if not url:
@@ -111,15 +111,17 @@ class Produto:
                                         "Accept":"application/json"},
                                 json=data)
         except Exception as e:
-            logger.error("Erro relacionado à requisição. %s",e)
-            return False, {}
+            erro = f"Produto {data.get('sku')}. Erro relacionado à requisição. {e}"
+            logger.error(erro)
+            return False, {erro}
         
         if res.status_code in [200,201]:                    
             return True, res.json()
         else:
-            logger.error("Erro %s: %s cod %s", res.status_code, res.json(), res["sku"])
-            print(f"Erro {res.status_code}: {res.json()} cod {data.get('sku')}")
-            return False, {}
+            erro = f"Erro {res.status_code}: {res.json()} cod {data.get('sku')}"
+            logger.error(erro)
+            print(erro)
+            return False, {erro}
 
     async def atualizar(self,id:int=None,data:dict=None) -> bool:
 
