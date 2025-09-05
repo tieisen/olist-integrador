@@ -104,11 +104,16 @@ class Produto:
             logger.error("Erro relacionado à url. %s",url)
             return False, {}
 
-        res = requests.post(url=url,
-                            headers={"Authorization":f"Bearer {token}",
-                                     "Content-Type":"application/json",
-                                     "Accept":"application/json"},
-                            json=data)
+        try:
+            res = requests.post(url=url,
+                                headers={"Authorization":f"Bearer {token}",
+                                        "Content-Type":"application/json",
+                                        "Accept":"application/json"},
+                                json=data)
+        except Exception as e:
+            logger.error("Erro relacionado à requisição. %s",e)
+            return False, {}
+        
         if res.status_code in [200,201]:                    
             return True, res.json()
         else:
