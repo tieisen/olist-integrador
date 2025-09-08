@@ -64,11 +64,11 @@ class Olist(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     dh_solicitacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    token_criptografado = Column(String, nullable=False)
+    token = Column(String, nullable=False)
     dh_expiracao_token = Column(DateTime(timezone=True), nullable=False)
-    refresh_token_criptografado = Column(String, nullable=False)
+    refresh_token = Column(String, nullable=False)
     dh_expiracao_refresh_token = Column(DateTime(timezone=True), nullable=False)
-    id_token_criptografado = Column(String, nullable=False)
+    id_token = Column(String, nullable=False)
     empresa_id = Column(Integer, ForeignKey("empresa.id"), nullable=False)
 
     empresa_ = relationship("Empresa", back_populates="olist_")
@@ -78,7 +78,7 @@ class Sankhya(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     dh_solicitacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    token_criptografado = Column(String, nullable=False)
+    token = Column(String, nullable=False)
     dh_expiracao_token = Column(DateTime(timezone=True), nullable=False)
     empresa_id = Column(Integer, ForeignKey("empresa.id"), nullable=False)
 
