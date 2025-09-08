@@ -27,14 +27,14 @@ def valida_criptografia(kwargs):
     cripto = Criptografia()
     for key, value in kwargs.items():
         if key in colunas_criptografadas:
-            kwargs[key] = cripto.criptografar(value)
+            kwargs[key] = cripto.criptografar(value).decode()
     
     return kwargs
         
 def valida_colunas_existentes(kwargs):
     colunas_do_banco = [
-        'serie_nfe','client_id','client_secret',
-        'olist_admin_email','olist_admin_senha',
+        'snk_codemp','nome','cnpj','serie_nfe','client_id',
+        'client_secret','olist_admin_email','olist_admin_senha',
         'olist_idfornecedor_padrao','olist_iddeposito_padrao',
         'olist_dias_busca_pedidos','olist_situacao_busca_pedidos',
         'snk_token','snk_appkey','snk_admin_email',
