@@ -14,6 +14,21 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
+def valida_colunas_existentes(kwargs):
+    colunas_do_banco = [
+        'id_loja','nome',
+        'ativo','empresa_id'
+    ]
+
+    # Verifica se existe coluna no banco para os dados informados
+    for _ in kwargs.keys():
+        if _ not in colunas_do_banco:
+            kwargs.pop(_)
+            erro = f"Coluna {_} não encontrada no banco de dados."
+            logger.warning(erro)
+    
+    return kwargs
+
 async def criar(
         id_loja:int,
         nome:str,
@@ -52,6 +67,12 @@ async def buscar_idloja(id_loja:int):
         return ecommerce.__dict__
     
 async def atualizar(ecommerce_id:int, **kwargs):
+
+    kwargs = valida_colunas_existentes(kwargs)
+    if not kwargs:
+        print("Colunas informadas não existem no banco de dados.")
+        return False
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Ecommerce).where(Ecommerce.id == ecommerce_id)
