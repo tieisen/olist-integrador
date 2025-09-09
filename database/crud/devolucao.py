@@ -65,7 +65,8 @@ async def criar(
                                    id_nota=id_nota,
                                    numero=numero,
                                    serie=serie,
-                                   dh_emissao=datetime.strptime(dh_emissao,'%d/%m/%Y') if dh_emissao else datetime.now())
+                                   dh_emissao=datetime.strptime(dh_emissao,'%d/%m/%Y') if dh_emissao else datetime.now(),
+                                   **kwargs)
         session.add(nova_devolucao)
         await session.commit()
         return True
