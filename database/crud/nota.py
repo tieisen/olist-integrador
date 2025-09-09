@@ -27,7 +27,7 @@ async def criar(
     ):
 
     if kwargs:
-        kwargs = validar_dados(modelo=None,
+        kwargs = validar_dados(modelo=Nota,
                                kwargs=kwargs,
                                colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         if not kwargs:
@@ -56,7 +56,8 @@ async def criar(
         nova_nota = Nota(pedido_id=pedido_id,
                          id_nota=id_nota,
                          numero=numero,
-                         serie=serie)
+                         serie=serie,
+                         **kwargs)
         session.add(nova_nota)
         await session.commit()
         return True
