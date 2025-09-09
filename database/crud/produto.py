@@ -1,7 +1,9 @@
-from database.database import SessionLocal
+from database.database import AsyncSessionLocal
 from datetime import datetime
 from database.models import Produto
 from src.utils.log import Log
+from sqlalchemy.future import select
+from src.utils.db import validar_dados
 import os
 import logging
 from dotenv import load_dotenv
@@ -14,71 +16,124 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-def criar(cod_snk:int, cod_olist:int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    if produto:
-        session.close()
-        return False        
-    novo_produto = Produto(cod_snk=cod_snk,
-                           cod_olist=cod_olist,
-                           dh_cadastro=datetime.now())
-    session.add(novo_produto)
-    session.commit()
-    session.refresh(novo_produto)
-    session.close()
+COLUNAS_CRIPTOGRAFADAS = None
+
+async def criar(
+        cod_snk:int,
+        cod_olist:int,
+        empresa_id:int,
+        **kwargs
+    ):
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Produto,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False    
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Produto).where(Produto.cod_snk == cod_snk,
+                                  Produto.empresa_id == empresa_id)
+        )
+        produto = result.scalar_one_or_none()
+
+        if produto:
+            print("Produto já existe nesta empresa")
+            return False
+        
+        novo_produto = Produto(
+            cod_snk=cod_snk,
+            cod_olist=cod_olist,
+            empresa_id=empresa_id,
+            **kwargs
+        )
+        
+        session.add(novo_produto)
+        await session.commit()
+        await session.refresh(novo_produto)
     return True
 
-def atualizar(cod_snk: int, pendencia: bool):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    if not produto:
-        session.close()
-        return False
-    setattr(produto, "pendencia", pendencia)
-    if not pendencia:
-        setattr(produto, "dh_atualizado", datetime.now())
-    session.commit()
-    session.close()
-    return True
+async def atualizar(
+        cod_snk:int,
+        empresa_id:int,
+        pendencia:bool=False,
+        **kwargs
+    ):
 
-def buscar_todos():
-    session = SessionLocal()
-    produto = session.query(Produto).all()
-    session.close()
-    return produto
+    if kwargs:
+        kwargs = validar_dados(modelo=Produto,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False  
 
-def buscar_pendencias():
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.pendencia.is_(True)).all()
-    session.close()
-    return produto
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Produto).where(Produto.cod_snk == cod_snk,
+                                  Produto.empresa_id == empresa_id)
+        )
+        produto = result.scalar_one_or_none()
 
-def buscar_olist(cod_olist: int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_olist == cod_olist).first()
-    session.close()
-    return produto    
+        if not produto:
+            print("Produto não encontrado")
+            return False
+        
+        if kwargs:
+            for key, value in kwargs.items():
+                setattr(produto, key, value)
 
-def buscar_snk(cod_snk: int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    session.close()
-    return produto
+        setattr(produto, "pendencia", pendencia)
+        if not pendencia:
+            setattr(produto, "dh_atualizacao", datetime.now())
+        await session.commit()
+        await session.close()
+        return True
 
-def excluir(cod_snk: int):
-    session = SessionLocal()
-    produto = session.query(Produto).filter(Produto.cod_snk == cod_snk).first()
-    if not produto:
-        session.close()
-        return False
-    try:
-        session.delete(produto)
-        session.commit()
-        session.close()
-        return True        
-    except Exception as e:
-        logger.error("Erro ao excluir produtos no banco de dados: %s",e)
-        session.close()
-        return False   
+async def buscar_pendencias(empresa_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Produto).where(Produto.pendencia.is_(True),
+                                  Produto.empresa_id == empresa_id)
+        )
+        produtos = result.scalars().all()
+        return produtos
 
+async def buscar_olist(cod_olist: int, empresa_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Produto).where(Produto.cod_olist == cod_olist,
+                                  Produto.empresa_id == empresa_id)
+        )
+        produto = result.scalar_one_or_none()
+        return produto.__dict__
+
+async def buscar_snk(cod_snk: int, empresa_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Produto).where(Produto.cod_snk == cod_snk,
+                                  Produto.empresa_id == empresa_id)
+        )
+        produto = result.scalar_one_or_none()
+        return produto.__dict__
+
+async def excluir(cod_snk: int, empresa_id: int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Produto).where(Produto.cod_snk == cod_snk,
+                                  Produto.empresa_id == empresa_id)
+        )
+        produto = result.scalar_one_or_none()
+        if not produto:
+            print("Produto não encontrado")
+            return False
+        try:
+            await session.delete(produto)
+            await session.commit()
+            return True
+        except Exception as e:
+            await session.rollback()
+            logger.error("Erro ao excluir produto no banco de dados: %s", e)
+            return False
+        
