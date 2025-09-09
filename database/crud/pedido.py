@@ -3,6 +3,7 @@ from database.models import Pedido, Ecommerce
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
+from src.utils.db import validar_dados
 import os
 import logging
 from dotenv import load_dotenv
@@ -15,22 +16,7 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-def valida_colunas_existentes(kwargs):
-    colunas_do_banco = [
-        'id_pedido', 'dh_pedido', 'cod_pedido',
-        'num_pedido', 'dh_cancelamento',
-        'id_separacao', 'nunota', 'dh_importacao',
-        'dh_confirmacao', 'dh_faturamento', 'ecommerce_id'
-    ]
-
-    # Verifica se existe coluna no banco para os dados informados
-    for _ in kwargs.keys():
-        if _ not in colunas_do_banco:
-            kwargs.pop(_)
-            erro = f"Coluna {_} não encontrada no banco de dados."
-            logger.warning(erro)
-    
-    return kwargs
+COLUNAS_CRIPTOGRAFADAS = None
 
 async def criar(
         id_loja:int,
@@ -40,10 +26,12 @@ async def criar(
         **kwargs
     ):
     
-    kwargs = valida_colunas_existentes(kwargs)
-    if not kwargs:
-        print("Colunas informadas não existem no banco de dados.")
-        return False
+    if kwargs:
+        kwargs = validar_dados(modelo=Pedido,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -76,7 +64,10 @@ async def criar(
             print(f"Erro ao criar pedido {id_pedido}: {e}")
             return False
 
-async def atualizar_separacao(id_pedido: int, id_separacao: int):
+async def atualizar_separacao(
+        id_pedido: int,
+        id_separacao: int
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.id_pedido == id_pedido)
@@ -100,7 +91,10 @@ async def buscar_importar(ecommerce_id:int):
         pedidos = result.scalars().all()
         return pedidos
 
-async def atualizar_importado(id_pedido:int,nunota:int):
+async def atualizar_importado(
+        id_pedido:int,
+        nunota:int
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.id_pedido == id_pedido)
@@ -124,7 +118,10 @@ async def buscar_confirmar(ecommerce_id:int):
         pedidos = result.scalars().all()
         return pedidos
 
-async def atualizar_confirmado(nunota:int, dh_confirmado: str=None):
+async def atualizar_confirmado(
+        nunota:int,
+        dh_confirmado: str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).filter(Pedido.nunota == nunota)
@@ -151,7 +148,10 @@ async def buscar_faturar(ecommerce_id:int):
         pedidos = result.scalars().all()
         return pedidos
 
-async def atualizar_faturado(nunota:int, dh_faturamento: str=None):
+async def atualizar_faturado(
+        nunota:int,
+        dh_faturamento: str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).filter(Pedido.nunota == nunota)
@@ -168,7 +168,10 @@ async def atualizar_faturado(nunota:int, dh_faturamento: str=None):
         await session.commit()
         return True
 
-async def atualizar_cancelado(id_pedido:int, dh_cancelamento: str=None):
+async def atualizar_cancelado(
+        id_pedido:int,
+        dh_cancelamento: str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).filter(Pedido.id_pedido == id_pedido)
