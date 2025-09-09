@@ -46,7 +46,8 @@ async def criar(
         novo_produto = Produto(
             cod_snk=cod_snk,
             cod_olist=cod_olist,
-            empresa_id=empresa_id
+            empresa_id=empresa_id,
+            **kwargs
         )
         
         session.add(novo_produto)
@@ -79,6 +80,10 @@ async def atualizar(
             print("Produto não encontrado")
             return False
         
+        if kwargs:
+            for key, value in kwargs.items():
+                setattr(produto, key, value)
+
         setattr(produto, "pendencia", pendencia)
         if not pendencia:
             setattr(produto, "dh_atualizacao", datetime.now())
