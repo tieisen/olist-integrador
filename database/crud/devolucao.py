@@ -3,6 +3,7 @@ from database.models import Devolucao, Nota
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
+from src.utils.db import validar_dados
 import os
 import logging
 from dotenv import load_dotenv
@@ -15,13 +16,24 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
+COLUNAS_CRIPTOGRAFADAS = None
+
 async def criar(
         chave_referenciada:int,
         id_nota:int,
         numero:int,
         serie:str,
-        dh_emissao:str=None
+        dh_emissao:str=None,
+        **kwargs
     ):
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Devolucao,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Devolucao).where(Devolucao.id_nota == id_nota)
@@ -65,7 +77,10 @@ async def buscar_atualizar_nunota():
         )
         return result.scalars().all()
 
-async def atualizar_nunota(id_nota:int, nunota:int):
+async def atualizar_nunota(
+        id_nota:int,
+        nunota:int
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Devolucao).where(Devolucao.id_nota == id_nota)
@@ -87,7 +102,10 @@ async def buscar_confirmar():
         )
         return result.scalars().all()
     
-async def atualizar_confirmada(nunota:int, dh_confirmacao:str=None):
+async def atualizar_confirmada(
+        nunota:int,
+        dh_confirmacao:str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Devolucao).where(Devolucao.nunota == nunota)
@@ -101,7 +119,10 @@ async def atualizar_confirmada(nunota:int, dh_confirmacao:str=None):
         await session.commit()
         return True
 
-async def atualizar_cancelamento(id_nota:int, dh_cancelamento:str=None):
+async def atualizar_cancelamento(
+        id_nota:int,
+        dh_cancelamento:str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Devolucao).where(Devolucao.id_nota == id_nota)
