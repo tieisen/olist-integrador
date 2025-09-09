@@ -6,6 +6,7 @@ from database.models import Nota, Pedido
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
+from src.utils.db import validar_dados
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -15,12 +16,23 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
+COLUNAS_CRIPTOGRAFADAS = None
+
 async def criar(
         pedido_id:int,
         id_nota:int,
         numero:int,
-        serie:str
+        serie:str,
+        **kwargs
     ):
+
+    if kwargs:
+        kwargs = validar_dados(modelo=None,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -71,7 +83,11 @@ async def buscar_autorizar(ecommerce_id:int):
         )
         return result.scalars().all()
 
-async def atualizar_autorizada(id_nota:int,chave_acesso:str,dh_emissao:str=None):
+async def atualizar_autorizada(
+        id_nota:int,
+        chave_acesso:str,
+        dh_emissao:str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -96,7 +112,10 @@ async def buscar_financeiro(ecommerce_id:int):
         )
         return result.scalars().all()
 
-async def atualizar_financeiro(id_nota:int, id_financeiro:int):
+async def atualizar_financeiro(
+        id_nota:int,
+        id_financeiro:int
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -126,7 +145,10 @@ async def buscar_financeiro_baixar(ecommerce_id:int):
         )
         return result.scalars().all()    
 
-async def atualizar_financeiro_baixar(id_financeiro:int, dh_baixa:str=None):
+async def atualizar_financeiro_baixar(
+        id_financeiro:int,
+        dh_baixa:str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -152,7 +174,11 @@ async def buscar_atualizar_nunota(ecommerce_id:int):
         )
         return result.scalars().all()
 
-async def atualizar_nunota(nunota:int, id_nota:int=None, nunota_pedido:int=None):
+async def atualizar_nunota(
+        nunota:int,
+        id_nota:int=None,
+        nunota_pedido:int=None
+    ):
     async with AsyncSessionLocal() as session:
 
         if nunota == nunota_pedido:
@@ -198,7 +224,10 @@ async def buscar_confirmar(ecommerce_id:int):
         notas = result.scalars().all()
         return notas
     
-async def atualizar_confirmada(nunota:int, dh_confirmacao:str=None):
+async def atualizar_confirmada(
+        nunota:int,
+        dh_confirmacao:str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -213,7 +242,10 @@ async def atualizar_confirmada(nunota:int, dh_confirmacao:str=None):
         await session.commit()
         return True
 
-async def atualizar_cancelamento(id_nota:int, dh_cancelamento:str=None):
+async def atualizar_cancelamento(
+        id_nota:int,
+        dh_cancelamento:str=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
