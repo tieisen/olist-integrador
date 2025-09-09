@@ -45,7 +45,8 @@ async def criar(
             return False
         novo_ecommerce = Ecommerce(id_loja=id_loja,
                                    nome=nome,
-                                   empresa_id=empresa_id)
+                                   empresa_id=empresa_id
+                                   **kwargs)
         session.add(novo_ecommerce)
         await session.commit()
         return True
