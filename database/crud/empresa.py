@@ -1,7 +1,7 @@
 from database.database import AsyncSessionLocal
 from database.models import Empresa
-from src.services.criptografia import Criptografia
 from src.utils.log import Log
+from src.utils.db import validar_dados
 from sqlalchemy.future import select
 import os
 import logging
@@ -15,56 +15,25 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-def valida_criptografia(kwargs):
-    colunas_criptografadas = [
+COLUNAS_CRIPTOGRAFADAS = [
         'client_secret',
         'olist_admin_senha',
         'snk_token',
         'snk_appkey',
         'snk_admin_senha'
     ]    
-    # Criptografa os dados sensíveis
-    cripto = Criptografia()
-    for key, value in kwargs.items():
-        if key in colunas_criptografadas:
-            kwargs[key] = cripto.criptografar(value).decode()
-    
-    return kwargs
-        
-def valida_colunas_existentes(kwargs):
-    colunas_do_banco = [
-        'snk_codemp','nome','cnpj','serie_nfe','client_id',
-        'client_secret','olist_admin_email','olist_admin_senha',
-        'olist_idfornecedor_padrao','olist_iddeposito_padrao',
-        'olist_dias_busca_pedidos','olist_situacao_busca_pedidos',
-        'snk_token','snk_appkey','snk_admin_email',
-        'snk_admin_senha','snk_timeout_token_min',
-        'snk_top_pedido','snk_top_venda','snk_top_devolucao',
-        'snk_codvend','snk_codcencus','snk_codnat',
-        'snk_codtipvenda','snk_codusu_integracao','snk_codtab_transf',
-        'snk_cod_local_estoque','snk_codparc'
-    ]
-
-    # Verifica se existe coluna no banco para os dados informados
-    for _ in kwargs.keys():
-        if _ not in colunas_do_banco:
-            kwargs.pop(_)
-            erro = f"Coluna {_} não encontrada no banco de dados."
-            logger.warning(erro)
-    
-    return kwargs
 
 async def criar(snk_codemp:int,
                 nome:str,
                 cnpj:str,
                 **kwargs):
 
-    kwargs = valida_colunas_existentes(kwargs)
-    if not kwargs:
-        print("Colunas informadas não existem no banco de dados.")
-        return False
-    
-    kwargs = valida_criptografia(kwargs)
+    if kwargs:
+        kwargs = validar_dados(modelo=Empresa,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -90,12 +59,12 @@ async def criar(snk_codemp:int,
 
 async def atualizar_id(empresa_id:int,**kwargs):
 
-    kwargs = valida_colunas_existentes(kwargs)
-    if not kwargs:
-        print("Colunas informadas não existem no banco de dados.")
-        return False
-    
-    kwargs = valida_criptografia(kwargs)
+    if kwargs:
+        kwargs = validar_dados(modelo=Empresa,
+                            kwargs=kwargs,
+                            colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -112,12 +81,12 @@ async def atualizar_id(empresa_id:int,**kwargs):
 
 async def atualizar_codigo(snk_codemp:int,**kwargs):
 
-    kwargs = valida_colunas_existentes(kwargs)
-    if not kwargs:
-        print("Colunas informadas não existem no banco de dados.")
-        return False
-    
-    kwargs = valida_criptografia(kwargs)
+    if kwargs:
+        kwargs = validar_dados(modelo=Empresa,
+                            kwargs=kwargs,
+                            colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
