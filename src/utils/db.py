@@ -16,8 +16,8 @@ logging.basicConfig(filename=Log().buscar_path(),
 def listar_colunas(engine, nome_tabela: str) -> list[str]:
     """
     Retorna as colunas de uma tabela em formato de lista.
-    :param engine: instância do SQLAlchemy Engine
-    :param nome_tabela: nome da tabela no banco
+        :param engine: instância do SQLAlchemy Engine
+        :param nome_tabela: nome da tabela no banco
     """
     inspector = inspect(engine)
     return [col["name"] for col in inspector.get_columns(nome_tabela)]
@@ -26,7 +26,7 @@ def listar_colunas(engine, nome_tabela: str) -> list[str]:
 def listar_colunas_model(modelo) -> list[str]:
     """
     Retorna as colunas a partir de um modelo do SQLAlchemy.
-    :param modelo: classe do modelo (ex: Empresa)
+        :param modelo: classe do modelo (ex: Empresa)
     """
     return [col.name for col in modelo.__table__.columns]
 
@@ -64,7 +64,8 @@ def validar_colunas_existentes(modelo, kwargs:dict):
     
     return kwargs
 
-def validar_dados(modelo,kwargs:dict,colunas_criptografadas:list[str]):
+def validar_dados(modelo,kwargs:dict,colunas_criptografadas:list[str]=None):
+
     if not validar_colunas_existentes(modelo,kwargs):
         return False
     
