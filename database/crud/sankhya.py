@@ -3,6 +3,7 @@ from database.models import Sankhya
 from datetime import datetime, timedelta
 from src.services.criptografia import Criptografia
 from sqlalchemy.future import select
+from src.utils.db import validar_dados
 from src.utils.log import Log
 import os
 import logging
@@ -16,42 +17,19 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-def valida_criptografia(kwargs):
-    colunas_criptografadas = [ 'token' ]    
-    # Criptografa os dados sensíveis
-    cripto = Criptografia()
-    for key, value in kwargs.items():
-        if key in colunas_criptografadas:
-            kwargs[key] = cripto.criptografar(value).decode()
-    
-    return kwargs
-        
-def valida_colunas_existentes(kwargs):
-    colunas_do_banco = [
-        'dh_solicitacao', 'token',
-        'dh_expiracao_token', 'empresa_id'
-    ]
-
-    # Verifica se existe coluna no banco para os dados informados
-    for _ in kwargs.keys():
-        if _ not in colunas_do_banco:
-            kwargs.pop(_)
-            erro = f"Coluna {_} não encontrada no banco de dados."
-            logger.warning(erro)
-    
-    return kwargs
+COLUNAS_CRIPTOGRAFADAS = [ 'token' ]
 
 async def criar(
         empresa_id:int,
         **kwargs
     ):
 
-    kwargs = valida_colunas_existentes(kwargs)
-    if not kwargs:
-        print("Colunas informadas não existem no banco de dados.")
-        return False
-    
-    kwargs = valida_criptografia(kwargs)
+    if kwargs:
+        kwargs = validar_dados(modelo=Sankhya,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
 
     async with AsyncSessionLocal() as session:    
         try:
