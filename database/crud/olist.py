@@ -33,7 +33,7 @@ def valida_colunas_existentes(kwargs):
         'dh_solicitacao', 'token',
         'dh_expiracao_token', 'refresh_token',
         'dh_expiracao_refresh_token',
-        'id_token_criptografado', 'empresa_id'
+        'id_token', 'empresa_id'
     ]
 
     # Verifica se existe coluna no banco para os dados informados
