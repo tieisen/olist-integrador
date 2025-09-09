@@ -2,6 +2,7 @@ from database.database import AsyncSessionLocal
 from database.models import Ecommerce
 from src.utils.log import Log
 from sqlalchemy.future import select
+from src.utils.db import validar_dados
 import os
 import logging
 from dotenv import load_dotenv
@@ -14,26 +15,22 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-def valida_colunas_existentes(kwargs):
-    colunas_do_banco = [
-        'id_loja','nome',
-        'ativo','empresa_id'
-    ]
-
-    # Verifica se existe coluna no banco para os dados informados
-    for _ in kwargs.keys():
-        if _ not in colunas_do_banco:
-            kwargs.pop(_)
-            erro = f"Coluna {_} não encontrada no banco de dados."
-            logger.warning(erro)
-    
-    return kwargs
+COLUNAS_CRIPTOGRAFADAS = None
 
 async def criar(
         id_loja:int,
         nome:str,
-        empresa_id:int
+        empresa_id:int,
+        **kwargs
     ):
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Ecommerce,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Ecommerce).where(
@@ -68,10 +65,12 @@ async def buscar_idloja(id_loja:int):
     
 async def atualizar(ecommerce_id:int, **kwargs):
 
-    kwargs = valida_colunas_existentes(kwargs)
-    if not kwargs:
-        print("Colunas informadas não existem no banco de dados.")
-        return False
+    if kwargs:
+        kwargs = validar_dados(modelo=Ecommerce,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
