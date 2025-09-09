@@ -19,7 +19,7 @@ logging.basicConfig(filename=Log().buscar_path(),
 COLUNAS_CRIPTOGRAFADAS = None
 
 async def criar(
-        pedido_id:int,
+        id_pedido:int,
         id_nota:int,
         numero:int,
         serie:str,
@@ -42,18 +42,24 @@ async def criar(
         if nota:
             print(f"Nota {id_nota} já existe no ID {nota.id}")
             return False
-        
+
         result = await session.execute(
             select(Nota)
-            .where(Nota.pedido_id == pedido_id,
-                   Nota.dh_cancelamento.isnot(None))
+            .where(Nota.dh_cancelamento.isnot(None),
+                   Nota.pedido_.has(Pedido.id_pedido == id_pedido))
         )
-        pedido = result.scalar_one_or_none()
-        if pedido:
-            print(f"Pedido {pedido_id} já foi atendido na nota {pedido.numero}")
+        pedido_atendido = result.scalar_one_or_none()
+        if pedido_atendido:
+            print(f"Pedido {id_pedido} já foi atendido na nota {pedido_atendido.numero}")
             return False
+
+        result = await session.execute(
+            select(Pedido)
+            .where(Pedido.id_pedido == id_pedido)
+        )
+        pedido = result.scalar_one_or_none()        
         
-        nova_nota = Nota(pedido_id=pedido_id,
+        nova_nota = Nota(pedido_id=pedido.id,
                          id_nota=id_nota,
                          numero=numero,
                          serie=serie,
