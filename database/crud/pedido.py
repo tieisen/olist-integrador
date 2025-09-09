@@ -15,12 +15,36 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
+def valida_colunas_existentes(kwargs):
+    colunas_do_banco = [
+        'id_pedido', 'dh_pedido', 'cod_pedido',
+        'num_pedido', 'dh_cancelamento',
+        'id_separacao', 'nunota', 'dh_importacao',
+        'dh_confirmacao', 'dh_faturamento', 'ecommerce_id'
+    ]
+
+    # Verifica se existe coluna no banco para os dados informados
+    for _ in kwargs.keys():
+        if _ not in colunas_do_banco:
+            kwargs.pop(_)
+            erro = f"Coluna {_} não encontrada no banco de dados."
+            logger.warning(erro)
+    
+    return kwargs
+
 async def criar(
         id_loja:int,
         id_pedido:int,
         cod_pedido:str,
-        num_pedido:int
+        num_pedido:int,
+        **kwargs
     ):
+    
+    kwargs = valida_colunas_existentes(kwargs)
+    if not kwargs:
+        print("Colunas informadas não existem no banco de dados.")
+        return False
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.id_pedido == id_pedido)
@@ -42,7 +66,8 @@ async def criar(
             novo_pedido = Pedido(id_pedido=id_pedido,
                                  cod_pedido=cod_pedido,
                                  num_pedido=num_pedido,
-                                 ecommerce_id=ecommerce.id)
+                                 ecommerce_id=ecommerce.id,
+                                 **kwargs)
             session.add(novo_pedido)
             await session.commit()
             await session.refresh(novo_pedido)            
