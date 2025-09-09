@@ -14,7 +14,13 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-async def criar(log_id:int,pedido_id:int,evento:str,status:bool=True,obs:str=None):
+async def criar(
+        log_id:int,
+        pedido_id:int,
+        evento:str,
+        status:bool=True,
+        obs:str=None
+    ):
     async with AsyncSessionLocal() as session:
         novo_log = LogPedido(log_id=log_id,
                              pedido_id=pedido_id,

@@ -23,7 +23,8 @@ async def criar(
         valor_new:str=None,
         sucesso:bool=True,
         obs:str=None,
-        produto_id:int=None):
+        produto_id:int=None
+    ):
     async with AsyncSessionLocal() as session:
 
         novo_log = LogProduto(log_id=log_id,

@@ -7,7 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv('keys/.env')
 
-async def criar(empresa_id:int, de:str, para:str, contexto:str):
+async def criar(
+        empresa_id:int,
+        de:str,
+        para:str,
+        contexto:str
+    ):
     async with AsyncSessionLocal() as session:
         novo_log = Log(empresa_id=empresa_id,
                        de=de,
@@ -18,7 +23,10 @@ async def criar(empresa_id:int, de:str, para:str, contexto:str):
         await session.refresh(novo_log)
     return novo_log.id
 
-async def atualizar(id:int, sucesso:bool=None):
+async def atualizar(
+        id:int,
+        sucesso:bool=None
+    ):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Log)
@@ -87,7 +95,10 @@ async def buscar_falhas(empresa_id:int):
             log = result.scalars().all()
             return log
         
-async def listar_falhas(empresa_id:int=None,logs:list=None):
+async def listar_falhas(
+        empresa_id:int=None,
+        logs:list=None
+    ):
     lista_falhas = []
 
     if not any([empresa_id, logs]):

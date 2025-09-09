@@ -14,7 +14,15 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-async def criar(log_id:int,codprod:int,idprod:int,qtdmov:int=0,status_estoque:bool=True,status_lotes:bool=None,obs:str=None):
+async def criar(
+        log_id:int,
+        codprod:int,
+        idprod:int,
+        qtdmov:int=0,
+        status_estoque:bool=True,
+        status_lotes:bool=None,
+        obs:str=None
+    ):
     async with AsyncSessionLocal() as session:
         novo_log = LogEstoque(log_id=log_id,
                               codprod=codprod,
