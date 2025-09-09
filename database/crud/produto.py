@@ -3,6 +3,7 @@ from datetime import datetime
 from database.models import Produto
 from src.utils.log import Log
 from sqlalchemy.future import select
+from src.utils.db import validar_dados
 import os
 import logging
 from dotenv import load_dotenv
@@ -15,7 +16,22 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-async def criar(cod_snk:int, cod_olist:int, empresa_id:int):
+COLUNAS_CRIPTOGRAFADAS = None
+
+async def criar(
+        cod_snk:int,
+        cod_olist:int,
+        empresa_id:int,
+        **kwargs
+    ):
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Produto,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False    
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Produto).where(Produto.cod_snk == cod_snk,
@@ -38,7 +54,20 @@ async def criar(cod_snk:int, cod_olist:int, empresa_id:int):
         await session.refresh(novo_produto)
     return True
 
-async def atualizar(cod_snk: int, empresa_id: int, pendencia: bool = False):
+async def atualizar(
+        cod_snk:int,
+        empresa_id:int,
+        pendencia:bool=False,
+        **kwargs
+    ):
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Produto,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False  
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Produto).where(Produto.cod_snk == cod_snk,
