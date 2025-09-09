@@ -39,7 +39,7 @@ async def criar(
         )
         pedido = result.scalar_one_or_none()
         if pedido:
-            print("Pedido já existe")
+            print(f"Pedido {id_pedido} já existe na base")
             return False
 
         result = await session.execute(
