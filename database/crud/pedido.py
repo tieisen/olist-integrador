@@ -64,6 +64,44 @@ async def criar(
             print(f"Erro ao criar pedido {id_pedido}: {e}")
             return False
 
+async def atualizar(
+        id_pedido:int=None,
+        num_pedido:int=None,
+        **kwargs
+    ):
+
+    if not any([id_pedido, num_pedido]):
+        print("Nenhum parâmetro informado")
+        return False
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Pedido,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
+            
+    async with AsyncSessionLocal() as session:
+        if id_pedido:
+            result = await session.execute(
+                select(Pedido).where(Pedido.id_pedido == id_pedido)
+            )
+        if num_pedido:
+            result = await session.execute(
+                select(Pedido).where(Pedido.num_pedido == num_pedido)
+            )
+
+        pedido = result.scalar_one_or_none()
+        if not pedido:
+            print(f"Pedido não encontrado. Parâmetro: {id_pedido or num_pedido}")
+            return False
+        
+        for key, value in kwargs.items():
+            setattr(pedido, key, value)
+            
+        await session.commit()
+        return True        
+
 async def atualizar_separacao(
         id_pedido: int,
         id_separacao: int
