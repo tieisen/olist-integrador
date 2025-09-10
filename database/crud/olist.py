@@ -1,5 +1,5 @@
 from database.database import AsyncSessionLocal
-from database.models import Olist
+from database.models import Olist, Empresa
 from datetime import datetime, timedelta
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
@@ -44,11 +44,26 @@ async def criar(
             logger.error("Erro ao salvar token no banco de dados: %s",e)
             return False
 
-async def buscar(empresa_id:int):
+async def buscar(
+        empresa_id:int=None,
+        codemp:int=None
+    ):
+
+    if not any([empresa_id,codemp]):
+        return False
+
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Olist).where(Olist.empresa_id == empresa_id).order_by(Olist.id.desc()).fetch(1)
-        )
+
+        if empresa_id:
+            result = await session.execute(
+                select(Olist).where(Olist.empresa_id == empresa_id).order_by(Olist.id.desc()).fetch(1)
+            )
+
+        if codemp:
+            result = await session.execute(
+                select(Olist).where(Olist.empresa_.has(Empresa.snk_codemp == codemp)).order_by(Olist.id.desc()).fetch(1)
+            )
+
         token = result.scalar_one_or_none()
         if not token:
             print("Token não encontrado")
