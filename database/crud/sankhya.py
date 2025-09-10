@@ -1,9 +1,8 @@
 from database.database import AsyncSessionLocal
-from database.models import Sankhya
+from database.models import Sankhya, Empresa
 from datetime import datetime, timedelta
-from src.services.criptografia import Criptografia
 from sqlalchemy.future import select
-from src.utils.db import validar_dados
+from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import Log
 import os
 import logging
@@ -43,20 +42,35 @@ async def criar(
             logger.error("Erro ao salvar token no banco de dados: %s",e)
             return False
 
-async def buscar_token(empresa_id:int):
+async def buscar(
+        empresa_id:int=None,
+        codemp:int=None
+    ):
+
+    if not any([empresa_id,codemp]):
+        return False
+    
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Sankhya).where(Sankhya.empresa_id == empresa_id).order_by(Sankhya.id.desc()).fetch(1)
-        )
+
+        if empresa_id:
+            result = await session.execute(
+                select(Sankhya).where(Sankhya.empresa_id == empresa_id).order_by(Sankhya.id.desc()).fetch(1)
+            )
+
+        if codemp:
+            result = await session.execute(
+                select(Sankhya).where(Sankhya.empresa_.has(Empresa.snk_codemp == codemp)).order_by(Sankhya.id.desc()).fetch(1)
+            )        
+
         token = result.scalar_one_or_none()
-        try:
-            cripto = Criptografia()
-            token_literal = cripto.descriptografar(token.token)
-            return token_literal
-        except Exception as e:
-            erro = f"Erro ao descriptografar token: {e}"
-            logger.error(erro)
-            return False    
+        if not token:
+            # print("Token não encontrado")
+            return False
+                
+        dados_token = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                       retorno=token)
+        
+        return dados_token 
 
 async def excluir(id:int):
     async with AsyncSessionLocal() as session:
@@ -65,7 +79,7 @@ async def excluir(id:int):
         )
         token = result.scalar_one_or_none()
         if not token:
-            print("Token não encontrado")
+            # print("Token não encontrado")
             return False
         try:
             await session.delete(token)
@@ -90,7 +104,7 @@ async def excluir_cache():
         )
         tokens = result.scalars().all()
         if not tokens:
-            print("Tokens não encontrados")
+            # print("Tokens não encontrados")
             return False
         try:
             for token in tokens:
