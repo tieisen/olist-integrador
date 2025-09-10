@@ -1,9 +1,8 @@
 from database.database import AsyncSessionLocal
 from database.models import Olist
 from datetime import datetime, timedelta
-from src.services.criptografia import Criptografia
 from sqlalchemy.future import select
-from src.utils.db import validar_dados
+from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import Log
 import os
 import logging
@@ -45,35 +44,20 @@ async def criar(
             logger.error("Erro ao salvar token no banco de dados: %s",e)
             return False
 
-async def buscar_token(empresa_id:int):
+async def buscar(empresa_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Olist).where(Olist.empresa_id == empresa_id).order_by(Olist.id.desc()).fetch(1)
         )
         token = result.scalar_one_or_none()
-        try:
-            cripto = Criptografia()
-            token_literal = cripto.descriptografar(token.token)
-            return token_literal
-        except Exception as e:
-            erro = f"Erro ao descriptografar token: {e}"
-            logger.error(erro)
-            return False            
-
-async def buscar_refresh_token(empresa_id:int):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Olist).where(Olist.empresa_id == empresa_id).order_by(Olist.id.desc()).fetch(1)
-        )
-        token = result.scalar_one_or_none()
-        try:
-            cripto = Criptografia()
-            token_literal = cripto.descriptografar(token.refresh_token)
-            return token_literal
-        except Exception as e:
-            erro = f"Erro ao descriptografar refresh token: {e}"
-            logger.error(erro)
+        if not token:
+            print("Token não encontrado")
             return False
+        
+        dados_token = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                       retorno=token)
+        
+        return dados_token 
 
 async def excluir(id:int):
     async with AsyncSessionLocal() as session:
