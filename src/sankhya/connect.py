@@ -1,13 +1,14 @@
 import os
+import json
 import asyncio
 import logging
 import requests
-from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from cryptography.fernet import Fernet
-from database.crud import token_sankhya as crud
-from datetime import datetime, timedelta
+from dotenv   import load_dotenv
+from datetime import datetime, timedelta, timezone
+
+from src.utils.decorador.empresa import ensure_dados_empresa
 from src.utils.log import Log
+from database.crud import sankhya as crud
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -17,70 +18,101 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-class Connect(object):
+class Autenticacao:
 
-    def __init__(self):
-        self.fernet = Fernet(os.getenv('SANKHYA_FERNET_KEY').encode())
+    def __init__(self, codemp:int):
+        self.codemp = codemp
+        self.dados_empresa = None        
+        self.headers = None
         self.url = os.getenv('SANKHYA_URL_TOKEN')
-        self.timeout_token = int(os.getenv('SANKHYA_TIMEOUT_TOKEN'))
+
+    def formatar_header(self):
         self.headers = {
-            'token':os.getenv('SANKHYA_TOKEN'),
-            'appkey':os.getenv('SANKHYA_APPKEY'),
-            'username':os.getenv('SANKHYA_USERNAME'),
-            'password':os.getenv('SANKHYA_PASSWORD')
+            'token':self.dados_empresa.get('snk_token'),
+            'appkey':self.dados_empresa.get('snk_appkey'),
+            'username':self.dados_empresa.get('snk_admin_email'),
+            'password':self.dados_empresa.get('snk_admin_senha')
         }
 
-    async def request_token(self) -> dict:
+    @ensure_dados_empresa
+    async def solicitar_token(self) -> dict:
+
+        self.formatar_header()
+
         res = requests.post(
             url=self.url,
             headers=self.headers)
+        
         if res.status_code != 200:
             logger.error("Erro %s ao obter token: %s", res.status_code, res.text)
             print(f"Erro {res.status_code} ao obter token: {res.text}")
             return {}
+        
         if not res.json().get('bearerToken'):
             logger.error("Token de acesso não encontrado na resposta")
             return {}
-        return res.json().get("bearerToken")
+        
+        return res.json()
     
-    def save_token(self, token: str) -> bool:
+    @ensure_dados_empresa
+    async def salvar_token(
+            self,
+            dados_token:dict
+        ) -> bool:
         try:
-            encrypted_token = self.fernet.encrypt(token.encode("utf-8")).decode()
-            expire_date = datetime.now() + timedelta(minutes=self.timeout_token)            
-            ack = crud.criar(token_criptografado=encrypted_token,
-                             dh_expiracao_token=expire_date)
-            if not ack:
-                logger.error("Erro ao salvar token criptografado")
-                return False
-            return True
+            token = json.dumps(dados_token.get('bearerToken'))
+            expire_date = datetime.now() + timedelta(minutes=self.dados_empresa.get('snk_timeout_token_min'))
         except Exception as e:
-            logger.error("Erro ao salvar token criptografado: %s",e)
+            logger.error("Erro ao formatar dados do token: %s",e)
+            return False
+                
+        ack = await crud.criar(empresa_id=self.dados_empresa.get('id'),
+                               token=token,
+                               dh_expiracao_token=expire_date)
+        if not ack:
+            logger.error("Erro ao salvar token criptografado")
             return False
         
-    def get_token(self) -> str:
+        return True
+
+    async def buscar_token_salvo(self) -> str:
+        dados_token = await crud.buscar(empresa_id=self.dados_empresa.get('id'))
+
+        if not dados_token:
+            logger.error(f"Token não encontrado para a empresa {self.codemp}")
+            print(f"Token não encontrado para a empresa {self.codemp}")
+            return None
+
+        if dados_token.get('dh_expiracao_token') > datetime.now(timezone.utc):            
+            return dados_token.get('token')
+        else:
+            logger.warning(f"Token expirado para a empresa {self.codemp}")
+            return None
+
+    @ensure_dados_empresa
+    async def primeiro_login(self) -> str:
+        
+        token = await self.solicitar_token()
+        if not token:
+            return ''
+        
+        ack = await self.salvar_token(token)
+        if not ack:
+            return ''
+        
+        return token.get('bearerToken')
+
+    @ensure_dados_empresa
+    async def autenticar(self) -> str:
         try:
-            token_data = crud.buscar()
-            if token_data and token_data.dh_expiracao_token > datetime.now():
-                # print("Token salvo ainda é válido")
-                decrypted_token = self.fernet.decrypt(token_data.token_criptografado.encode()).decode()
-                return f"Bearer {decrypted_token}"
+            token = await self.buscar_token_salvo()
+            if token:
+                # Token válido salvo na base
+                return token
             else:
-                # print("Token salvo não é válido ou não existe")
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    coro = self.request_token()
-                    new_token = asyncio.ensure_future(coro)               
-                    import nest_asyncio
-                    nest_asyncio.apply()
-                    new_token = loop.run_until_complete(new_token)
-                else:                    
-                    new_token = loop.run_until_complete(self.request_token())
-                if not new_token:
-                    logger.error("Erro ao recuperar ou renovar token")
-                    print("Erro ao recuperar ou renovar token")
-                    return ""
-                self.save_token(token=new_token)
-                return f"Bearer {new_token}"
+                # Token não existe ou expirou
+                token_login = await self.primeiro_login()
+                return token_login
         except Exception as e:
-            logger.error("Erro ao recuperar ou renovar token: %s",e)
-            return ""
+            logger.error("Erro na autenticacao: %s",e)
+            return ''
