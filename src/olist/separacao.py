@@ -2,7 +2,8 @@ import os
 import logging
 import requests
 from dotenv import load_dotenv
-from src.olist.connect import Connect
+
+from src.utils.decorador.olist import ensure_token
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -15,11 +16,15 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Separacao:
 
-    def __init__(self):  
-        self.con = Connect()
+    def __init__(self, codemp:int):  
+        self.token = None
+        self.codemp = codemp
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
-    def extrair_lista(self, res:dict) -> list:
+    def extrair_lista(
+            self,
+            res:dict
+        ) -> list:
 
         if not isinstance(res, dict):
             logger.error("Retorno da API não informado.")
@@ -45,14 +50,9 @@ class Separacao:
             print("Erro ao extrair lista.")
             return False
 
+    @ensure_token
     async def listar(self) -> list:
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
         url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
                 self.endpoint+"/?situacao=4" ] # Em Separacao
         
@@ -67,7 +67,7 @@ class Separacao:
             res = requests.get(
                 url = u,
                 headers = {
-                    "Authorization":f"Bearer {token}",
+                    "Authorization":f"Bearer {self.token}",
                     "Content-Type":"application/json",
                     "Accept":"application/json"
                 }
@@ -86,18 +86,11 @@ class Separacao:
 
         return lista if status else status        
 
-    async def buscar(self, id:int=None) -> bool:
-
-        if not id:
-            logger.error("ID da separação não informado.")
-            print("ID da separação não informado.")
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+    @ensure_token
+    async def buscar(
+            self,
+            id:int
+        ) -> bool:
 
         url = self.endpoint+f"/{id}"
         if not url:
@@ -108,7 +101,7 @@ class Separacao:
         res = requests.get(
             url = url,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             }
@@ -121,18 +114,11 @@ class Separacao:
         
         return res.json()
 
-    async def separar(self, id:int=None) -> bool:
-
-        if not id:
-            logger.error("ID da separação não informado.")
-            print("ID da separação não informado.")
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+    @ensure_token
+    async def separar(
+            self,
+            id:int
+        ) -> bool:
 
         url = self.endpoint+f"/{id}/situacao"
         if not url:
@@ -143,7 +129,7 @@ class Separacao:
         res = requests.put(
             url = url,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             },
@@ -159,18 +145,11 @@ class Separacao:
         
         return True
 
-    async def concluir(self, id:int=None) -> bool:
-
-        if not id:
-            logger.error("ID da separação não informado.")
-            print("ID da separação não informado.")
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+    @ensure_token
+    async def concluir(
+            self,
+            id:int
+        ) -> bool:
 
         url = self.endpoint+f"/{id}/situacao"
         if not url:
@@ -181,7 +160,7 @@ class Separacao:
         res = requests.put(
             url = url,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             },
