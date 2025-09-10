@@ -2,9 +2,8 @@ import os
 import json
 import logging
 import requests
-from functools import wraps
-from dotenv    import load_dotenv
-from datetime  import datetime,timedelta,timezone
+from dotenv   import load_dotenv
+from datetime import datetime,timedelta,timezone
 
 from selenium                      import webdriver
 from selenium.webdriver.common.by  import By
@@ -12,9 +11,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support    import expected_conditions as EC
 from urllib.parse                  import urlparse, parse_qs
 
-from database.crud import olist   as crud_olist
-from database.crud import empresa as crud_empresa
-from src.utils.log import Log
+from database.crud               import olist as crud
+from src.utils.log               import Log
+from src.utils.decorador.empresa import ensure_dados_empresa
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -23,15 +22,6 @@ logging.basicConfig(filename=Log().buscar_path(),
                     format=os.getenv('LOGGER_FORMAT'),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
-
-def ensure_dados_empresa(func):
-    @wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        # Garante que os dados da empresa estão carregados
-        if not self.dados_empresa:
-            await self.buscar_dados_empresa()
-        return await func(self, *args, **kwargs)
-    return wrapper
 
 class Autenticacao():
 
@@ -42,11 +32,7 @@ class Autenticacao():
         self.redirect_uri = os.getenv('OLIST_REDIRECT_URI')
         self.path_token = os.getenv('OLIST_PATH_TOKENS')
         self.dados_empresa = None
-
-    async def buscar_dados_empresa(self):
-        if not self.dados_empresa:
-            self.dados_empresa = await crud_empresa.buscar(codemp=self.codemp)
-
+        
     @ensure_dados_empresa
     async def solicitar_auth_code(self) -> str:
         url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}'
@@ -149,7 +135,7 @@ class Autenticacao():
             logger.error("Erro ao formatar dados do token: %s",e)
             return False
         
-        ack = await crud_olist.criar(empresa_id=self.dados_empresa.get('id'),
+        ack = await crud.criar(empresa_id=self.dados_empresa.get('id'),
                                      token=access_token,
                                      dh_expiracao_token=expire_date,
                                      refresh_token=refresh_token,
@@ -179,7 +165,7 @@ class Autenticacao():
     async def buscar_token_salvo(self) -> str:
         
         # Busca o token mais recente na base
-        dados_token = await crud_olist.buscar(self.dados_empresa.get('id'))
+        dados_token = await crud.buscar(self.dados_empresa.get('id'))
 
         if not dados_token:
             logger.error(f"Token não encontrado para a empresa {self.codemp}")
