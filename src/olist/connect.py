@@ -3,17 +3,20 @@ import json
 import asyncio
 import logging
 import requests
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta,timezone
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from urllib.parse import urlparse, parse_qs
 from cryptography.fernet import Fernet
+import asyncio
 from dotenv import load_dotenv
-from database.crud import token_olist as crud
+from database.crud import olist as crud_olist
 from datetime import datetime, timedelta
 from src.utils.log import Log
+from database.crud import empresa as crud_empresa
+from functools import wraps
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -23,23 +26,41 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-class Connect(object):
+def ensure_dados_empresa(func):
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        # Garante que os dados da empresa estão carregados
+        if not self.dados_empresa:
+            await self.buscar_dados_empresa()
+        return await func(self, *args, **kwargs)
+    return wrapper
 
-    def __init__(self):
-        self.fernet = Fernet(os.getenv('OLIST_FERNET_KEY'))
+class Autenticacao():
+
+    def __init__(self, codemp:int):
+        self.codemp = codemp
+        # self.fernet = Fernet(os.getenv('OLIST_FERNET_KEY'))
         self.auth_url = os.getenv('OLIST_AUTH_URL')
         self.endpoint_token = os.getenv('OLIST_ENDPOINT_TOKEN')
-        self.client_id = os.getenv('OLIST_CLIENT_ID')
-        self.client_secret = os.getenv('OLIST_CLIENT_SECRET')
+        # self.client_id = os.getenv('OLIST_CLIENT_ID')
+        # self.client_secret = os.getenv('OLIST_CLIENT_SECRET')
         self.redirect_uri = os.getenv('OLIST_REDIRECT_URI')
-        self.username = os.getenv('OLIST_USERNAME')
-        self.password = os.getenv('OLIST_PASSWORD')
+        # self.username = os.getenv('OLIST_USERNAME')
+        # self.password = os.getenv('OLIST_PASSWORD')
         self.path_token = os.getenv('OLIST_PATH_TOKENS')        
-        self.access_token  = ''   
-        self.refresh_token = ''   
+        # self.access_token  = ''   
+        # self.refresh_token = ''
+        # Definir timezone do Brasil (UTC-3)
+        self.tz = timezone(timedelta(hours=-3))
+        self.dados_empresa = None
 
-    async def request_auth_code(self) -> str:
-        url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.client_id}&redirect_uri={self.redirect_uri}'
+    async def buscar_dados_empresa(self):
+        if not self.dados_empresa:
+            self.dados_empresa = await crud_empresa.buscar(codemp=self.codemp)
+
+    @ensure_dados_empresa
+    async def solicitar_auth_code(self) -> str:
+        url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.client_id}&redirect_uri={self.redirect_uri}'
         try:
             driver = webdriver.Firefox()
             driver.get(url)
@@ -47,14 +68,14 @@ class Connect(object):
             login_input = driver.find_element(By.ID, "username")
             next_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             login_input.clear()
-            login_input.send_keys(self.username)
+            login_input.send_keys(self.dados_empresa.olist_admin_email)
             next_button.click()
             
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "password")))
             pass_input = driver.find_element(By.ID, "password")
             submit_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             pass_input.clear()
-            pass_input.send_keys(self.password)
+            pass_input.send_keys(self.dados_empresa.olist_admin_senha)
             submit_button.click()
             
             res_url = driver.current_url
@@ -66,24 +87,48 @@ class Connect(object):
         finally:
             driver.quit()
 
-    async def request_token(self, authorization_code: str = None, refresh_token: str = None) -> dict:
-        if not authorization_code and not refresh_token:
-            logger.error("authorization_code ou refresh_token não informado")
-            return {"erro":"authorization_code ou refresh_token não informado"}
+    @ensure_dados_empresa
+    async def solicitar_token(self,authorization_code:str) -> dict:
+        
         header = {
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
         payload = {
             "grant_type": "authorization_code",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
+            "client_id": self.dados_empresa.client_id,
+            "client_secret": self.dados_empresa.client_secret,
             "redirect_uri": self.redirect_uri,
             "code": authorization_code
-        } if authorization_code else {
+        }
+
+        try:
+            res = requests.post(
+                url=self.auth_url + self.endpoint_token,
+                headers=header,
+                data=payload
+            )
+            if res.status_code == 200:
+                return res.json()
+            else:
+                error = res.json().get("error_description", "Erro desconhecido")
+                logger.error("Erro ao obter token: %s",error)
+                return False
+        except requests.exceptions.RequestException as e:
+            logger.error("Erro de conexão: %s",e)
+            return False
+
+    @ensure_dados_empresa
+    async def solicitar_atualizacao_token(self,refresh_token:str) -> dict:
+
+        header = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        payload = {
             "grant_type": "refresh_token",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,            
+            "client_id": self.dados_empresa.client_id,
+            "client_secret": self.dados_empresa.client_secret,            
             "refresh_token": refresh_token
         }
 
@@ -98,95 +143,106 @@ class Connect(object):
             else:
                 error = res.json().get("error_description", "Erro desconhecido")
                 logger.error("Erro ao obter token: %s",error)
-                return {"erro":error}
+                return False
         except requests.exceptions.RequestException as e:
             logger.error("Erro de conexão: %s",e)
-            return {"erro":e}
-
-    def save_token(self, token_data: dict) -> bool:
+            return False
+    
+    @ensure_dados_empresa
+    async def salvar_token(self, dados_token: dict) -> bool:
         try:
-            access_token = json.dumps(token_data['access_token']).encode("utf-8")
-            refresh_token = json.dumps(token_data['refresh_token']).encode("utf-8")
-            id_token = json.dumps(token_data['id_token']).encode("utf-8")
-            encrypted_access_token = self.fernet.encrypt(access_token).decode()
-            encrypted_refresh_token = self.fernet.encrypt(refresh_token).decode()
-            encrypted_id_token = self.fernet.encrypt(id_token).decode()
-            expire_date = datetime.now()+timedelta(0,token_data['expires_in'])
-            expire_date_refresh = datetime.now()+timedelta(0,token_data['refresh_expires_in'])
-            ack = crud.criar(token_criptografado=encrypted_access_token,
-                             dh_expiracao_token=expire_date,
-                             refresh_token_criptografado=encrypted_refresh_token,
-                             dh_expiracao_refresh_token=expire_date_refresh,
-                             id_token_criptografado=encrypted_id_token)
-            if not ack:
-                logger.error("Erro ao salvar token criptografado")
-                return False            
-            return True
+            access_token = json.dumps(dados_token['access_token']).encode("utf-8")
+            refresh_token = json.dumps(dados_token['refresh_token']).encode("utf-8")
+            id_token = json.dumps(dados_token['id_token']).encode("utf-8")
+            expire_date = datetime.now()+timedelta(0,dados_token['expires_in'])
+            expire_date_refresh = datetime.now()+timedelta(0,dados_token['refresh_expires_in'])
         except Exception as e:
-            logger.error("Erro ao salvar token criptografado: %s",e)
+            logger.error("Erro ao formatar dados do token: %s",e)
             return False
         
-    def get_token(self) -> str:
+        ack = await crud_olist.criar(empresa_id=self.dados_empresa.id,
+                                     token=access_token,
+                                     dh_expiracao_token=expire_date,
+                                     refresh_token=refresh_token,
+                                     dh_expiracao_refresh_token=expire_date_refresh,
+                                     id_token=id_token)
+        
+        if not ack:
+            logger.error("Erro ao salvar token")
+            return False
+        
+        return True
+
+    @ensure_dados_empresa        
+    async def atualizar_token(self, refresh_token:str) -> str:
+        
+        novo_token = await self.solicitar_atualizacao_token(refresh_token=refresh_token)
+        if not novo_token:
+            return False
+        
+        ack = await self.salvar_token(novo_token)
+        if not ack:
+            return False
+        
+        return novo_token.get('access_token')        
+         
+    @ensure_dados_empresa        
+    def buscar_token_salvo(self) -> str:
+        
+        # Busca o token mais recente na base
+        dados_token = crud_olist.buscar(self.dados_empresa.id)
+
+        if not dados_token:
+            logger.error(f"Token não encontrado para a empresa {self.codemp}")
+            return None
+
+        if dados_token.get('dh_expiracao_token') < datetime.now(timezone.utc):
+            return dados_token.get('token')
+        
+        if dados_token.get('dh_expiracao_refresh_token') < datetime.now(timezone.utc):
+            return [dados_token.get('refresh_token')]
+
+        if dados_token.get('dh_expiracao_refresh_token') > datetime.now(timezone.utc):
+            logger.warning(f"Refresh token expirado para a empresa {self.codemp}")            
+            return None     
+
+    @ensure_dados_empresa
+    async def primeiro_login(self) -> str:
+        
+        authcode = await self.solicitar_auth_code()
+        if not authcode:
+            return ''
+        
+        token = await self.solicitar_token(authorization_code=authcode)
+        if not token:
+            return ''
+        
+        ack = await self.salvar_token(token)
+        if not ack:
+            return ''
+        
+        return token.get('access_token')
+
+    @ensure_dados_empresa
+    async def autenticar(self) -> str:
         try:
-            token_data = crud.buscar()
-            if token_data:
-                if token_data.dh_expiracao_token > datetime.now():
-                    token_descriptografado = self.fernet.decrypt(token_data.token_criptografado.encode()).decode()
-                    return json.loads(token_descriptografado)
-                elif token_data.dh_expiracao_refresh_token > datetime.now():
-                    refresh_token_descriptografado = self.fernet.decrypt(token_data.refresh_token_criptografado.encode()).decode()
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        coro = self.request_token(refresh_token=json.loads(refresh_token_descriptografado))
-                        new_token = asyncio.ensure_future(coro)
-                        import nest_asyncio
-                        nest_asyncio.apply()
-                        new_token = loop.run_until_complete(new_token)     
-                    else:
-                        new_token = loop.run_until_complete(self.request_token(refresh_token=json.loads(refresh_token_descriptografado)))                
-                    if new_token.get("erro"):
-                        logger.error("Retorno do token de acesso invalido.")
-                        return ''               
-                    else:
-                        self.save_token(new_token)                
-                        logger.info("Token de acesso atualizado.")
-                        return new_token["access_token"]
-                else:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_running():
-                        coro = self.login()
-                        new_token = asyncio.ensure_future(coro)
-                        import nest_asyncio
-                        nest_asyncio.apply()
-                        new_token = loop.run_until_complete(new_token)
-                        return new_token            
-                    else:
-                        new_token = loop.run_until_complete(self.login())
-                        return new_token
-            else:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    coro = self.login()
-                    new_token = asyncio.ensure_future(coro)
-                    import nest_asyncio
-                    nest_asyncio.apply()
-                    new_token = loop.run_until_complete(new_token)
-                    return new_token            
-                else:
-                    new_token = loop.run_until_complete(self.login())
-                    return new_token                
+            token = await self.buscar_token_salvo()
+            if isinstance(token,str):
+                # Token válido salvo na base
+                return token
+            
+            if isinstance(token,list):
+                # Token expirado. Solicita novo token
+                novo_token = await self.atualizar_token(refresh_token=token[0])
+                return novo_token
+
+            if not token:
+                # Token não existe ou expirou o refresh token
+                token_login = await self.primeiro_login()
+                return token_login
         except Exception as e:
-            logger.error("Erro ao recuperar ou renovar token: %s",e)
+            logger.error("Erro na autenticacao: %s",e)
             return ''
 
-    async def login(self) -> str:
-        try:
-            authcode = await self.request_auth_code()
-            token = await self.request_token(authorization_code=authcode)
-            self.save_token(token)
-            logger.info("Token de acesso recuperado via login.")
-            return token["access_token"]
-        except Exception as e:
-            logger.error("Erro no login: %s",e)            
-            return ''
+
 
