@@ -51,7 +51,7 @@ async def criar(
         await session.commit()
         return True
 
-async def buscar_idloja(id_loja:int):
+async def buscar(id_loja:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Ecommerce).where(
