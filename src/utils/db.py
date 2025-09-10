@@ -43,6 +43,41 @@ def validar_criptografia(colunas_criptografadas:list[str], kwargs:dict):
         return False
     
     return kwargs
+
+def remover_criptografia(colunas_criptografadas:list[str], dados:dict):
+    # Criptografa os dados sensíveis
+    cripto = Criptografia()
+    try:
+        for key, value in dados.items():
+            if key in colunas_criptografadas:
+                dados[key] = cripto.descriptografar(value)
+    except Exception as e:
+        erro = f"Erro ao descriptografar dados da coluna {key}. {e}"
+        logger.error(erro)
+        return False    
+    return dados
+
+def formatar_retorno(colunas_criptografadas:list[str], retorno):
+
+    if not retorno:
+        return False
+    
+    if isinstance(retorno,list):
+        retorno_formatado = []
+        for r in retorno:
+            r.__dict__.pop('_sa_instance_state', None)            
+            if not colunas_criptografadas:
+                retorno_formatado.append(r.__dict__)
+                continue
+            dados = remover_criptografia(colunas_criptografadas,r.__dict__)
+            retorno_formatado.append(dados)
+        return retorno_formatado    
+
+    retorno.__dict__.pop('_sa_instance_state', None)
+    if not colunas_criptografadas:
+        return retorno.__dict__
+    dados = remover_criptografia(colunas_criptografadas,retorno.__dict__)
+    return dados
         
 def validar_colunas_existentes(modelo, kwargs:dict):
     if not modelo:
