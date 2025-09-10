@@ -3,7 +3,9 @@ import logging
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
-from src.olist.connect import Connect
+
+from src.utils.decorador.olist import ensure_token
+from src.utils.decorador.ecommerce import ensure_dados_ecommerce
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -16,21 +18,24 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Nota:
 
-    def __init__(self):  
-        self.con = Connect()
+    def __init__(self, codemp:int, id_loja:int=None):  
+        self.token = None
+        self.codemp = codemp
+        self.id_loja = id_loja
+        self.dados_empresa = None
+        self.dados_ecommerce = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
 
-    async def buscar(self, id:int=None, id_ecommerce:str=None) -> bool:
+    @ensure_token
+    async def buscar(
+            self,
+            id:int=None,
+            id_ecommerce:str=None
+        ) -> bool:
 
         if not any([id, id_ecommerce]):
             logger.error("Nota não informada.")
             print("Nota não informada.")
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
         if id:
@@ -44,7 +49,7 @@ class Nota:
         res = requests.get(
             url = url_,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             }
@@ -64,7 +69,7 @@ class Nota:
             res = requests.get(
                 url = url_id,
                 headers = {
-                    "Authorization":f"Bearer {token}",
+                    "Authorization":f"Bearer {self.token}",
                     "Content-Type":"application/json",
                     "Accept":"application/json"
                 }
@@ -78,21 +83,16 @@ class Nota:
             print("Nota cancelada")
             logger.error("Nota cancelada")
             return False
-        
+    
+    @ensure_token
     async def buscar_canceladas(self) -> bool:
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
 
         url = self.endpoint+f"/?situacao=3&tipo=S&dataInicial={datetime.now().strftime('%Y-%m-%d')}&dataFinal={datetime.now().strftime('%Y-%m-%d')}"
 
         res = requests.get(
             url = url,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             }
@@ -109,13 +109,18 @@ class Nota:
         lista_canceladas = [r.get('id') for r in res.json().get('itens')]
         return lista_canceladas
 
-    async def buscar_legado(self, id:int=None, id_ecommerce:str=None) -> bool:
+    @ensure_token
+    async def buscar_legado(
+            self,
+            id:int=None,
+            id_ecommerce:str=None
+        ) -> bool:
 
-        def desmembra_xml(dados_nota:dict=None, xml=None):
-            
-            if not dados_nota or not xml:
-                return {}
-            
+        def desmembra_xml(
+                dados_nota:dict,
+                xml:str
+            ):
+                        
             from lxml import etree
             ns = {'nfe': 'http://www.portalfiscal.inf.br/nfe'}
 
@@ -160,12 +165,6 @@ class Nota:
             print("Nota não informada.")
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
         if id:
             url_ = self.endpoint+f"/{id}"
             id_ecommerce = None
@@ -177,7 +176,7 @@ class Nota:
         res = requests.get(
             url = url_,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             }
@@ -197,7 +196,7 @@ class Nota:
             res = requests.get(
                 url = url_id,
                 headers = {
-                    "Authorization":f"Bearer {token}",
+                    "Authorization":f"Bearer {self.token}",
                     "Content-Type":"application/json",
                     "Accept":"application/json"
                 }
@@ -209,7 +208,7 @@ class Nota:
             res = requests.get(
                 url = self.endpoint+f"/{nota.get('id')}/xml",
                 headers = {
-                    "Authorization":f"Bearer {token}",
+                    "Authorization":f"Bearer {self.token}",
                     "Content-Type":"application/json",
                     "Accept":"application/json"
                 }
@@ -227,29 +226,22 @@ class Nota:
             logger.error("Nota cancelada")
             return False
 
-    async def emitir(self, id:int=None):
-
-        if not id:
-            logger.error("ID não informado.")
-            print("ID não informado.")
-            return False
+    @ensure_token
+    async def emitir(
+            self,
+            id:int
+        ) -> dict:
         
         url = self.endpoint+f"/{id}/emitir"
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False        
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+            return False  
         
         res = requests.post(
             url = url,
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             },
@@ -264,29 +256,23 @@ class Nota:
         if res.status_code == 200:
             return res.json()        
 
-    async def buscar_financeiro(self, serie:str=None, numero:str=None) -> bool:
-
-        if not all([serie, numero]):
-            logger.error("Nota não informada.")
-            print("Nota não informada.")
-            return False
+    @ensure_token
+    async def buscar_financeiro(
+            self,
+            serie:str,
+            numero:str
+        ) -> bool:
         
         url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')+f"?numeroDocumento={serie}{numero}/01"
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False                
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False             
+            return False         
 
         res = requests.get(
             url = url,            
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             }
@@ -302,48 +288,28 @@ class Nota:
                 return res.json().get('itens')[0]
             except:
                 return False
-            # print(res.json())
-            # url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')+f"/{res.json().get('itens')[0].get('id')}"
-            # res_ = requests.get(
-            #     url = url,            
-            #     headers = {
-            #         "Authorization":f"Bearer {token}",
-            #         "Content-Type":"application/json",
-            #         "Accept":"application/json"
-            #     }
-            # )
-            # if res.status_code != 200:
-            #     logger.error("Erro %s: %s fin %s", res.status_code, res.text, f"{serie}{numero}/01")
-            #     return res_.json().get('itens')[0]
-            # else:
-            #     return res_.json()
 
-    async def baixar_financeiro(self, id:int=None, valor:float=None) -> bool:
-
-        if not all([id, valor]):
-            logger.error("Dados do financeiro e da nota não informados.")
-            print("Dados do financeiro e da nota não informados.")
-            return False
+    @ensure_token
+    @ensure_dados_ecommerce
+    async def baixar_financeiro(
+            self,
+            id:int,
+            valor:float
+        ) -> bool:
 
         url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')+f"/{id}/baixar"
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False        
+            return False 
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False             
-
         payload = {
             "contaDestino": {
-                "id": 334742438
+                "id": self.dados_ecommerce.get('id_conta_destino')
             },
             "data": None,
             "categoria": {
-                "id": 347787528
+                "id": self.dados_ecommerce.get('id_categoria_destino')
             },
             "historico": None,
             "taxa": None,
@@ -356,18 +322,18 @@ class Nota:
         res = requests.post(
             url = url,            
             headers = {
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             },
             json=payload
         )
         
+        # Financeiro baixado com sucesso (204) ou
+        # Financeiro da nota já foi baixado (409)
         if res.status_code not in (409,204):
             logger.error("Erro %s: %s fin %s", res.status_code, res.text, id)            
             print(f"Erro {res.status_code}: {res.text}")
-            return False
-        
-        # Financeiro baixado com sucesso (204) ou
-        # Financeiro da nota já foi baixado (409)
+            return False       
+
         return True        
