@@ -3,7 +3,8 @@ import time
 import logging
 import requests
 from dotenv import load_dotenv
-from src.olist.connect import Connect
+
+from src.utils.decorador.olist import ensure_token
 from src.parser.estoque import Estoque as ParserEstoque
 from src.utils.log import Log
 
@@ -17,23 +18,23 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Estoque:
 
-    def __init__(self):  
-        self.con = Connect()
+    def __init__(self, codemp:int):  
+        self.token = None
+        self.codemp = codemp
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_ESTOQUES')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         
-    async def buscar(self, id:int=None, lista_produtos:list=None) -> bool:
+    @ensure_token
+    async def buscar(
+            self,
+            id:int=None,
+            lista_produtos:list=None
+        ) -> bool:
         
         if not any([id,lista_produtos]):
             print("Produto não informado.")
             logger.error("Produto não informado.")
             return False
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False   
 
         result = []
 
@@ -42,7 +43,7 @@ class Estoque:
             res = requests.get(
                 url=url,
                 headers={
-                    "Authorization":f"Bearer {token}",
+                    "Authorization":f"Bearer {self.token}",
                     "Content-Type":"application/json",
                     "Accept":"application/json"
                 }
@@ -62,7 +63,7 @@ class Estoque:
                 res = requests.get(
                     url=url,
                     headers={
-                        "Authorization":f"Bearer {token}",
+                        "Authorization":f"Bearer {self.token}",
                         "Content-Type":"application/json",
                         "Accept":"application/json"
                     }
@@ -76,18 +77,18 @@ class Estoque:
                     return result
         
         return result
-        
-    async def enviar_saldo(self,id:int=None,data:dict=None,lista_dados:list=None) -> list:
+    
+    @ensure_token
+    async def enviar_saldo(
+            self,
+            id:int=None,
+            data:dict=None,
+            lista_dados:list=None
+        ) -> list:
         
         if not all([id,data]) and not lista_dados:
             print("Dados não informados.")
             logger.error("Dados não informados.")
-            return False
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
         url = None
@@ -95,7 +96,7 @@ class Estoque:
         if id and data:
             url = self.endpoint+f"/{id}"
             res = requests.post(url=url,
-                                headers={"Authorization":f"Bearer {token}",
+                                headers={"Authorization":f"Bearer {self.token}",
                                          "Content-Type":"application/json",
                                          "Accept":"application/json"},
                                 json=data)
@@ -125,7 +126,7 @@ class Estoque:
                 time.sleep(self.req_time_sleep)
                 res = requests.post(url=url,
                                     headers={
-                                        "Authorization":f"Bearer {token}",
+                                        "Authorization":f"Bearer {self.token}",
                                         "Content-Type":"application/json",
                                         "Accept":"application/json"
                                     },
