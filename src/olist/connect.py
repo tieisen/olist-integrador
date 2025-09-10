@@ -1,22 +1,20 @@
 import os
 import json
-import asyncio
 import logging
 import requests
-from datetime import datetime,timedelta,timezone
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from urllib.parse import urlparse, parse_qs
-from cryptography.fernet import Fernet
-import asyncio
-from dotenv import load_dotenv
-from database.crud import olist as crud_olist
-from datetime import datetime, timedelta
-from src.utils.log import Log
-from database.crud import empresa as crud_empresa
 from functools import wraps
+from dotenv    import load_dotenv
+from datetime  import datetime,timedelta,timezone
+
+from selenium                      import webdriver
+from selenium.webdriver.common.by  import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support    import expected_conditions as EC
+from urllib.parse                  import urlparse, parse_qs
+
+from database.crud import olist   as crud_olist
+from database.crud import empresa as crud_empresa
+from src.utils.log import Log
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -39,19 +37,10 @@ class Autenticacao():
 
     def __init__(self, codemp:int):
         self.codemp = codemp
-        # self.fernet = Fernet(os.getenv('OLIST_FERNET_KEY'))
         self.auth_url = os.getenv('OLIST_AUTH_URL')
         self.endpoint_token = os.getenv('OLIST_ENDPOINT_TOKEN')
-        # self.client_id = os.getenv('OLIST_CLIENT_ID')
-        # self.client_secret = os.getenv('OLIST_CLIENT_SECRET')
         self.redirect_uri = os.getenv('OLIST_REDIRECT_URI')
-        # self.username = os.getenv('OLIST_USERNAME')
-        # self.password = os.getenv('OLIST_PASSWORD')
-        self.path_token = os.getenv('OLIST_PATH_TOKENS')        
-        # self.access_token  = ''   
-        # self.refresh_token = ''
-        # Definir timezone do Brasil (UTC-3)
-        self.tz = timezone(timedelta(hours=-3))
+        self.path_token = os.getenv('OLIST_PATH_TOKENS')
         self.dados_empresa = None
 
     async def buscar_dados_empresa(self):
@@ -60,7 +49,7 @@ class Autenticacao():
 
     @ensure_dados_empresa
     async def solicitar_auth_code(self) -> str:
-        url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.client_id}&redirect_uri={self.redirect_uri}'
+        url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}'
         try:
             driver = webdriver.Firefox()
             driver.get(url)
@@ -68,14 +57,14 @@ class Autenticacao():
             login_input = driver.find_element(By.ID, "username")
             next_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             login_input.clear()
-            login_input.send_keys(self.dados_empresa.olist_admin_email)
+            login_input.send_keys(self.dados_empresa.get('olist_admin_email'))
             next_button.click()
             
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "password")))
             pass_input = driver.find_element(By.ID, "password")
             submit_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             pass_input.clear()
-            pass_input.send_keys(self.dados_empresa.olist_admin_senha)
+            pass_input.send_keys(self.dados_empresa.get('olist_admin_senha'))
             submit_button.click()
             
             res_url = driver.current_url
@@ -96,8 +85,8 @@ class Autenticacao():
 
         payload = {
             "grant_type": "authorization_code",
-            "client_id": self.dados_empresa.client_id,
-            "client_secret": self.dados_empresa.client_secret,
+            "client_id": self.dados_empresa.get('client_id'),
+            "client_secret": self.dados_empresa.get('client_secret'),
             "redirect_uri": self.redirect_uri,
             "code": authorization_code
         }
@@ -127,8 +116,8 @@ class Autenticacao():
 
         payload = {
             "grant_type": "refresh_token",
-            "client_id": self.dados_empresa.client_id,
-            "client_secret": self.dados_empresa.client_secret,            
+            "client_id": self.dados_empresa.get('client_id'),
+            "client_secret": self.dados_empresa.get('client_secret'),            
             "refresh_token": refresh_token
         }
 
@@ -160,7 +149,7 @@ class Autenticacao():
             logger.error("Erro ao formatar dados do token: %s",e)
             return False
         
-        ack = await crud_olist.criar(empresa_id=self.dados_empresa.id,
+        ack = await crud_olist.criar(empresa_id=self.dados_empresa.get('id'),
                                      token=access_token,
                                      dh_expiracao_token=expire_date,
                                      refresh_token=refresh_token,
@@ -187,22 +176,23 @@ class Autenticacao():
         return novo_token.get('access_token')        
          
     @ensure_dados_empresa        
-    def buscar_token_salvo(self) -> str:
+    async def buscar_token_salvo(self) -> str:
         
         # Busca o token mais recente na base
-        dados_token = crud_olist.buscar(self.dados_empresa.id)
+        dados_token = await crud_olist.buscar(self.dados_empresa.get('id'))
 
         if not dados_token:
             logger.error(f"Token não encontrado para a empresa {self.codemp}")
+            print(f"Token não encontrado para a empresa {self.codemp}")
             return None
 
-        if dados_token.get('dh_expiracao_token') < datetime.now(timezone.utc):
+        if dados_token.get('dh_expiracao_token') > datetime.now(timezone.utc):            
             return dados_token.get('token')
         
-        if dados_token.get('dh_expiracao_refresh_token') < datetime.now(timezone.utc):
+        if dados_token.get('dh_expiracao_refresh_token') > datetime.now(timezone.utc):
             return [dados_token.get('refresh_token')]
 
-        if dados_token.get('dh_expiracao_refresh_token') > datetime.now(timezone.utc):
+        if dados_token.get('dh_expiracao_refresh_token') < datetime.now(timezone.utc):
             logger.warning(f"Refresh token expirado para a empresa {self.codemp}")            
             return None     
 
