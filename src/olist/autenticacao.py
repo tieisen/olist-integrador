@@ -23,7 +23,7 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-class Autenticacao():
+class Autenticacao:
 
     def __init__(self, codemp:int):
         self.codemp = codemp
