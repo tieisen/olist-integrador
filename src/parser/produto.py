@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import datetime
 from src.utils.formatter import Formatter
+from src.utils.decorador.empresa import ensure_dados_empresa
 from dotenv import load_dotenv
 from src.utils.log import Log
 
@@ -17,9 +18,13 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Produto:
 
-    def __init__(self):
+    def __init__(
+            self,
+            codemp:int
+        ):
         self.formatter = Formatter()
-        self.fornecedor_padrao_id = int(os.getenv('OLIST_ID_FORN_PADRAO'))
+        self.codemp = codemp
+        self.dados_empresa = None
 
     def to_sankhya(self, data_olist:dict=None, data_sankhya:dict=None, type:str='update') -> tuple[list,dict]:
 
@@ -112,6 +117,7 @@ class Produto:
 
         return updates, new_data
 
+    @ensure_dados_empresa
     def to_olist(self, data_olist:dict=None, data_sankhya:dict=None) -> tuple[list,dict]:
         updates = []
         new_data = data_olist.copy() if data_olist else None
@@ -249,7 +255,7 @@ class Produto:
                 modelo_api = json.load(f)
             new_data = self.formatter.limpar_json(new_data,modelo_api.get('put'))
             if new_data['fornecedores'][0].get('id') == 0:
-                new_data['fornecedores'][0]['id'] = self.fornecedor_padrao_id 
+                new_data['fornecedores'][0]['id'] = self.dados_empresa.get('olist_id_fornecedor_padrao')
             new_data['fornecedores'][0]['padrao'] = True
             new_data['seo']['keywords']=['produto']
 
@@ -298,7 +304,7 @@ class Produto:
                                     'maximo': int(data_sankhya.get('estmax')) if data_sankhya.get('estmax') else None,
                                     'diasPreparacao': 0,
                                     'localizacao': None}
-            new_data['fornecedores'] = [{'id' : self.fornecedor_padrao_id,
+            new_data['fornecedores'] = [{'id' : self.dados_empresa.get('olist_id_fornecedor_padrao'),
                                          'codigoProdutoNoFornecedor' : str(data_sankhya.get('refforn')),
                                          'padrao' : True }]
             new_data['grade'] = ['.']
