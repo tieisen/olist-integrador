@@ -2,6 +2,7 @@ from sqlalchemy import inspect
 from src.services.criptografia import Criptografia
 import os
 import logging
+import datetime
 from dotenv import load_dotenv
 from src.utils.log import Log
 
@@ -57,6 +58,16 @@ def remover_criptografia(colunas_criptografadas:list[str], dados:dict):
         return False    
     return dados
 
+def corrigir_timezone(dados:dict):
+    # Definir timezone -3
+    br_tz = datetime.timezone(datetime.timedelta(hours=-3))
+
+    for key, value in dados.items():
+        if isinstance(value,datetime.datetime):
+            dados[key] = value.astimezone(br_tz)
+    
+    return dados
+
 def formatar_retorno(colunas_criptografadas:list[str], retorno):
 
     if not retorno:
@@ -70,13 +81,14 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno):
                 retorno_formatado.append(r.__dict__)
                 continue
             dados = remover_criptografia(colunas_criptografadas,r.__dict__)
+            dados = corrigir_timezone(dados)
             retorno_formatado.append(dados)
         return retorno_formatado    
 
     retorno.__dict__.pop('_sa_instance_state', None)
-    if not colunas_criptografadas:
-        return retorno.__dict__
-    dados = remover_criptografia(colunas_criptografadas,retorno.__dict__)
+    if colunas_criptografadas:
+        dados = remover_criptografia(colunas_criptografadas,retorno.__dict__)
+    dados = corrigir_timezone(retorno.__dict__)
     return dados
         
 def validar_colunas_existentes(modelo, kwargs:dict):
