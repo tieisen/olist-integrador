@@ -75,6 +75,7 @@ class Autenticacao:
         
         return True
 
+    @ensure_dados_empresa
     async def buscar_token_salvo(self) -> str:
         dados_token = await crud.buscar(empresa_id=self.dados_empresa.get('id'))
 
