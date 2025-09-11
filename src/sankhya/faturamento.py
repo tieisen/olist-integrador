@@ -1,9 +1,11 @@
 import os
 import logging
 import requests
-from src.sankhya.connect import Connect
-from src.utils.formatter import Formatter
 from dotenv import load_dotenv
+
+from src.utils.decorador.sankhya import ensure_token
+from src.utils.buscar_script import buscar_script
+from src.utils.formatter import Formatter
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -14,59 +16,42 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
-CONTEXTO = 'faturamento'
-
 class Faturamento:
 
-    def __init__(self):
-        self.con = Connect()
+    def __init__(self, codemp:int):
+        self.token = None
+        self.codemp = codemp
         self.formatter = Formatter()
 
-    async def buscar_itens(self, nunota:int=None):
+    @ensure_token
+    async def buscar_itens(
+            self,
+            nunota:int=None
+        ):
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False  
+
+        parametro = 'SANKHYA_PATH_SCRIPT_CONFERIDOS_PEDIDO' if nunota else 'SANKHYA_PATH_SCRIPT_CONFERIDOS_DIA'
+        script = buscar_script(parametro=parametro)
 
         if nunota:
-            query = f'''
-                SELECT
-                    COI.CODPROD,
-                    COI.CONTROLE,
-                    SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
-                FROM TGFCON2 CON
-                    INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
-                    INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
-                WHERE CON.NUNOTAORIG = {nunota}
-                GROUP BY COI.CODPROD, COI.CONTROLE
-            '''
+            try:
+                query = script.format_map({"nunota":nunota})
+            except Exception as e:
+                erro = f"Falha ao formatar query do saldo de estoque por lote. {e}"
+                print(erro)
+                logger.error(erro)
+                return False            
         else:
-            query = '''
-                SELECT
-                    COI.CODPROD,
-                    COI.CONTROLE,
-                    SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
-                FROM TGFCON2 CON
-                    INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
-                    INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
-                WHERE TRUNC(CON.DHFINCONF) = TRUNC(SYSDATE)
-                    AND CAB.AD_MKP_ORIGEM IS NOT NULL
-                    AND CAB.PENDENTE = 'S'
-                GROUP BY COI.CODPROD, COI.CONTROLE
-            '''
+            query = script
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
@@ -75,7 +60,6 @@ class Faturamento:
             })
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
-            # print(res.json())
             return self.formatter.return_format(res.json())
         else:
             if nunota:
@@ -86,12 +70,11 @@ class Faturamento:
                 print(f"Erro ao buscar itens conferidos no dia. {res.text}")
             return False
 
-    async def compara_saldos(self, saldo_estoque:list=None, saldo_pedidos:list=None):
-
-        if not all([saldo_estoque, saldo_pedidos]):
-            print("Dados não informados")
-            logger.error("Dados não informados")
-            return False
+    async def compara_saldos(
+            self,
+            saldo_estoque:list,
+            saldo_pedidos:list
+        ):
         
         lista_transferir = []        
 
