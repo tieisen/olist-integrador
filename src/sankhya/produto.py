@@ -2,7 +2,8 @@ import os
 import logging
 import requests
 from dotenv import load_dotenv
-from src.sankhya.connect import Connect
+
+from src.utils.decorador.sankhya import ensure_token
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 
@@ -16,12 +17,24 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Produto:
 
-    def __init__(self):   
-        self.con = Connect()  
+    def __init__(self, codemp:int):
+        self.token = None
+        self.codemp = codemp
         self.formatter = Formatter()        
-        self.campos_lista = ["AD_MKP_CATEGORIA","AD_MKP_DESCRICAO","AD_MKP_DHATUALIZADO","AD_MKP_ESTPOL","AD_MKP_ESTREGBAR","AD_MKP_ESTREGBARTIP","AD_MKP_ESTREGBARVAL","AD_MKP_IDPROD","AD_MKP_IDPRODPAI","AD_MKP_INTEGRADO","AD_MKP_MARCA","AD_MKP_NOME","ALTURA","CODESPECST","CODPROD","CODVOL","DESCRPROD","ESPESSURA","ESTMAX","ESTMIN","LARGURA","NCM","ORIGPROD","PESOBRUTO","PESOLIQ","QTDEMB","REFERENCIA","REFFORN","TIPCONTEST"]
+        self.campos_lista = [
+            "AD_MKP_CATEGORIA","AD_MKP_DESCRICAO","AD_MKP_DHATUALIZADO","AD_MKP_ESTPOL",
+            "AD_MKP_ESTREGBAR","AD_MKP_ESTREGBARTIP","AD_MKP_ESTREGBARVAL","AD_MKP_IDPROD",
+            "AD_MKP_IDPRODPAI","AD_MKP_INTEGRADO","AD_MKP_MARCA","AD_MKP_NOME","ALTURA",
+            "CODESPECST","CODPROD","CODVOL","DESCRPROD","ESPESSURA","ESTMAX","ESTMIN","LARGURA",
+            "NCM","ORIGPROD","PESOBRUTO","PESOLIQ","QTDEMB","REFERENCIA","REFFORN","TIPCONTEST"
+        ]
 
-    async def buscar(self, codprod:int=None, idprod:int=None) -> dict:
+    @ensure_token
+    async def buscar(
+            self,
+            codprod:int=None,
+            idprod:int=None
+        ) -> dict:
 
         if not any([codprod, idprod]):
             logger.error("Nenhum critério de busca fornecido. Deve ser informado 'codprod' ou 'idprod'.")
@@ -32,13 +45,7 @@ class Produto:
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
+            return False   
 
         if codprod:
             criteria = {
@@ -68,7 +75,7 @@ class Produto:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
@@ -100,12 +107,10 @@ class Produto:
                 print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
             return False
 
-    def prepapar_dados(self, payload:dict=None):
-
-        if not payload:
-            logger.error("Nenhum dado fornecido para preparar.")
-            print("Nenhum dado fornecido para preparar.")
-            return False
+    def prepapar_dados(
+            self,
+            payload:dict
+        ):
         
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
@@ -117,12 +122,12 @@ class Produto:
             dados[f'{self.campos_lista.index(str.upper(i))}'] = f'{payload.get(i)}'
         return dados
 
-    async def atualizar(self, codprod:int=None, payload:dict=None) -> bool:
-
-        if not all([codprod, payload]):
-            logger.error("Nenhum dado fornecido para atualizar.")
-            print("Nenhum dado fornecido para atualizar.")
-            return False
+    @ensure_token
+    async def atualizar(
+            self,
+            codprod:int,
+            payload:dict
+        ) -> bool:
 
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
@@ -134,16 +139,10 @@ class Produto:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False  
 
         res = requests.post(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName":"DatasetSP.save",
                 "requestBody":{
@@ -169,28 +168,31 @@ class Produto:
             print(f"Erro ao atualizar produto. Cód. {codprod}. {res.text}")
             return False        
 
+    @ensure_token
     async def buscar_alteracoes(self) -> dict:
         
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
-            logger.error("Erro relacionado à url. %s",url)
+            erro = f"Parâmetro da URL não encontrado"
+            print(erro)
+            logger.error(erro)
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
+        tabela = os.getenv('SAKNHYA_TABELA_RASTRO_PRODUTO')
+        if not tabela:
+            erro = f"Parâmetro da tabela de rastro de produto não encontrado"
+            print(erro)
+            logger.error(erro)
             return False
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
-                        "rootEntity": "AD_OLISTRASTPROD",
+                        "rootEntity": tabela,
                         "includePresentationFields": "N",
                         "offsetPage": "0",
                         "entity": {
@@ -208,7 +210,12 @@ class Produto:
         else:                
             return self.formatter.return_format(res.json())
 
-    async def excluir_alteracoes(self, codprod:int=None, lista_produtos:list=None) -> bool:
+    @ensure_token
+    async def excluir_alteracoes(
+            self,
+            codprod:int=None,
+            lista_produtos:list=None
+        ) -> bool:
 
         if not any([codprod, lista_produtos]):
             print("Código do produto não informado ou lista de produtos vazia")
@@ -220,12 +227,13 @@ class Produto:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+
+        tabela = os.getenv('SAKNHYA_TABELA_RASTRO_PRODUTO')
+        if not tabela:
+            erro = f"Parâmetro da tabela de rastro de produto não encontrado"
+            print(erro)
+            logger.error(erro)
+            return False          
         
         if codprod:
             filter = [{"CODPROD": f"{codprod}"}]
@@ -248,11 +256,11 @@ class Produto:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DatasetSP.removeRecord",
                 "requestBody": {
-                    "entityName": "AD_OLISTRASTPROD",
+                    "entityName": tabela,
                     "standAlone": False,
                     "pks": filter
                 }
