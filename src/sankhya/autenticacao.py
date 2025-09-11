@@ -84,7 +84,7 @@ class Autenticacao:
             print(f"Token não encontrado para a empresa {self.codemp}")
             return None
 
-        if dados_token.get('dh_expiracao_token') > datetime.now(timezone.utc):            
+        if dados_token.get('dh_expiracao_token') > datetime.now():            
             return dados_token.get('token')
         else:
             logger.warning(f"Token expirado para a empresa {self.codemp}")
