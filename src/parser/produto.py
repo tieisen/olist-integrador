@@ -118,14 +118,9 @@ class Produto:
         return updates, new_data
 
     @ensure_dados_empresa
-    def to_olist(self, data_olist:dict=None, data_sankhya:dict=None) -> tuple[list,dict]:
+    def to_olist(self, data_sankhya:dict, data_olist:dict=None, ) -> tuple[list,dict]:
         updates = []
         new_data = data_olist.copy() if data_olist else None
-
-        if not data_sankhya:
-            logger.error("Dados do produto no Sankhya não encontrados.")
-            print("Dados do produto no Sankhya não encontrados.")
-            return [], {}
 
         if new_data and data_sankhya:                
             if new_data.get('descricao') != data_sankhya.get('ad_mkp_nome'):
