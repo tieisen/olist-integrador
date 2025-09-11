@@ -1,5 +1,6 @@
 from database.database import AsyncSessionLocal
 from database.models import LogProduto
+from database.models import Produto
 from src.utils.log import Log
 from sqlalchemy.future import select
 import os
@@ -16,9 +17,9 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 async def criar(
         log_id:int,
-        codprod:int,
-        idprod:int,
-        campo:str,        
+        codprod:int=0,
+        idprod:int=0,
+        campo:str='',
         valor_old:str=None,
         valor_new:str=None,
         sucesso:bool=True,
@@ -26,6 +27,28 @@ async def criar(
         produto_id:int=None
     ):
     async with AsyncSessionLocal() as session:
+
+        if not produto_id and not (codprod == 0 and idprod == 0):
+            if codprod :
+                produto = await session.execute(
+                    select(Produto)
+                    .where(Produto.cod_snk == codprod)
+                )
+                produto = produto.scalar_one_or_none()
+                if not produto:
+                    return False
+                produto_id = produto.id
+            elif idprod:
+                produto = await session.execute(
+                    select(Produto)
+                    .where(Produto.cod_olist == idprod)
+                )
+                produto = produto.scalar_one_or_none()
+                if not produto:
+                    return False
+                produto_id = produto.id
+            else:
+                pass
 
         novo_log = LogProduto(log_id=log_id,
                               codprod=codprod,
