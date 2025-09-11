@@ -2,9 +2,12 @@ import os
 import logging
 import requests
 from dotenv import load_dotenv
-from src.sankhya.connect import Connect
+
+from src.utils.decorador.sankhya import ensure_token
+from src.utils.decorador.empresa import ensure_dados_empresa
 from src.utils.formatter import Formatter
 from src.utils.log import Log
+from src.utils.buscar_script import buscar_script
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -16,11 +19,19 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Estoque:
 
-    def __init__(self):   
-        self.con = Connect()  
+    def __init__(self, codemp:int):
+        self.token = None
+        self.codemp = codemp
+        self.dados_empresa = None
         self.formatter = Formatter()
-        
-    async def buscar(self, codprod:int=None, lista_produtos:list=None) -> dict:
+    
+    @ensure_token
+    async def buscar(
+            self,
+            codprod:int=None,
+            lista_produtos:list=None
+        ) -> dict:
+
         if not any([codprod, lista_produtos]):
             print("Código do produto não informado ou lista de produtos vazia")
             return False
@@ -29,13 +40,13 @@ class Estoque:
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False  
-              
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
+            return False
+        
+        view = os.getenv('SANKHYA_VIEW_SALDO_ESTOQUE')
+        if not view:
+            erro = f"Parâmetro da view de saldo de estoque não encontrado"
+            print(erro)
+            logger.error(erro)
             return False        
 
         if codprod:
@@ -49,12 +60,12 @@ class Estoque:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadView",
                 "requestBody": {
                     "query": {
-                        "viewName": "AD_OLISTESTOQUE",
+                        "viewName": view,
                         "where": {
                             "$": filter
                         },
@@ -73,29 +84,31 @@ class Estoque:
             logger.error("Erro ao buscar saldo de estoque do item %s. %s",codprod,res.json())
             print(f"Erro ao buscar saldo de estoque do item {codprod}. {res.json()}")
             return False
-        
+    
+    @ensure_token
     async def buscar_alteracoes(self) -> dict:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False 
-         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False      
+            return False
+
+        tabela = os.getenv('SANKHYA_TABELA_RASTRO_ESTOQUE')
+        if not tabela:
+            erro = f"Parâmetro da tabela de rastro de estoque não encontrado"
+            print(erro)
+            logger.error(erro)
+            return False
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
-                        "rootEntity": "AD_OLISTRASTEST",
+                        "rootEntity": tabela,
                         "includePresentationFields": "N",
                         "offsetPage": "0",
                         "entity": {
@@ -113,8 +126,13 @@ class Estoque:
             logger.error("Erro ao buscar alterações pendentes. %s",res.json())
             print(f"Erro ao buscar alterações pendentes. {res.json()}")
             return False
-        
-    async def remover_alteracoes(self, codprod:int=None, lista_produtos:list=None) -> dict:
+    
+    @ensure_token
+    async def remover_alteracoes(
+            self,
+            codprod:int=None,
+            lista_produtos:list=None
+        ) -> dict:
 
         if not any([codprod, lista_produtos]):
             print("Código do produto não informado ou lista de produtos vazia")
@@ -127,12 +145,12 @@ class Estoque:
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False      
+        tabela = os.getenv('SANKHYA_TABELA_RASTRO_ESTOQUE')
+        if not tabela:
+            erro = f"Parâmetro da tabela de rastro de estoque não encontrado"
+            print(erro)
+            logger.error(erro)
+            return False
 
         if codprod:
             filter = [{"CODPROD": f"{codprod}"}]
@@ -146,11 +164,11 @@ class Estoque:
         print("Enviando dados para remoção")
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DatasetSP.removeRecord",
                 "requestBody": {
-                    "entityName": "AD_OLISTRASTEST",
+                    "entityName": tabela,
                     "standAlone": False,
                     "pks": filter
                 }
@@ -162,53 +180,67 @@ class Estoque:
             logger.error("Erro ao remover alterações pendentes. %s",res.json())
             print(f"Erro ao remover alterações pendentes. {res.json()}")
             return False
-        
-    async def buscar_saldo_por_lote(self, codprod:int=None, controle:str=None, qtd:int=None, lista_produtos:list=None) -> dict:       
-
-        if not lista_produtos and not all([codprod, controle, qtd]):
+    
+    @ensure_dados_empresa
+    async def formatar_query_busca_saldo_lote(
+            self,
+            codprod:int=None,
+            controle:str=None,
+            lista_produtos:list=None
+        ):
+            
+        if not lista_produtos and not all([codprod, controle]):
             print("Código do produto, controle de lote e quantidade não informados")
             logger.error("Código do produto, controle de lote e quantidade não informados")
             return False
+        
+        parametro = 'SANKHYA_PATH_SCRIPT_ESTOQUE_LOTE_LISTA' if lista_produtos else 'SANKHYA_PATH_SCRIPT_ESTOQUE_LOTE_ITEM'
+        script = buscar_script(parametro=parametro)
+
+        try:
+            if lista_produtos:
+                produtos = [produto.get('codprod') for produto in lista_produtos]
+                query = script.format_map({
+                                    "codemp":self.codemp,
+                                    "codlocais":self.dados_empresa.get('snk_codlocal_estoque'),
+                                    "lista_produtos":','.join(map(str,produtos))
+                                })
+            else:
+                query = script.format_map({
+                                    "codemp":self.codemp,
+                                    "codlocais":self.dados_empresa.get('snk_codlocal_estoque'),
+                                    "codprod":codprod,
+                                    "controle":controle
+                                })
+        except Exception as e:
+            erro = f"Falha ao formatar query do saldo de estoque por lote. {e}"
+            print(erro)
+            logger.error(erro)
+            return False
+
+        return query
+
+    @ensure_token
+    async def buscar_saldo_por_lote(
+            self,
+            codprod:int=None,
+            controle:str=None,
+            lista_produtos:list=None
+        ) -> dict:
         
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
-
-        query = f'''
-            SELECT EST.CODPROD, EST.CONTROLE, SUM(EST.ESTOQUE) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN
-            FROM TGFEST EST
-                INNER JOIN TGFPRO PRO ON EST.CODPROD = PRO.CODPROD
-            WHERE EST.CODEMP = 31
-                AND EST.CODLOCAL IN (101,911)
-                AND EST.CODPROD = {codprod}
-                AND EST.CONTROLE = '{controle}'
-            GROUP BY EST.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
-        '''
-
-        if lista_produtos:
-            produtos = [produto.get('codprod') for produto in lista_produtos]
-            query = f'''
-                SELECT EST.CODPROD, EST.CONTROLE, SUM(EST.ESTOQUE) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN
-                FROM TGFEST EST
-                    INNER JOIN TGFPRO PRO ON EST.CODPROD = PRO.CODPROD
-                WHERE EST.CODEMP = 31
-                    AND EST.CODLOCAL IN (101,911)
-                    AND TRIM(EST.CONTROLE) IS NOT NULL
-                    AND EST.CODPROD IN ({','.join(map(str,produtos))})
-                GROUP BY EST.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
-            '''
+        
+        query = await self.formatar_query_busca_saldo_lote(codprod=codprod,
+                                                           controle=controle,
+                                                           lista_produtos=lista_produtos)
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
@@ -219,6 +251,7 @@ class Estoque:
         if res.status_code in (200,201) and res.json().get('status')=='1':
             return self.formatter.return_format(res.json())
         else:
-            logger.error("Erro validar estoque do item %s na empresa 31. %s",codprod,res.json())
-            print(f"Erro ao validar estoque do item {codprod} na empresa 31. {res.json()}")
+            erro = f"Erro ao validar estoque do(s) item(ns) na empresa {self.codemp}. {res.json()}" 
+            logger.error(erro)
+            print(erro)
             return False
