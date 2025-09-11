@@ -2,7 +2,8 @@ import os
 import logging
 import requests
 from dotenv import load_dotenv
-from src.sankhya.connect import Connect
+
+from src.utils.decorador.sankhya import ensure_token
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 
@@ -16,8 +17,9 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Nota:
 
-    def __init__(self):   
-        self.con = Connect()  
+    def __init__(self, codemp:int):
+        self.token = None
+        self.codemp = codemp
         self.formatter = Formatter()
         self.campos_cabecalho = [
                 "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
@@ -35,7 +37,16 @@ class Nota:
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, pendentes:bool=False, offset:int=0, itens:bool=False) -> dict:
+    @ensure_token
+    async def buscar(
+            self,
+            nunota:int=None,
+            id_olist:int=None,
+            codpedido:str=None,
+            pendentes:bool=False,
+            offset:int=0,
+            itens:bool=False
+        ) -> dict:
 
         if not any([nunota, id_olist, codpedido, pendentes]):
             print("Nenhum critério de busca informado. Nenhum dado será retornado.")
@@ -46,12 +57,6 @@ class Nota:
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
         fieldset_list = ','.join(self.campos_cabecalho)
@@ -112,7 +117,7 @@ class Nota:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
@@ -135,11 +140,10 @@ class Nota:
             if isinstance(retorno_formatado, list):
                 dados_nota = retorno_formatado[0]            
             if itens:
-                dados_itens = await Itens().buscar(nunota=int(dados_nota.get('nunota')))
+                itens_handler = Itens(self)
+                dados_itens = await itens_handler.buscar(nunota=int(dados_nota.get('nunota')))
                 dados_nota['itens'] = dados_itens
-            return dados_nota                
-
-            #return self.formatter.return_format(res.json())
+            return dados_nota  
         else:
             if nunota:
                 print(f"Erro ao buscar nota. Nunota {nunota}. {res.json()}")
@@ -155,28 +159,21 @@ class Nota:
                 logger.error("Erro ao buscar notas pendentes. %s",res.json())
             return False
 
-    async def confirmar(self, nunota:int=None) -> bool:
-
-        if not nunota:
-            print("Número único da nota não informado")
-            logger.error("Número único da nota não informado")
-            return False
+    @ensure_token
+    async def confirmar(
+            self,
+            nunota:int
+        ) -> bool:
         
         url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
+            return False  
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "ServicosNfeSP.confirmarNota",
                 "requestBody": {
@@ -199,7 +196,14 @@ class Nota:
             print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
             return False
 
-    async def informar_numero_e_chavenfe(self, nunota:int=None, chavenfe:str=None, numero:str=None, id_nota:int=None) -> bool:
+    @ensure_token
+    async def informar_numero_e_chavenfe(
+            self,
+            nunota:int=None,
+            chavenfe:str=None,
+            numero:str=None,
+            id_nota:int=None
+        ) -> bool:
         
         if not all([nunota, chavenfe, numero, id_nota]):
             print("Número único da nota, chave NFe, número e ID da nota não informados.")
@@ -211,12 +215,6 @@ class Nota:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
 
         payload = {
             "serviceName": "DatasetSP.save",
@@ -245,7 +243,7 @@ class Nota:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload
         )
         if res.status_code in (200,201) and res.json().get('status')=='1':
@@ -255,27 +253,33 @@ class Nota:
             print(f"Erro informar dados da NFe na nota de venda do Sankhya. Nunota {nunota}. Nota {numero}. {res.json()}")
             return False
 
-    async def devolver(self, nunota:int, itens:list) -> tuple[bool,int]:
+    @ensure_token
+    async def devolver(
+            self,
+            nunota:int,
+            itens:list
+        ) -> tuple[bool,int]:
 
         url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, 0
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
+
+        top_devolucao = int(os.getenv('SANKHYA_CODTIPOPER_DEVOLUCAO'))
+        serie_nf = os.getenv('SANKHYA_SERIE_NF')
+        if not all([top_devolucao,serie_nf]):
+            erro = f"Parâmetros da TOP de devolução ou série da NF não encontados"
+            logger.error(erro)
+            print(erro)
             return False, 0
 
         body = {
             "serviceName": "SelecaoDocumentoSP.faturar",
             "requestBody": {
                 "notas": {
-                    "codTipOper": int(os.getenv('SANKHYA_CODTIPOPER_DEVOLUCAO')),
-                    "serie": os.getenv('SANKHYA_SERIE_NF'),
+                    "codTipOper": top_devolucao,
+                    "serie": serie_nf,
                     "tipoFaturamento": "FaturamentoNormal",
                     "dataValidada": True,
                     "faturarTodosItens": False,
@@ -294,7 +298,7 @@ class Nota:
 
         res = requests.post(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=body)
         
         if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
@@ -304,19 +308,17 @@ class Nota:
             logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
             return False, 0
 
-    async def alterar_observacao(self, nunota:int, observacao:str) -> bool:
+    @ensure_token
+    async def alterar_observacao(
+            self,
+            nunota:int,
+            observacao:str
+        ) -> bool:
 
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
         body = {
@@ -340,7 +342,7 @@ class Nota:
 
         res = requests.post(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=body)
         
         if res.status_code == 200 and res.json().get('status') == '1':
@@ -352,21 +354,22 @@ class Nota:
 
 class Itens(Nota):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, nota_instance: 'Nota'=None, codemp:int=None):
+        self.token = nota_instance.token if nota_instance else None
+        self.codemp = codemp or nota_instance.codemp
         self.formatter = Formatter()
         self.campos_item = [
-            "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG", "CODPROD", "CONTROLE",
-            "CODTRIB","CODVEND", "CODVOL", "NUNOTA", "QTDNEG", "RESERVA", "SEQUENCIA",
+            "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG",
+            "CODPROD", "CONTROLE", "CODTRIB","CODVEND", "CODVOL",
+            "NUNOTA", "QTDNEG", "RESERVA", "SEQUENCIA",
             "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    async def buscar(self, nunota:int=None) -> dict:
-
-        if not nunota:
-            print("Número único da nota não informado")
-            logger.error("Número único da nota não informado")
-            return False
+    @ensure_token
+    async def buscar(
+            self,
+            nunota:int
+        ) -> dict:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
@@ -374,12 +377,6 @@ class Itens(Nota):
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
-
         criteria = {
             "expression": {
                 "$": "this.NUNOTA = ? AND SEQUENCIA > 0"
@@ -394,7 +391,7 @@ class Itens(Nota):
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
