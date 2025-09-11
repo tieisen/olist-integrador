@@ -84,12 +84,7 @@ class Produto:
             return False
 
     @ensure_token
-    async def incluir(self,data:dict=None) -> tuple[bool,dict]:
-
-        if not data:
-            logger.error("Dados do produto não informados.")
-            print("Dados do produto não informados.")
-            return False, {}
+    async def incluir(self,data:dict) -> tuple[bool,dict]:
         
         if not isinstance(data, dict):
             logger.error("Dados do produto em formato inválido.")
