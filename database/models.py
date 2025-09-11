@@ -38,6 +38,7 @@ class Empresa(Base):
     snk_codusu_integracao = Column(Integer, nullable=True)
     snk_codtab_transf = Column(Integer, nullable=True)
     snk_codlocal_estoque = Column(String, nullable=True)
+    snk_codlocal_venda = Column(Integer, nullable=True)
     snk_codparc = Column(Integer, nullable=True)
     
     log_ = relationship("Log", back_populates="empresa_", cascade="all, delete-orphan")
