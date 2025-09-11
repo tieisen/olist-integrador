@@ -136,11 +136,11 @@ class Autenticacao:
             return False
         
         ack = await crud.criar(empresa_id=self.dados_empresa.get('id'),
-                                     token=access_token,
-                                     dh_expiracao_token=expire_date,
-                                     refresh_token=refresh_token,
-                                     dh_expiracao_refresh_token=expire_date_refresh,
-                                     id_token=id_token)
+                               token=access_token,
+                               dh_expiracao_token=expire_date,
+                               refresh_token=refresh_token,
+                               dh_expiracao_refresh_token=expire_date_refresh,
+                               id_token=id_token)
         
         if not ack:
             logger.error("Erro ao salvar token")
@@ -172,13 +172,13 @@ class Autenticacao:
             print(f"Token não encontrado para a empresa {self.codemp}")
             return None
 
-        if dados_token.get('dh_expiracao_token') > datetime.now(timezone.utc):            
+        if dados_token.get('dh_expiracao_token') > datetime.now():            
             return dados_token.get('token')
         
-        if dados_token.get('dh_expiracao_refresh_token') > datetime.now(timezone.utc):
+        if dados_token.get('dh_expiracao_refresh_token') > datetime.now():
             return [dados_token.get('refresh_token')]
 
-        if dados_token.get('dh_expiracao_refresh_token') < datetime.now(timezone.utc):
+        if dados_token.get('dh_expiracao_refresh_token') < datetime.now():
             logger.warning(f"Refresh token expirado para a empresa {self.codemp}")            
             return None     
 
