@@ -14,9 +14,9 @@ logging.basicConfig(filename=os.getenv('PATH_LOGS'),
 
 class Conferencia:
 
-    def __init__(self):
-        pass
-
+    def __init__(self, codemp:int):
+        self.codemp = codemp
+        
     def to_sankhya_itens(self, nuconf:int=None, dados_olist:list=None) -> list:
         new_dados_sankhya = []
 
@@ -25,7 +25,7 @@ class Conferencia:
             logger.error("Dados não informados.")
             return new_dados_sankhya
         
-        produto = Produto()
+        produto = Produto(self.codemp)
 
         seq = 0
         for item in dados_olist:
