@@ -3,10 +3,12 @@ import logging
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
-from src.sankhya.connect import Connect
-from src.utils.formatter import Formatter
-from src.sankhya.nota import Nota as NotaSnk
+
+from src.sankhya.nota import Nota
 from src.utils.log import Log
+from src.utils.decorador.sankhya import ensure_token
+from src.utils.formatter import Formatter
+from src.utils.buscar_script import buscar_script
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -18,27 +20,35 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Pedido:
 
-    def __init__(self):   
-        self.con = Connect()  
+    def __init__(self, codemp:int):
+        self.token = None
+        self.codemp = codemp
         self.formatter = Formatter()
         self.campos_cabecalho = [
-                "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
-                "AD_MKP_IDNFE", "AD_MKP_NUMPED", "AD_MKP_ORIGEM", "AD_TAXASHOPEE", "APROVADO",
-                "BASEICMS", "BASEIPI", "BASEIRF", "BASEISS", "BASESUBSTIT", "CIF_FOB", "CLASSIFICMS",
-                "CODCENCUS", "CODCIDORIGEM", "CODEMP", "CODEMPNEGOC", "CODNAT", "CODPARC", "CODTIPOPER",
-                "CODTIPVENDA", "CODUFDESTINO", "CODUFENTREGA", "CODUSU", "CODUSUINC",
-                "CODVEND", "CONFIRMADA", "DHTIPOPER", "DHTIPVENDA", "DTMOV", "DTNEG", "NUNOTA",
-                "NUMNOTA", "OBSERVACAO", "PENDENTE", "PESO", "PESOBRUTO", "QTDVOL", "STATUSNOTA", "TIPMOV",
-                "VLRDESCTOT", "VLRDESCTOTITEM", "VLRFRETE", "VLRICMS", "VLRICMSDIFALDEST",
-                "VLRICMSDIFALREM", "VLRICMSFCP", "VLRICMSFCPINT", "VLRIPI", "VLRIRF", "VLRISS",
-                "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
-            ]
+            "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
+            "AD_MKP_IDNFE", "AD_MKP_NUMPED", "AD_MKP_ORIGEM", "AD_TAXASHOPEE", "APROVADO",
+            "BASEICMS", "BASEIPI", "BASEIRF", "BASEISS", "BASESUBSTIT", "CIF_FOB", "CLASSIFICMS",
+            "CODCENCUS", "CODCIDORIGEM", "CODEMP", "CODEMPNEGOC", "CODNAT", "CODPARC", "CODTIPOPER",
+            "CODTIPVENDA", "CODUFDESTINO", "CODUFENTREGA", "CODUSU", "CODUSUINC",
+            "CODVEND", "CONFIRMADA", "DHTIPOPER", "DHTIPVENDA", "DTMOV", "DTNEG", "NUNOTA",
+            "NUMNOTA", "OBSERVACAO", "PENDENTE", "PESO", "PESOBRUTO", "QTDVOL", "STATUSNOTA", "TIPMOV",
+            "VLRDESCTOT", "VLRDESCTOTITEM", "VLRFRETE", "VLRICMS", "VLRICMSDIFALDEST",
+            "VLRICMSDIFALREM", "VLRICMSFCP", "VLRICMSFCPINT", "VLRIPI", "VLRIRF", "VLRISS",
+            "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
+        ]
 
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
     
-    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, itens:bool=False) -> dict:
-        
+    @ensure_token
+    async def buscar(
+            self,
+            nunota:int=None,
+            id_olist:int=None,
+            codpedido:str=None,
+            itens:bool=False
+        ) -> dict:
+
         if not any([nunota, id_olist, codpedido]):
             print("Nenhum critério de busca informado. Informe nunota, id_olist ou codpedido.")
             logger.error("Nenhum critério de busca informado. Informe nunota, id_olist ou codpedido.")
@@ -48,12 +58,6 @@ class Pedido:
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
         if nunota:
@@ -97,7 +101,7 @@ class Pedido:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
@@ -124,7 +128,8 @@ class Pedido:
                 
                 dados_pedido = dados_pedido[0]
                 if itens:
-                    dados_itens = await Itens().buscar(nunota=int(dados_pedido.get('nunota')))
+                    itens_handler = Itens(self)
+                    dados_itens = await itens_handler.buscar(nunota=int(dados_pedido.get('nunota')))
                     dados_pedido['itens'] = dados_itens
                 return dados_pedido
             except Exception as e:
@@ -143,29 +148,24 @@ class Pedido:
                 logger.error("Erro ao buscar pedido. Pedido %s. %s",codpedido,res.text)        
             return False
     
-    async def buscar_nunota_nota(self, nunota:int) -> dict:
+    @ensure_token
+    async def buscar_nunota_nota(
+            self,
+            nunota:int
+        ) -> dict:
         
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
 
-        query = f'''
-            SELECT VAR.NUNOTA
-            FROM TGFVAR VAR
-            WHERE VAR.NUNOTAORIG = {nunota} AND ROWNUM = 1
-        '''
+        script = buscar_script(parametro='SANKHYA_PATH_SCRIPT_PEDIDO_TGFVAR')
+        query = script.format_map({"nunota":nunota})
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
@@ -180,7 +180,10 @@ class Pedido:
             print(f"Erro ao buscar número da nota. {res.json()}")
             return False
 
-    async def buscar_nota_do_pedido(self, nunota:int) -> dict:
+    async def buscar_nota_do_pedido(
+            self,
+            nunota:int
+        ) -> dict:
         
         nunota_nota = await self.buscar_nunota_nota(nunota=nunota)
         if not nunota_nota:
@@ -189,9 +192,9 @@ class Pedido:
             return 0
         nunota_nota = nunota_nota[0].get('nunota')
         
-        nota_snk = NotaSnk()
-        dados_nota = await nota_snk.buscar(nunota=nunota_nota,
-                                           itens=True)
+        nota = Nota(self.codemp)
+        dados_nota = await nota.buscar(nunota=nunota_nota,
+                                       itens=True)
         
         if not dados_nota:
             print(f"Erro ao buscar dados da nota {nunota_nota} vinculada ao pedido {nunota}")
@@ -200,24 +203,17 @@ class Pedido:
         
         return dados_nota
 
-    async def buscar_cidade(self, ibge:int=None) -> dict:
-
-        if not ibge:
-            print("Nenhum código IBGE informado.")
-            logger.error("Nenhum código IBGE informado.")
-            return False
+    @ensure_token
+    async def buscar_cidade(
+            self,
+            ibge:int
+        ) -> dict:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False   
 
         payload = {
             "serviceName": "CRUDServiceProvider.loadRecords",
@@ -248,7 +244,7 @@ class Pedido:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload)
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
@@ -258,28 +254,22 @@ class Pedido:
             print(f"Erro ao buscar dados de localização da cidade {ibge}. {res.text}")
             return False
 
-    async def lancar(self, dados_cabecalho:dict=None, dados_itens:list=None) -> int:
-        
-        if not all([dados_cabecalho, dados_itens]):
-            print("Dados do cabeçalho ou dos itens não informados.")
-            logger.error("Dados do cabeçalho ou dos itens não informados.")
-            return False
-        
+    @ensure_token
+    async def lancar(
+            self,
+            dados_cabecalho:dict,
+            dados_itens:list
+        ) -> int:
+                
         url = os.getenv('SANKHYA_URL_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False          
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName":"CACSP.incluirNota",
                 "requestBody":{
@@ -306,28 +296,21 @@ class Pedido:
             print(f"Erro ao lançar pedido #{dados_cabecalho.get('AD_MKP_NUMPED')}. {res.text}")
             return False
 
-    async def confirmar(self, nunota:int=None) -> bool:
-
-        if not nunota:
-            print("Número único do pedido não informado.")
-            logger.error("Número único do pedido não informado.")
-            return False
+    @ensure_token
+    async def confirmar(
+            self,
+            nunota:int
+        ) -> bool:
         
         url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False          
+            return False       
                 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "ServicosNfeSP.confirmarNota",
                 "requestBody": {
@@ -348,12 +331,12 @@ class Pedido:
         logger.error("Erro ao confirmar pedido. Nunota %s. %s",nunota,res.text)
         return False
 
-    async def faturar(self, nunota:int=None, dt_fatur:str=None) -> tuple[bool,int]:
-
-        if not nunota:
-            print("Número único do pedido não informado.")
-            logger.error("Número único do pedido não informado.")
-            return False, None
+    @ensure_token
+    async def faturar(
+            self,
+            nunota:int,
+            dt_fatur:str=None
+        ) -> tuple[bool,int]:
         
         url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
         if not url:
@@ -361,10 +344,12 @@ class Pedido:
             logger.error("Erro relacionado à url. %s",url)
             return False, None
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
+        top_faturamento = os.getenv('SANKHYA_CODTIPOPER_NOTA')
+        serie_nf = os.getenv('SANKHYA_SERIE_NF')
+        if not all([top_faturamento,serie_nf]):
+            erro = f"Parâmetros da TOP de faturamento ou série da NF não encontados"
+            logger.error(erro)
+            print(erro)
             return False, None
 
         data_faturamento = datetime.strptime(dt_fatur,'%Y-%m-%d').strftime('%d/%m/%Y') if dt_fatur else datetime.now().strftime('%d/%m/%Y')
@@ -377,8 +362,8 @@ class Pedido:
             "serviceName":"SelecaoDocumentoSP.faturar",
             "requestBody":{
                 "notas":{
-                    "codTipOper":os.getenv('SANKHYA_CODTIPOPER_NOTA'),
-                    "serie":os.getenv('SANKHYA_SERIE_NF'),
+                    "codTipOper":top_faturamento,
+                    "serie":serie_nf,
                     "dtFaturamento":data_faturamento,
                     "tipoFaturamento":"FaturamentoNormal",
                     "dataValidada":"true",
@@ -403,7 +388,7 @@ class Pedido:
 
         res = requests.post(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=body)
         
         if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
@@ -413,18 +398,16 @@ class Pedido:
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
-    async def excluir(self, nunota:int) -> bool:
+    @ensure_token
+    async def excluir(
+            self,
+            nunota:int
+        ) -> bool:
         
         url = os.getenv('SANKHYA_URL_DELETE')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False, None
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False, None
 
         body = {
@@ -438,7 +421,7 @@ class Pedido:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=body)
         
         if res.status_code in (200,201) and res.json().get('status') in ('0','1'):
@@ -449,15 +432,23 @@ class Pedido:
             return False
 
 class Itens(Pedido):
-    def __init__(self):
+    def __init__(self, pedido_instance: 'Pedido'=None, codemp:int=None):
+        self.token = pedido_instance.token if pedido_instance else None
+        self.codemp = codemp or pedido_instance.codemp
         self.formatter = Formatter()
-        self.con = Connect() 
         self.campos_item = [
-                "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG", "CODPROD", "CODTRIB","CODVEND", "CODVOL",
-                "CONTROLE", "NUNOTA", "QTDNEG", "RESERVA", "SEQUENCIA", "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
-            ]            
+            "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG",
+            "CODPROD", "CODTRIB","CODVEND", "CODVOL", "CONTROLE",
+            "NUNOTA", "QTDNEG", "RESERVA", "SEQUENCIA", "STATUSNOTA",
+            "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
+        ]            
 
-    async def buscar(self, nunota:int=None, pedido_ecommerce:str=None) -> dict:
+    @ensure_token
+    async def buscar(
+            self,
+            nunota:int=None,
+            pedido_ecommerce:str=None
+        ) -> dict:
 
         if not any([nunota, pedido_ecommerce]):
             print("Nenhum critério de busca informado. Informe nunota ou pedido_ecommerce.")
@@ -468,12 +459,6 @@ class Itens(Pedido):
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
         
         if nunota:
@@ -500,11 +485,11 @@ class Itens(Pedido):
                         "type": "S"
                     }
                 ]
-            }                
-
+            }  
+            
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
