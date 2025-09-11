@@ -17,12 +17,7 @@ class Estoque:
     def __init__(self):
         pass
 
-    def to_olist(self, data:dict=None) -> tuple[int,dict]:
-
-        if not data:
-            logger.error("Dados não informados.")
-            print("Dados não informados.")
-            return False, None
+    def to_olist(self, data:dict) -> tuple[int,dict]:
         
         if not isinstance(data, dict):
             logger.error("Dados inválidos, deve ser um dicionário.")
