@@ -3,7 +3,7 @@ from database.models import Pedido, Ecommerce
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
-from src.utils.db import validar_dados
+from src.utils.db import validar_dados, formatar_retorno
 import os
 import logging
 from dotenv import load_dotenv
@@ -63,6 +63,35 @@ async def criar(
         except Exception as e:
             print(f"Erro ao criar pedido {id_pedido}: {e}")
             return False
+
+async def buscar(
+        id_pedido:int=None,
+        num_pedido:int=None,
+        cod_pedido:str=None
+    ) -> dict:
+
+    if not any([id_pedido, num_pedido, cod_pedido]):
+        print("Nenhum parâmetro informado")
+        return False
+    async with AsyncSessionLocal() as session:
+        if id_pedido:
+            result = await session.execute(
+                select(Pedido).where(Pedido.id_pedido == id_pedido)
+            )
+        if num_pedido:
+            result = await session.execute(
+                select(Pedido).where(Pedido.num_pedido == num_pedido)
+            )
+        if cod_pedido:
+            result = await session.execute(
+                select(Pedido).where(Pedido.cod_pedido == cod_pedido)
+            )
+        pedido = result.scalar_one_or_none()
+        if not pedido:
+            return False
+        dados_pedido = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                        retorno=pedido)
+        return dados_pedido
 
 async def atualizar(
         id_pedido:int=None,
@@ -176,6 +205,19 @@ async def atualizar_confirmado(
         await session.commit()
         return True
 
+async def buscar_checkout(ecommerce_id:int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Pedido).where(Pedido.dh_cancelamento.is_(None),
+                                 Pedido.dh_faturamento.is_(None),
+                                 Pedido.id_separacao.isnot(None),
+                                 Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
+        )
+        pedidos = result.scalars().all()
+        dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=pedidos)           
+        return dados_pedidos
+    
 async def buscar_faturar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
