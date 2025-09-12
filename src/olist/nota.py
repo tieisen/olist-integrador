@@ -18,32 +18,32 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Nota:
 
-    def __init__(self, codemp:int, id_loja:int=None):  
-        self.token = None
-        self.codemp = codemp
+    def __init__(self, id_loja:int, codemp:int=None, empresa_id:int=None):  
         self.id_loja = id_loja
-        self.dados_empresa = None
+        self.codemp = codemp
+        self.empresa_id = empresa_id        
         self.dados_ecommerce = None
+        self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
 
     @ensure_token
     async def buscar(
             self,
             id:int=None,
-            id_ecommerce:str=None
+            cod_pedido:str=None
         ) -> bool:
 
-        if not any([id, id_ecommerce]):
+        if not any([id, cod_pedido]):
             logger.error("Nota não informada.")
             print("Nota não informada.")
             return False
 
         if id:
             url_ = self.endpoint+f"/{id}"
-            id_ecommerce = None
+            cod_pedido = None
         
-        if id_ecommerce:
-            url_ = self.endpoint+f"/?numeroPedidoEcommerce={id_ecommerce}"
+        if cod_pedido:
+            url_ = self.endpoint+f"/?numeroPedidoEcommerce={cod_pedido}"
             id = None             
 
         res = requests.get(
@@ -64,7 +64,7 @@ class Nota:
         if res.status_code == 200 and id and res.json().get('itens'):
             nota = res.json()
         
-        if res.status_code == 200 and id_ecommerce and res.json().get('itens'):
+        if res.status_code == 200 and cod_pedido and res.json().get('itens'):
             url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
             res = requests.get(
                 url = url_id,
@@ -113,7 +113,7 @@ class Nota:
     async def buscar_legado(
             self,
             id:int=None,
-            id_ecommerce:str=None
+            cod_pedido:str=None
         ) -> bool:
 
         def desmembra_xml(
@@ -160,17 +160,17 @@ class Nota:
             return dados_nota
 
 
-        if not any([id, id_ecommerce]):
+        if not any([id, cod_pedido]):
             logger.error("Nota não informada.")
             print("Nota não informada.")
             return False
         
         if id:
             url_ = self.endpoint+f"/{id}"
-            id_ecommerce = None
+            cod_pedido = None
         
-        if id_ecommerce:
-            url_ = self.endpoint+f"/?numeroPedidoEcommerce={id_ecommerce}"
+        if cod_pedido:
+            url_ = self.endpoint+f"/?numeroPedidoEcommerce={cod_pedido}"
             id = None             
 
         res = requests.get(
@@ -191,7 +191,7 @@ class Nota:
         if res.status_code == 200 and id and res.json().get('itens'):
             nota = res.json()
         
-        if res.status_code == 200 and id_ecommerce and res.json().get('itens'):
+        if res.status_code == 200 and cod_pedido and res.json().get('itens'):
             url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
             res = requests.get(
                 url = url_id,
