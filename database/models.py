@@ -94,6 +94,7 @@ class Ecommerce(Base):
     nome = Column(String, nullable=False)
     id_conta_destino = Column(Integer, nullable=False)
     id_categoria_financeiro = Column(Integer, nullable=False)
+    id_deposito = Column(Integer, nullable=True)
     dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))    
     ativo = Column(Boolean, default=True)
