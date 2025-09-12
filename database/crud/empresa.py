@@ -26,7 +26,7 @@ COLUNAS_CRIPTOGRAFADAS = [
 async def criar(snk_codemp:int,
                 nome:str,
                 cnpj:str,
-                **kwargs):
+                **kwargs) -> bool:
 
     if kwargs:
         kwargs = validar_dados(modelo=Empresa,
@@ -37,7 +37,8 @@ async def criar(snk_codemp:int,
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Empresa).where(Empresa.snk_codemp == snk_codemp)
+            select(Empresa)
+            .where(Empresa.snk_codemp == snk_codemp)
         )
         empresa = result.scalar_one_or_none()
 
@@ -54,14 +55,13 @@ async def criar(snk_codemp:int,
 
         session.add(nova_empresa)
         await session.commit()
-        await session.refresh(nova_empresa)
         return True
 
 async def atualizar(
         id:int=None,
         codemp:int=None,
         **kwargs
-    ):
+    ) -> bool:
 
     if not any([id,codemp]):
         return False
@@ -89,63 +89,52 @@ async def atualizar(
         for key, value in kwargs.items():
             setattr(empresa, key, value)
         await session.commit()
-        await session.refresh(empresa)
         return True
 
 async def buscar(
         id:int=None,
         codemp:int=None
-    ):
+    ) -> dict:
 
     if not any([id,codemp]):
-        return False    
-
+        return False
     async with AsyncSessionLocal() as session:
-
         if id:
             result = await session.execute(
                 select(Empresa).where(Empresa.id == id)
             )
-
         if codemp:
             result = await session.execute(
                 select(Empresa).where(Empresa.snk_codemp == codemp)
             )
-
         empresa = result.scalar_one_or_none()
         if not empresa:
-            print(f"Empresa não encontrada. Parâmetro: {codemp or id}")
-            return False
-        
+            print(f"Empresa não encontrada. Parâmetro: {id}")
+            return False        
         dados_empresa = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
-                                         retorno=empresa)
-        
+                                         retorno=empresa)        
         return dados_empresa
 
 async def excluir(
         id:int=None,
         codemp:int=None
-    ):
+    ) -> bool:
 
     if not any([id,codemp]):
-        return False    
-
+        return False
     async with AsyncSessionLocal() as session:
         if id:
             result = await session.execute(
                 select(Empresa).where(Empresa.id == id)
             )
-
         if codemp:
             result = await session.execute(
                 select(Empresa).where(Empresa.snk_codemp == codemp)
             )
-
         empresa = result.scalar_one_or_none()
         if not empresa:
             print(f"Empresa não encontrada. Parâmetro: {id}")
-            return False
-        
+            return False        
         try:
             await session.delete(empresa)
             await session.commit()
