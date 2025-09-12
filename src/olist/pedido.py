@@ -18,9 +18,10 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Pedido:
 
-    def __init__(self, codemp:int):  
+    def __init__(self, codemp:int=None, empresa_id:int=None):  
         self.codemp = codemp
-        self.token = None        
+        self.empresa_id = empresa_id
+        self.token = None
         self.dados_empresa = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PEDIDOS')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
