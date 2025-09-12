@@ -2,7 +2,7 @@ from database.database import AsyncSessionLocal
 from database.models import Ecommerce
 from src.utils.log import Log
 from sqlalchemy.future import select
-from src.utils.db import validar_dados
+from src.utils.db import validar_dados, formatar_retorno
 import os
 import logging
 from dotenv import load_dotenv
@@ -59,10 +59,9 @@ async def buscar(id_loja:int):
             )
         )
         ecommerce = result.scalar_one_or_none()
-        if not ecommerce:
-            print(f"Ecommerce não encontrado. Parâmetro: {id_loja}")
-            return False
-        return ecommerce.__dict__
+        dados_ecommerce = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=ecommerce)           
+        return dados_ecommerce        
     
 async def atualizar(ecommerce_id:int, **kwargs):
 
