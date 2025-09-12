@@ -3,7 +3,7 @@ from functools import wraps
 
 async def buscar_dados_empresa(self):
     if not self.dados_empresa:
-        self.dados_empresa = await empresa.buscar(codemp=self.codemp)
+        self.dados_empresa = await empresa.buscar(id=self.empresa_id, codemp=self.codemp)
 
 def ensure_dados_empresa(func):
     @wraps(func)
