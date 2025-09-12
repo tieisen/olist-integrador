@@ -1,7 +1,9 @@
 from database.database import AsyncSessionLocal
 from datetime import datetime, timedelta
-from database.models import Log, LogEstoque, LogPedido, LogProduto
+from database.models import Log
+from database.crud import log_produto, log_estoque, log_pedido
 from sqlalchemy.future import select
+from src.utils.db import formatar_retorno
 import os
 from dotenv import load_dotenv
 
@@ -12,7 +14,7 @@ async def criar(
         de:str,
         para:str,
         contexto:str
-    ):
+    ) -> int:
     async with AsyncSessionLocal() as session:
         novo_log = Log(empresa_id=empresa_id,
                        de=de,
@@ -26,7 +28,7 @@ async def criar(
 async def atualizar(
         id:int,
         sucesso:bool=None
-    ):
+    ) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Log)
@@ -43,46 +45,47 @@ async def atualizar(
         setattr(log, "sucesso", sucesso)
         await session.commit()
         await session.refresh(log)
-        return True
-    
-async def validar_sucesso_pelo_historico(id:int):
+    return True
+
+async def buscar(id:int) -> dict:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Log)
-            .where(Log.id == id)
+            .where(Log.log_id == id)
         )
         log = result.scalar_one_or_none()
-        if not log:
-            print(f"Log não encontrado. Parâmetro: {id}")
-            return False
-        
-        contexto = None
-        match log.contexto:
-            case c if 'pedido' in c:
-                contexto = LogPedido
-            case 'produto':
-                contexto = LogProduto
-            case 'estoque':
-                contexto = LogEstoque
+    dados_log = formatar_retorno(retorno=log)        
+    return dados_log
 
-        if not contexto:
-            print(f"Contexto não encontrado. Parâmetro: {log.contexto}")
-            return False
+async def validar_sucesso_pelo_historico(id:int) -> bool:
 
-        result = await session.execute(
-            select(contexto)
-            .where(contexto.log_id == id,
-                   contexto.sucesso.is_(False))
-        )
-        falhas_do_contexto = result.scalars().all()
-        return False if falhas_do_contexto else True
+    dados_log = await buscar(id)
+    if not dados_log:
+        print(f"Log não encontrado. Parâmetro: {id}")
+        return False
+    
+    contexto = None
+    match dados_log.get('contexto'):
+        case c if 'pedido' in c:
+            contexto = log_pedido
+        case 'produto':
+            contexto = log_produto
+        case 'estoque':
+            contexto = log_estoque
 
-async def buscar_falhas(empresa_id:int):    
+    if not contexto:
+        print(f"Contexto não encontrado. Parâmetro: {dados_log.get('contexto')}")
+        return False
+    
+    falhas_do_contexto = await contexto.buscar_falhas(log_id=dados_log.get('id'))
+    return False if falhas_do_contexto else True
+
+async def buscar_falhas(empresa_id:int) -> list[dict]:    
     try:
         tempo_limite = datetime.now().replace(minute=0, second=0, microsecond=0) - timedelta(minutes=int(os.getenv('TEMPO_HISTORICO_MINUTOS')))
     except Exception as e:
-        print("Erro ao calcular tempo limite para busca do histórico de falhas")
-        return False
+        print(f"Erro ao calcular tempo limite para busca do histórico de falhas. {e}")
+        return []
     finally:
         async with AsyncSessionLocal() as session:
             result = await session.execute(
@@ -92,13 +95,20 @@ async def buscar_falhas(empresa_id:int):
                     Log.empresa_id == empresa_id)
                 .order_by(Log.dh_execucao)
             )
-            log = result.scalars().all()
-            return log
+            logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs)
+        if not dados_logs:
+            dados_logs = []
+        elif not isinstance(dados_logs,list):
+            dados_logs = [dados_logs]
+        else:
+            dados_logs = []
+        return dados_logs
         
 async def listar_falhas(
         empresa_id:int=None,
         logs:list=None
-    ):
+    ) -> list[dict]:
     lista_falhas = []
 
     if not any([empresa_id, logs]):
@@ -106,32 +116,29 @@ async def listar_falhas(
         return False
     
     if not logs:
-        logs = await buscar_falhas(empresa_id=empresa_id)
+        logs = await buscar_falhas(empresa_id=empresa_id)    
     
-    async with AsyncSessionLocal() as session:
-        for l in logs:
-            match l.contexto:
-                case c if 'pedido' in c:
-                    contexto = LogPedido
-                case 'produto':
-                    contexto = LogProduto
-                case 'estoque':
-                    contexto = LogEstoque
+    for l in logs:
+        contexto = None
+        match l.get('contexto'):
+            case c if 'pedido' in c:
+                contexto = log_pedido
+            case c if 'produto' in c:
+                contexto = log_produto
+            case c if 'estoque' in c:
+                contexto = log_estoque
 
-            if not contexto:
-                print(f"Contexto não encontrado. Parâmetro: {l.contexto}")
-                return False
-
-            result = await session.execute(
-                select(contexto)
-                .where(contexto.log_id == l.id,
-                       contexto.sucesso.is_(False))
-            )
-            lista_falhas.append({
-                "contexto": l.contexto,
-                "de": l.de,
-                "para": l.para,
-                "falhas": result.scalars().all()})
+        if not contexto:
+            print(f"Contexto não encontrado. Parâmetro: {l.get('contexto')}")
+            return False
         
-        return lista_falhas
+        detalhamento_falhas = await contexto.buscar_falhas(log_id=l.get('id'))
+
+        lista_falhas.append({
+            "contexto": l.get('contexto'),
+            "de": l.get('de'),
+            "para": l.get('para'),
+            "falhas": detalhamento_falhas})
+    
+    return lista_falhas
   
