@@ -3,7 +3,7 @@ from functools import wraps
 
 async def buscar_token(self):
     if not self.token:
-        token = await Autenticacao(codemp=self.codemp).autenticar()
+        token = await Autenticacao(codemp=self.codemp,empresa_id=self.empresa_id).autenticar()
         self.token = token.strip('"')
 
 def ensure_token(func):
