@@ -1,8 +1,8 @@
 from database.database import AsyncSessionLocal
-from database.models import LogProduto
-from database.models import Produto
+from database.models import Produto, LogProduto
 from src.utils.log import Log
 from sqlalchemy.future import select
+from src.utils.db import formatar_retorno
 import os
 import logging
 from dotenv import load_dotenv
@@ -25,7 +25,7 @@ async def criar(
         sucesso:bool=True,
         obs:str=None,
         produto_id:int=None
-    ):
+    ) -> bool:
     async with AsyncSessionLocal() as session:
 
         if not produto_id and not (codprod == 0 and idprod == 0):
@@ -64,21 +64,23 @@ async def criar(
         await session.refresh(novo_log)
         return True
 
-async def buscar_falhas(log_id: int):
+async def buscar_falhas(log_id: int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(LogProduto)
             .where(LogProduto.log_id == log_id,
                    LogProduto.sucesso.is_(False))
         )
-        log = result.scalars().all()
-        return log
+        logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs)        
+        return dados_logs
 
-async def buscar_id(log_id: int):
+async def buscar_id(log_id: int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(LogProduto)
             .where(LogProduto.log_id == log_id)
         )
-        log = result.scalars().all()
-        return log
+        logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs)        
+        return dados_logs
