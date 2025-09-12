@@ -3,7 +3,7 @@ import json
 import logging
 import requests
 from dotenv   import load_dotenv
-from datetime import datetime,timedelta,timezone
+from datetime import datetime,timedelta
 
 from selenium                      import webdriver
 from selenium.webdriver.common.by  import By
@@ -25,8 +25,9 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Autenticacao:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int=None, empresa_id:int=None):
         self.codemp = codemp
+        self.empresa_id = empresa_id
         self.auth_url = os.getenv('OLIST_AUTH_URL')
         self.endpoint_token = os.getenv('OLIST_ENDPOINT_TOKEN')
         self.redirect_uri = os.getenv('OLIST_REDIRECT_URI')
@@ -168,8 +169,8 @@ class Autenticacao:
         dados_token = await crud.buscar(self.dados_empresa.get('id'))
 
         if not dados_token:
-            logger.error(f"Token não encontrado para a empresa {self.codemp}")
-            print(f"Token não encontrado para a empresa {self.codemp}")
+            logger.error(f"Token não encontrado para a empresa {self.codemp or self.empresa_id}")
+            print(f"Token não encontrado para a empresa {self.codemp or self.empresa_id}")
             return None
 
         if dados_token.get('dh_expiracao_token') > datetime.now():            
@@ -179,7 +180,7 @@ class Autenticacao:
             return [dados_token.get('refresh_token')]
 
         if dados_token.get('dh_expiracao_refresh_token') < datetime.now():
-            logger.warning(f"Refresh token expirado para a empresa {self.codemp}")            
+            logger.warning(f"Refresh token expirado para a empresa {self.codemp or self.empresa_id}")            
             return None     
 
     @ensure_dados_empresa
