@@ -18,9 +18,10 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Estoque:
 
-    def __init__(self, codemp:int):  
-        self.token = None
+    def __init__(self, codemp:int=None, empresa_id:int=None):  
         self.codemp = codemp
+        self.empresa_id = empresa_id
+        self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_ESTOQUES')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         
