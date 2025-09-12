@@ -3,10 +3,11 @@ import logging
 from dotenv import load_dotenv
 from database.database import AsyncSessionLocal
 from database.models import Nota, Pedido
+from database.crud import pedido
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
-from src.utils.db import validar_dados
+from src.utils.db import validar_dados, formatar_retorno
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -24,49 +25,76 @@ async def criar(
         numero:int,
         serie:str,
         **kwargs
-    ):
-
+    ) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Nota,
                                kwargs=kwargs,
                                colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         if not kwargs:
-            return False
+            return False   
 
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Nota)
-            .where(Nota.id_nota == id_nota)
-        )
-        nota = result.scalar_one_or_none()
-        if nota:
-            print(f"Nota {id_nota} já existe no ID {nota.id}")
-            return False
+    # Verifica se a nota já existe
+    nota = await buscar(id_nota=id_nota)
+    if nota:
+        print(f"Nota {id_nota} já existe no ID {nota.get('id')}")
+        return False
+    
+    # Verifica se o pedido existe
+    dados_pedido = await pedido.buscar(id_pedido=id_pedido)
+    if not dados_pedido:
+        print(f"Pedido {id_pedido} não encontrado")
+        return False    
+    
+    # Verifica se o pedido já tem nota
+    pedido_atendido = await validar_pedido_atendido(id_pedido=id_pedido)
+    if pedido_atendido:
+        print(f"Pedido {id_pedido} já foi atendido na nota {pedido_atendido.numero}")
+        return False
 
-        result = await session.execute(
-            select(Nota)
-            .where(Nota.dh_cancelamento.isnot(None),
-                   Nota.pedido_.has(Pedido.id_pedido == id_pedido))
-        )
-        pedido_atendido = result.scalar_one_or_none()
-        if pedido_atendido:
-            print(f"Pedido {id_pedido} já foi atendido na nota {pedido_atendido.numero}")
-            return False
-
-        result = await session.execute(
-            select(Pedido)
-            .where(Pedido.id_pedido == id_pedido)
-        )
-        pedido = result.scalar_one_or_none()        
-        
-        nova_nota = Nota(pedido_id=pedido.id,
+    async with AsyncSessionLocal() as session:      
+        nova_nota = Nota(pedido_id=id_pedido,
                          id_nota=id_nota,
                          numero=numero,
                          serie=serie,
                          **kwargs)
         session.add(nova_nota)
         await session.commit()
-        return True
+    return True
+
+async def validar_pedido_atendido(id_pedido:int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.isnot(None),
+                   Nota.pedido_.has(Pedido.id_pedido == id_pedido))
+        )
+        pedido_atendido = result.scalar_one_or_none()
+    return True if pedido_atendido else False    
+
+async def buscar(
+        id_nota:int=None,
+        nunota:int=None
+    ) -> dict:
+    if not any([id_nota,nunota]):
+        return False
+    async with AsyncSessionLocal() as session:
+        if nunota:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.nunota == nunota)
+            )
+        if id_nota:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.id_nota == id_nota)
+            )
+        nota = result.scalar_one_or_none()
+    if not nota:
+        print(f"Nota não encontrada. Parâmetro: {nunota or id_nota}")
+        return False
+    dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                  retorno=nota)
+    return dados_nota    
 
 async def buscar_emitir(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
