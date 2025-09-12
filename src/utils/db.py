@@ -41,8 +41,7 @@ def validar_criptografia(colunas_criptografadas:list[str], kwargs:dict):
     except Exception as e:
         erro = f"Erro ao criptografar dados da coluna {key}. {e}"
         logger.error(erro)
-        return False
-    
+        return False    
     return kwargs
 
 def remover_criptografia(colunas_criptografadas:list[str], dados:dict):
@@ -61,18 +60,14 @@ def remover_criptografia(colunas_criptografadas:list[str], dados:dict):
 def corrigir_timezone(dados:dict):
     # Definir timezone -3
     br_tz = datetime.timezone(datetime.timedelta(hours=-3))
-
     for key, value in dados.items():
         if isinstance(value,datetime.datetime):
-            dados[key] = value.astimezone(br_tz)
-    
+            dados[key] = value.astimezone(br_tz).replace(tzinfo=None)    
     return dados
 
 def formatar_retorno(colunas_criptografadas:list[str], retorno):
-
     if not retorno:
-        return False
-    
+        return False    
     if isinstance(retorno,list):
         retorno_formatado = []
         for r in retorno:
@@ -83,8 +78,7 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno):
             dados = remover_criptografia(colunas_criptografadas,r.__dict__)
             dados = corrigir_timezone(dados)
             retorno_formatado.append(dados)
-        return retorno_formatado    
-
+        return retorno_formatado
     retorno.__dict__.pop('_sa_instance_state', None)
     if colunas_criptografadas:
         dados = remover_criptografia(colunas_criptografadas,retorno.__dict__)
@@ -93,29 +87,23 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno):
         
 def validar_colunas_existentes(modelo, kwargs:dict):
     if not modelo:
-        return False
-    
+        return False    
     colunas_do_banco = listar_colunas_model(modelo)
     colunas_nao_encontradas = []
-
     # Verifica se existe coluna no banco para os dados informados
     for _ in kwargs.keys():
         if _ not in colunas_do_banco:
-            colunas_nao_encontradas.append(_)
-    
+            colunas_nao_encontradas.append(_)    
     if colunas_nao_encontradas:
         erro = f"Coluna(s) [{', '.join(colunas_nao_encontradas)}] não encontrada(s) no banco de dados."
         logger.warning(erro)
         print(erro)
-        return False
-    
+        return False    
     return kwargs
 
 def validar_dados(modelo,kwargs:dict,colunas_criptografadas:list[str]=None):
-
     if not validar_colunas_existentes(modelo,kwargs):
-        return False
-    
+        return False    
     if colunas_criptografadas:
         if not validar_criptografia(colunas_criptografadas,kwargs):
             print("Erro ao criptografar dados.")
