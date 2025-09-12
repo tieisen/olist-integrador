@@ -1,10 +1,9 @@
 import os
 import json
-import asyncio
 import logging
 import requests
 from dotenv   import load_dotenv
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from src.utils.decorador.empresa import ensure_dados_empresa
 from src.utils.log import Log
@@ -20,8 +19,9 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Autenticacao:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int=None, empresa_id:int=None):
         self.codemp = codemp
+        self.empresa_id = empresa_id
         self.dados_empresa = None        
         self.headers = None
         self.url = os.getenv('SANKHYA_URL_TOKEN')
