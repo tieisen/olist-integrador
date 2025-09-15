@@ -36,10 +36,10 @@ class Produto:
     @contexto
     @ensure_dados_empresa
     async def receber_alteracoes(self,**kwargs):
-        log_id = crudLog.criar(empresa_id=self.dados_empresa.get('id'),
-                               de='olist',
-                               para='base',
-                               contexto=kwargs.get('_contexto'))        
+        log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
+                                     de='olist',
+                                     para='base',
+                                     contexto=kwargs.get('_contexto'))        
         # Busca lista de produtos com alterações pendentes
         print("")
         print("=========================================================")
@@ -345,10 +345,10 @@ class Produto:
 
     @contexto
     async def integrar_olist(self, **kwargs):
-        log_id = crudLog.criar(empresa_id=self.dados_empresa.get('id'),
-                               de='sankhya',
-                               para='olist',
-                               contexto=kwargs.get('_contexto'))
+        log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
+                                     de='sankhya',
+                                     para='olist',
+                                     contexto=kwargs.get('_contexto'))
         # Busca lista de produtos com alterações no Sankhya
         print("")
         print("=========================================================")
@@ -411,10 +411,10 @@ class Produto:
 
     @contexto
     async def integrar_snk(self, **kwargs):
-        log_id = crudLog.criar(empresa_id=self.dados_empresa.get('id'),
-                               de='olist',
-                               para='sankhya',
-                               contexto=kwargs.get('_contexto'))        
+        log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
+                                     de='olist',
+                                     para='sankhya',
+                                     contexto=kwargs.get('_contexto'))        
         # Busca fila de alterações
         print("")
         print("=========================================================")
