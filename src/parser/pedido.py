@@ -1,12 +1,12 @@
 import os
 import re
 import logging
-import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
 
 from src.utils.log import Log
 from src.utils.decorador.empresa import ensure_dados_empresa
+from src.utils.decorador.ecommerce import ensure_dados_ecommerce
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -18,23 +18,21 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Pedido:
 
-    def __init__(self, codemp:int):
-        self.codemp = codemp
-        self.dados_empresa = None
+    def __init__(self, id_loja:int):
+        self.id_loja = id_loja
+        self.dados_ecommerce:dict=None
+        self.empresa_id = self.dados_ecommerce.get('empresa_id')        
+        self.dados_empresa:dict=None
 
+    @ensure_dados_ecommerce
     @ensure_dados_empresa
-    async def buscar_dados_empresa(self):
-        return self.dados_empresa
-
-    def to_sankhya(
+    async def to_sankhya(
             self,
             dados_olist:dict,
             dados_cidade:list
         ) -> tuple[dict,list]:
         dados_sankhya = {}
         lista_itens = []
-
-        asyncio.run(self.buscar_dados_empresa())
 
         dados_sankhya['AD_MKP_CODPED'] = {"$":str(dados_olist['ecommerce'].get('numeroPedidoEcommerce'))}
         dados_sankhya['AD_MKP_DESTINO'] = {"$": dados_cidade.get('codcid')} # ID DA CIDADE NO SAKNHYA
@@ -76,7 +74,9 @@ class Pedido:
             
         return dados_sankhya, lista_itens
     
-    def to_sankhya_lote(
+    @ensure_dados_ecommerce
+    @ensure_dados_empresa
+    async def to_sankhya_lote(
             self,
             lista_pedidos:list,
             lista_itens:list
@@ -90,14 +90,12 @@ class Pedido:
         dados_itens = []
 
         data_negociacao = datetime.now().strftime('%d/%m/%Y')
-        observacao = formatar_pedidos(lista_pedidos)
-        origem = lista_pedidos[0].get('origem')
-        asyncio.run(self.buscar_dados_empresa())        
+        observacao = formatar_pedidos(lista_pedidos) 
         
-        dados_cabecalho['AD_MKP_ORIGEM'] = {"$":origem}
+        dados_cabecalho['AD_MKP_ORIGEM'] = {"$":self.dados_ecommerce.get('id_loja')}
         dados_cabecalho['CIF_FOB'] = {"$":'C'}
         dados_cabecalho['CODCENCUS'] = {"$":'0'}
-        dados_cabecalho['CODEMP'] = {"$":self.codemp}
+        dados_cabecalho['CODEMP'] = {"$":self.dados_empresa.get('snk_codemp')}
         dados_cabecalho['CODNAT'] = {"$":self.dados_empresa.get('snk_codnat')}
         dados_cabecalho['CODPARC'] = {"$":self.dados_empresa.get('snk_codparc')}
         dados_cabecalho['CODTIPOPER'] = {"$":self.dados_empresa.get('snk_top_pedido')}
@@ -125,8 +123,8 @@ class Pedido:
                 print(f"Item {item.get('codprod')}. Erro: {e}")
                 continue
 
-        return dados_cabecalho, dados_itens, origem
-    
+        return dados_cabecalho, dados_itens
+
     def to_sankhya_devolucao(
             self,
             dados_olist:list,
