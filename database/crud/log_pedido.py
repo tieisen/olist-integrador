@@ -15,6 +15,8 @@ logging.basicConfig(filename=Log().buscar_path(),
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.INFO)
 
+COLUNAS_CRIPTOGRAFADAS = None
+
 async def criar(
         log_id:int,
         pedido_id:int,
@@ -50,5 +52,6 @@ async def buscar_falhas(log_id: int) -> list[dict]:
                    LogPedido.sucesso.is_(False))
         )
         logs = result.scalars().all()
-        dados_logs = formatar_retorno(retorno=logs)        
+        dados_logs = formatar_retorno(retorno=logs,
+                                      colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         return dados_logs
