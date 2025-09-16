@@ -10,6 +10,7 @@ from src.olist.separacao           import Separacao  as SeparacaoOlist
 from src.utils.log                 import Log
 from src.utils.decorador.contexto  import contexto
 from src.utils.decorador.ecommerce import ensure_dados_ecommerce
+from src.utils.decorador.log       import log_execucao
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -28,14 +29,14 @@ class Separacao:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     @contexto
+    @log_execucao
+    @ensure_dados_ecommerce
     async def receber(self,**kwargs) -> bool:
-        log_id = crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                               de='olist',
-                               para='base',
-                               contexto=kwargs.get('_contexto'))        
+        log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                     de='olist',
+                                     para='base',
+                                     contexto=kwargs.get('_contexto'))        
         # Busca lista de pedidos em separação
-        print("")
-        print("=========================================================")
         print("-> Buscando lista de pedidos em separação...")
         separacao = SeparacaoOlist(id_loja=self.id_loja)
         lista_separacoes = await separacao.listar()
@@ -90,15 +91,14 @@ class Separacao:
         return True
 
     @contexto
+    @log_execucao    
     @ensure_dados_ecommerce
     async def checkout(self,**kwargs) -> bool:
-        log_id = crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                               de='base',
-                               para='olist',
-                               contexto=kwargs.get('_contexto'))        
+        log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                     de='base',
+                                     para='olist',
+                                     contexto=kwargs.get('_contexto'))        
         # Busca lista de pedidos para checkout
-        print("")
-        print("=========================================================")
         print("-> Buscando lista de pedidos para checkout...")
         lista_checkout = await crudPedido.buscar_checkout(ecommerce_id=self.dados_ecommerce.get('id'))
         if not lista_checkout:
@@ -133,15 +133,14 @@ class Separacao:
         return True
 
     @contexto
+    @log_execucao
     @ensure_dados_ecommerce
     async def separar(self,**kwargs) -> bool:
-        log_id = crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                               de='base',
-                               para='olist',
-                               contexto=kwargs.get('_contexto'))        
+        log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                     de='base',
+                                     para='olist',
+                                     contexto=kwargs.get('_contexto'))        
         # Busca lista de pedidos para separar
-        print("")
-        print("=========================================================")
         print("-> Buscando lista de pedidos para separar...")
         lista_checkout = await crudPedido.buscar_checkout(ecommerce_id=self.dados_ecommerce.get('id'))
         if not lista_checkout:
