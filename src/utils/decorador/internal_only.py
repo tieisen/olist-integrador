@@ -11,6 +11,8 @@ def internal_only(func):
 
         # Lista de métodos da classe
         metodos_classe = dir(self.__class__)
+        if metodos_classe and 'wrapper' not in metodos_classe:
+            metodos_classe.append('wrapper')
 
         if caller not in metodos_classe:
             raise PermissionError(
