@@ -101,6 +101,8 @@ class Ecommerce(Base):
     id_deposito = Column(Integer, nullable=True)
     dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))    
+    importa_pedido_lote = Column(Boolean, default=True)
+    limite_pedido_lote = Column(Integer, nullable=True)
     ativo = Column(Boolean, default=True)
     empresa_id = Column(Integer, ForeignKey("empresa.id"), nullable=False)
 
