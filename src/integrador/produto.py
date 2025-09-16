@@ -13,6 +13,7 @@ from database.crud                import produto     as crudProduto
 from src.utils.log                import Log
 from src.utils.decorador.contexto import contexto
 from src.utils.decorador.empresa  import ensure_dados_empresa
+from src.utils.decorador.log      import log_execucao
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -24,8 +25,9 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Produto:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int=None, empresa_id:int=None):
         self.codemp = codemp
+        self.empresa_id = empresa_id
         self.contexto = 'produto'
         self.dados_empresa = None
         self.snk = ProdutoSnk(codemp)
@@ -34,6 +36,7 @@ class Produto:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
 
     @contexto
+    @log_execucao
     @ensure_dados_empresa
     async def receber_alteracoes(self,**kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
@@ -41,8 +44,6 @@ class Produto:
                                      para='base',
                                      contexto=kwargs.get('_contexto'))        
         # Busca lista de produtos com alterações pendentes
-        print("")
-        print("=========================================================")
         print("-> Buscando lista de produtos com alterações pendentes...")
         alteracoes_pendentes = await self.olist.buscar_alteracoes()
         if not alteracoes_pendentes:
@@ -138,7 +139,9 @@ class Produto:
                                     codprod=alteracao.get('sku'),
                                     idprod=alteracao.get('id'))  
             print(f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} adicionado à fila de atualização")
-        await crudLog.atualizar(id=log_id)
+        status_log = False if await crudLogProd.buscar_falhas(log_id) else True
+        await crudLog.atualizar(id=log_id,sucesso=status_log)
+        print("--> RECEBIMENTO DE ALTERAÇÕES NOS PRODUTOS DO OLIST CONCLUÍDA!")         
         return True
     
     @ensure_dados_empresa
@@ -344,14 +347,14 @@ class Produto:
         return log_atualizacoes
 
     @contexto
+    @log_execucao
+    @ensure_dados_empresa
     async def integrar_olist(self, **kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='sankhya',
                                      para='olist',
                                      contexto=kwargs.get('_contexto'))
         # Busca lista de produtos com alterações no Sankhya
-        print("")
-        print("=========================================================")
         print("-> Buscando lista de produtos com alterações no Sankhya...")
         alteracoes_pendentes = await self.snk.buscar_alteracoes()
         if not alteracoes_pendentes:
@@ -410,14 +413,14 @@ class Produto:
         return True
 
     @contexto
+    @log_execucao
+    @ensure_dados_empresa
     async def integrar_snk(self, **kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='olist',
                                      para='sankhya',
                                      contexto=kwargs.get('_contexto'))        
         # Busca fila de alterações
-        print("")
-        print("=========================================================")
         print("-> Buscando produtos na fila de alteração...")        
         alteracoes_pendentes = crudProduto.buscar_pendencias()        
         if not alteracoes_pendentes:
@@ -451,6 +454,5 @@ class Produto:
         await self.snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)
         status_log = False if await crudLogProd.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("=========================")
         print("--> INTEGRAÇÃO DE PRODUTOS NO SANKHYA CONCLUÍDA!")
         return True
