@@ -61,16 +61,6 @@ async def criar(
         await session.commit()
     return True
 
-async def validar_pedido_atendido(id_pedido:int):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Nota)
-            .where(Nota.dh_cancelamento.isnot(None),
-                   Nota.pedido_.has(Pedido.id_pedido == id_pedido))
-        )
-        pedido_atendido = result.scalar_one_or_none()
-    return True if pedido_atendido else False    
-
 async def buscar(
         id_nota:int=None,
         nunota:int=None
@@ -95,6 +85,71 @@ async def buscar(
     dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                   retorno=nota)
     return dados_nota    
+
+async def atualizar(
+        id_nota:int=None,
+        chave_acesso:str=None,
+        nunota_pedido:int=None,
+        **kwargs
+    ):
+
+    if not any([id_nota,chave_acesso,nunota_pedido]):
+        print("Nenhum parâmetro informado")
+        return False
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Nota,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
+            
+    async with AsyncSessionLocal() as session:
+        if id_nota:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.id_nota == id_nota)
+            )
+        if chave_acesso:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.chave_acesso == chave_acesso)
+            )
+        if nunota_pedido:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.pedido_.has(Pedido.nunota == nunota_pedido))
+            )
+
+        try:
+            nota = result.scalar_one_or_none()
+        except:
+            nota = result.scalars().all()
+        
+        if not nota:
+            print(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido}")
+            return False
+        
+        if isinstance(nota,list):
+            for n in nota:
+                for key, value in kwargs.items():
+                    setattr(n, key, value)
+        else:
+            for key, value in kwargs.items():
+                setattr(nota, key, value)            
+            
+        await session.commit()
+        return True  
+
+async def validar_pedido_atendido(id_pedido:int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.isnot(None),
+                   Nota.pedido_.has(Pedido.id_pedido == id_pedido))
+        )
+        pedido_atendido = result.scalar_one_or_none()
+    return True if pedido_atendido else False    
 
 async def buscar_emitir(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
