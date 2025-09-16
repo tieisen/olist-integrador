@@ -411,7 +411,7 @@ class Faturamento:
 
         for i, pedido in enumerate(pedidos_faturar):
             time.sleep(self.req_time_sleep)
-            print(f"-> Pedido {i + 1}/{len(pedidos_faturar)}: {pedido.get("num_pedido")}")            
+            print(f"-> Pedido {i + 1}/{len(pedidos_faturar)}: {pedido.get("num_pedido")}")
             # Fatura pedido no Olist
             ack = await self.faturar_olist(pedido=pedido)
         
