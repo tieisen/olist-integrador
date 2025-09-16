@@ -285,7 +285,7 @@ class Pedido:
         if res.status_code in (200,201):
             if res.json().get('status')=='0':                
                 logger.error("Erro ao lançar pedido. %s",res.text)
-                return 0
+                return False
             if res.json().get('status')=='1':
                 return self.extrai_nunota(res.json())
             if res.json().get('status')=='2':
