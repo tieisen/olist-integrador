@@ -18,9 +18,10 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Faturamento:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int=None, empresa_id:int=None):
         self.token = None
         self.codemp = codemp
+        self.empresa_id = empresa_id
         self.formatter = Formatter()
 
     @ensure_token
