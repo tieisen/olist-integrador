@@ -25,7 +25,7 @@ class Faturamento:
 
     @ensure_token
     async def buscar_itens(
-            self,
+            self,            
             nunota:int=None
         ):
 
@@ -38,16 +38,16 @@ class Faturamento:
         parametro = 'SANKHYA_PATH_SCRIPT_CONFERIDOS_PEDIDO' if nunota else 'SANKHYA_PATH_SCRIPT_CONFERIDOS_DIA'
         script = buscar_script(parametro=parametro)
 
-        if nunota:
-            try:
+        try:
+            if nunota:
                 query = script.format_map({"nunota":nunota})
-            except Exception as e:
-                erro = f"Falha ao formatar query do saldo de estoque por lote. {e}"
-                print(erro)
-                logger.error(erro)
-                return False            
-        else:
-            query = script
+            else:
+                query = script.format_map({"codemp":self.codemp})
+        except Exception as e:
+            erro = f"Falha ao formatar query do saldo de estoque por lote. {e}"
+            print(erro)
+            logger.error(erro)
+            return False
 
         res = requests.get(
             url=url,
