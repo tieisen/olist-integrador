@@ -97,7 +97,7 @@ async def buscar(
         
         pedido = result.scalars().all()
         if not pedido:
-            return False
+            return []
         dados_pedido = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                         retorno=pedido)
         return dados_pedido
@@ -165,7 +165,11 @@ async def buscar_importar(ecommerce_id:int):
                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
         )
         pedidos = result.scalars().all()
-        return pedidos
+        if not pedidos:
+            return []
+        dados_pedido = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                        retorno=pedidos)
+        return dados_pedido
 
 async def atualizar_importado(
         id_pedido:int,
