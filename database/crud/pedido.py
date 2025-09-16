@@ -67,26 +67,35 @@ async def criar(
 async def buscar(
         id_pedido:int=None,
         num_pedido:int=None,
-        cod_pedido:str=None
-    ) -> dict:
+        cod_pedido:str=None,
+        lista:list[int]=None
+    ) -> list[dict]:
 
-    if not any([id_pedido, num_pedido, cod_pedido]):
+    if not any([id_pedido, num_pedido, cod_pedido, lista]):
         print("Nenhum parâmetro informado")
         return False
+    
     async with AsyncSessionLocal() as session:
         if id_pedido:
             result = await session.execute(
                 select(Pedido).where(Pedido.id_pedido == id_pedido)
             )
-        if num_pedido:
+        elif num_pedido:
             result = await session.execute(
                 select(Pedido).where(Pedido.num_pedido == num_pedido)
             )
-        if cod_pedido:
+        elif cod_pedido:
             result = await session.execute(
                 select(Pedido).where(Pedido.cod_pedido == cod_pedido)
             )
-        pedido = result.scalar_one_or_none()
+        elif lista:
+            result = await session.execute(
+                select(Pedido).where(Pedido.id_pedido.in_(lista))
+            )
+        else:
+            return False
+        
+        pedido = result.scalars().all()
         if not pedido:
             return False
         dados_pedido = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
@@ -226,7 +235,9 @@ async def buscar_faturar(ecommerce_id:int):
                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
         )
         pedidos = result.scalars().all()
-        return pedidos
+        dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=pedidos)           
+        return dados_pedidos
 
 async def atualizar_faturado(
         nunota:int,
