@@ -8,6 +8,7 @@ from src.olist.estoque             import Estoque     as EstoqueOlist
 from src.utils.decorador.contexto  import contexto
 from src.utils.decorador.empresa   import ensure_dados_empresa
 from src.utils.decorador.ecommerce import ensure_dados_ecommerce
+from src.utils.decorador.log       import log_execucao
 from src.utils.log                 import Log
 
 load_dotenv('keys/.env')
@@ -115,6 +116,7 @@ class Estoque:
             return False
 
     @contexto
+    @log_execucao
     @ensure_dados_empresa
     async def atualizar_olist(self, **kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
@@ -122,8 +124,6 @@ class Estoque:
                                      para='olist',
                                      contexto=kwargs.get('_contexto'))        
         # Busca lista de produtos com alterações de estoque no Sankhya
-        print("")
-        print("=========================================================")
         print("-> Buscando de produtos com alterações de estoque no Sankhya...")
         estoque_snk = EstoqueSnk()
         alteracoes_pendentes = await estoque_snk.buscar_alteracoes()
@@ -183,12 +183,11 @@ class Estoque:
                                                  lista_estoque=res_estoque):
                 raise Exception("Erro ao atualizar log")
 
-            print(f"Estoque sincronizado com sucesso!")
+            print(f"-> Estoque sincronizado com sucesso!")
 
             # Registro no log
             status_log = False if await crudLogEst.buscar_falhas(log_id) else True
             await crudLog.atualizar(id=log_id,sucesso=status_log)
-            print("=========================")
             print("--> INTEGRAÇÃO DE ESTOQUE CONCLUÍDA!")
             return True
         except Exception as e:
