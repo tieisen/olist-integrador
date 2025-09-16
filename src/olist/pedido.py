@@ -102,51 +102,22 @@ class Pedido:
     @ensure_token
     async def atualizar_nunota(
             self,
-            id:int=None,
-            nunota:int=None,
+            id:int,
+            nunota:int,
             observacao:str=None
         ):
-
-        if not id:
-            logger.error("Pedido não informado.")
-            print("Pedido não informado.")
-            return False
         
         url = self.endpoint+f"/{id}"
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
-
-        # if not observacao:
-        #     res_get = requests.get(
-        #         url=url,
-        #         headers={
-        #             "Authorization":f"Bearer {self.token}",
-        #             "Content-Type":"application/json",
-        #             "Accept":"application/json"
-        #         }
-        #     )
-        #     if res_get.status_code != 200:
-        #         print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
-        #         logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
-        #         return False
-        #     observacao = res_get.json().get('observacao')
-        # payload = {
-        #     "dataPrevista": None,
-        #     "dataEnvio": None,
-        #     "observacoes": observacao + f' | Nº do pedido no Sankhya: {nunota}',
-        #     "observacoesInternas": None,
-        #     "pagamento": {
-        #         "parcelas": []
-        #     }
-        # }
-
+        
         payload = {
             "dataPrevista": None,
             "dataEnvio": None,
             "observacoes": None,
-            "observacoesInternas": f"Nº do pedido no Sankhya: {nunota}",
+            "observacoesInternas": observacao + f"<br>Nº do pedido no Sankhya: {nunota}",
             "pagamento": {
                 "parcelas": []
             }
@@ -165,8 +136,7 @@ class Pedido:
         if res_put.status_code != 204:
             print(f"Erro {res_put.status_code}: {res_put.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
-            return False
-        
+            return False        
         return True
 
     @ensure_token
@@ -175,7 +145,7 @@ class Pedido:
             id:int
         ):
 
-        # import re
+        import re
         
         url = self.endpoint+f"/{id}"
         if not url:
@@ -183,27 +153,27 @@ class Pedido:
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
-        # res_get = requests.get(
-        #     url=url,
-        #     headers={
-        #         "Authorization":f"Bearer {self.token}",
-        #         "Content-Type":"application/json",
-        #         "Accept":"application/json"
-        #     }
-        # )
-        # if res_get.status_code != 200:
-        #     print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
-        #     logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
-        #     return False
-        # observacao = res_get.json().get('observacao')
-        # regex = r"[|].+"
-        # nova_observacao = re.sub(regex, '', observacao)
+        res_get = requests.get(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+        if res_get.status_code != 200:
+            print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
+            logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
+            return False
+        observacao = res_get.json().get('observacoesInternas')
+        regex = r"[|].+"
+        nova_observacao = re.sub(regex, '', observacao)
 
         payload = {
             "dataPrevista": None,
             "dataEnvio": None,
             "observacoes": None,
-            "observacoesInternas": '',
+            "observacoesInternas": nova_observacao,
             "pagamento": {
                 "parcelas": []
             }
