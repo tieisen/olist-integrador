@@ -386,5 +386,10 @@ class Pedido:
             return True, []
 
         # Ordena os itens por ID        
-        itens.sort(key=lambda i: i['id'])
-        return True, [p["id"] for p in itens]    
+        self.ordena_por_id(itens)
+        #return True, [p["id"] for p in itens]
+        return True, itens
+    
+    def ordena_por_id(self,lista_itens):
+        lista_itens.sort(key=lambda i: i['id'])
+        return True
