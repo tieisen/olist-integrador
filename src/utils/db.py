@@ -72,10 +72,9 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno):
         retorno_formatado = []
         for r in retorno:
             r.__dict__.pop('_sa_instance_state', None)            
-            if not colunas_criptografadas:
-                retorno_formatado.append(r.__dict__)
-                continue
-            dados = remover_criptografia(colunas_criptografadas,r.__dict__)
+            dados = r.__dict__
+            if colunas_criptografadas:
+                dados = remover_criptografia(colunas_criptografadas,dados)            
             dados = corrigir_timezone(dados)
             retorno_formatado.append(dados)
         return retorno_formatado
