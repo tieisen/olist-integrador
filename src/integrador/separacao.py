@@ -11,6 +11,7 @@ from src.utils.log                 import Log
 from src.utils.decorador.contexto  import contexto
 from src.utils.decorador.ecommerce import ensure_dados_ecommerce
 from src.utils.decorador.log       import log_execucao
+from src.utils.decorador.internal_only import internal_only
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -28,6 +29,17 @@ class Separacao:
         self.contexto = 'separacao'        
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
+    @internal_only
+    async def valida_separacoes_registradas(
+            self,
+            lista_pedidos:list[dict]
+        ) -> list[dict]:
+        lista_ids = [p['venda'].get('id') for p in lista_pedidos]
+        pedidos_existentes = await crudPedido.buscar(lista=lista_ids)
+        lista_pedidos_com_separacao = [p.get('id_pedido') for p in pedidos_existentes if p.get('id_separacao')]        
+        pedidos_pendentes_separacao = [p for p in lista_pedidos if p['venda'].get('id') not in lista_pedidos_com_separacao]
+        return pedidos_pendentes_separacao
+
     @contexto
     @log_execucao
     @ensure_dados_ecommerce
@@ -44,24 +56,33 @@ class Separacao:
             print("Nenhum pedido em separação encontrado")
             await crudLog.atualizar(id=log_id,
                                     sucesso=True)
-            return True        
+            return True
+        lista_separacoes = await self.valida_separacoes_registradas(lista_separacoes)
+        if not lista_separacoes:
+            print("Nenhuma separação pendente encontrada")
+            await crudLog.atualizar(id=log_id,
+                                    sucesso=True)
+            return True
         print(f"{len(lista_separacoes)} pedidos em separação encontrados.")
-        for item in lista_separacoes:
+        for i, item in enumerate(lista_separacoes):
+            print(item)
             time.sleep(self.req_time_sleep)  # Evita rate limit
+            print(f"-> Pedido {i + 1}/{len(lista_separacoes)}: {item['venda'].get('numero')}")            
             # Valida existencia do pedido
-            print(f"Validando existencia do pedido {item.get('id_pedido')}...")
-            pedido = await crudPedido.buscar(id_pedido=item.get('id_pedido'))
+            print(f"Validando existencia do pedido...")
+            pedido = await crudPedido.buscar(id_pedido=item['venda'].get('id'))
             # Pedido não encontrado
             if not pedido:
-                obs = f"Pedido ID {item.get('id_pedido')} não encontrado na base."
+                obs = f"Pedido {item['venda'].get('numero')} não encontrado na base."
                 logger.warning(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id'),
+                                          pedido_id=item['venda'].get('id'),
                                           evento='R',
                                           sucesso=False,
                                           obs=obs)
-                continue            
+                continue
+            pedido = pedido[0]
             # Separação já vinculada ao pedido
             if pedido.get('id_separacao') == item.get('id_separacao'):
                 obs = "Separação já vinculada ao pedido."
@@ -76,13 +97,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id'),
+                                          pedido_id=item['venda'].get('id'),
                                           evento='R',
                                           sucesso=False,
                                           obs=obs)
                 continue
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item.get('id'),
+                                      pedido_id=item['venda'].get('id'),
                                       evento='R')
             print("Pedido atualizado com sucesso!")
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
@@ -118,13 +139,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id'),
+                                          pedido_id=item['venda'].get('id'),
                                           evento='F',
                                           sucesso=False,
                                           obs=obs)
                 continue  
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item.get('id'),
+                                      pedido_id=item['venda'].get('id'),
                                       evento='F')
             print("Checkout realizado com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
@@ -160,13 +181,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id'),
+                                          pedido_id=item['venda'].get('id'),
                                           evento='F',
                                           sucesso=False,
                                           obs=obs)
                 continue  
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item.get('id'),
+                                      pedido_id=item['venda'].get('id'),
                                       evento='F')
             print("Separação realizada com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
