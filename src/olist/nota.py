@@ -22,10 +22,12 @@ class Nota:
         self.id_loja = id_loja
         self.codemp = codemp
         self.empresa_id = empresa_id        
-        self.dados_ecommerce = None
+        self.dados_ecommerce:dict = None
         self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
+        self.endpoint_fin = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')
 
+    @ensure_dados_ecommerce
     @ensure_token
     async def buscar(
             self,
@@ -84,6 +86,7 @@ class Nota:
             logger.error("Nota cancelada")
             return False
     
+    @ensure_dados_ecommerce
     @ensure_token
     async def buscar_canceladas(self) -> bool:
 
@@ -109,6 +112,7 @@ class Nota:
         lista_canceladas = [r.get('id') for r in res.json().get('itens')]
         return lista_canceladas
 
+    @ensure_dados_ecommerce
     @ensure_token
     async def buscar_legado(
             self,
@@ -226,6 +230,7 @@ class Nota:
             logger.error("Nota cancelada")
             return False
 
+    @ensure_dados_ecommerce
     @ensure_token
     async def emitir(
             self,
@@ -256,17 +261,20 @@ class Nota:
         if res.status_code == 200:
             return res.json()        
 
+    @ensure_dados_ecommerce
     @ensure_token
     async def buscar_financeiro(
             self,
-            serie:str,
-            numero:str
+            serie:str=None,
+            numero:str=None,
+            id:int=None
         ) -> bool:
         
-        url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')+f"?numeroDocumento={serie}{numero}/01"
-        if not url:
-            print(f"Erro relacionado à url. {url}")
-            logger.error("Erro relacionado à url. %s",url)
+        if id:
+            url = self.endpoint_fin+f"/{id}"
+        elif all([serie, numero]):
+            url = self.endpoint_fin+f"?numeroDocumento={serie}{numero}/01"
+        else:            
             return False         
 
         res = requests.get(
@@ -283,21 +291,20 @@ class Nota:
             print(f"Erro {res.status_code}: {res.text} fin {serie}{numero}/01")
             return False
         
-        if res.status_code == 200:
-            try:
-                return res.json().get('itens')[0]
-            except:
-                return False
+        if id:
+            return res.json()
+        else:
+            return res.json().get('itens')[0]
 
-    @ensure_token
     @ensure_dados_ecommerce
+    @ensure_token
     async def baixar_financeiro(
             self,
             id:int,
             valor:float
         ) -> bool:
 
-        url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')+f"/{id}/baixar"
+        url = self.endpoint_fin+f"/{id}/baixar"
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
