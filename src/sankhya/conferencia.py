@@ -5,6 +5,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from src.utils.decorador.sankhya import ensure_token
+from src.utils.decorador.empresa import ensure_dados_empresa
+from src.utils.decorador.internal_only import internal_only
+
 from src.utils.formatter import Formatter
 from src.utils.buscar_script import buscar_script
 
@@ -18,9 +21,11 @@ logging.basicConfig(filename=os.getenv('PATH_LOGS'),
 
 class Conferencia:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int=None, empresa_id:int=None):
         self.token = None
         self.codemp = codemp
+        self.empresa_id = empresa_id
+        self.dados_empresa:dict=None
         self.formatter = Formatter()
         self.campos_cabecalho = [
             "NUCONF", "NUNOTAORIG", "STATUS", "DHINICONF",
@@ -32,10 +37,12 @@ class Conferencia:
         ]
         self.nuconf = None
 
+    @internal_only
     def extrai_nuconf(self,payload:dict=None):
         return int(payload['responseBody']['result'][0][0])
 
-    async def buscar_aguardando_conferencia(self):
+    @ensure_token
+    async def buscar_aguardando_conferencia(self, id_loja:int=None):
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
@@ -45,6 +52,7 @@ class Conferencia:
 
         parametero = 'SANKHYA_PATH_SCRIPT_AGUARDANDO_CONFERENCIA'
         script = buscar_script(parametro=parametero)
+        query = script.format_map({"id_loja":id_loja})        
 
         res = requests.get(
             url=url,
@@ -52,7 +60,7 @@ class Conferencia:
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
-                    "sql":script
+                    "sql":query
                 }
             })
 
@@ -257,6 +265,7 @@ class Conferencia:
             return False
 
     @ensure_token
+    @ensure_dados_empresa
     async def concluir(
             self,
             nuconf:int
@@ -287,7 +296,7 @@ class Conferencia:
                         "values": {
                             "0": "F",
                             "1": datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                            "2": os.getenv('SANKHYA_CODUSU_INTEGRACAO'),
+                            "2": self.dados_empresa.get('snk_codusu_integracao'),
                             "3": "1"
                         }
                     }
