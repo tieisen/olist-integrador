@@ -178,7 +178,7 @@ class Pedido:
             await crudLogPed.criar(log_id=self.log_id,
                                    pedido_id=ack.get('id',0),
                                    evento='R',
-                                   status=ack.get('success'),
+                                   sucesso=ack.get('success'),
                                    obs=ack.get('__exception__',None))            
         else:
             # Consulta pedidos novos
@@ -194,7 +194,7 @@ class Pedido:
                     await crudLogPed.criar(log_id=self.log_id,
                                            pedido_id=ack.get('id',0),
                                            evento='R',
-                                           status=ack.get('success'),
+                                           sucesso=ack.get('success'),
                                            obs=ack.get('__exception__',None))                    
             elif isinstance(pedidos_novos,bool):
                 # Retornou True ou False
@@ -508,7 +508,7 @@ class Pedido:
                 await crudLogPed.criar(log_id=self.log_id,
                                        pedido_id=pedido.get('id'),
                                        evento='I',
-                                       status=ack.get('success'),
+                                       sucesso=ack.get('success'),
                                        obs=ack.get('__exception__',None))            
         else:
             for i, pedido in enumerate(pedidos_importar):
@@ -520,7 +520,7 @@ class Pedido:
                 await crudLogPed.criar(log_id=self.log_id,
                                        pedido_id=pedido.get('id'),
                                        evento='I',
-                                       status=ack.get('success'),
+                                       sucesso=ack.get('success'),
                                        obs=ack.get('__exception__',None))                  
         
         # Atualiza log
@@ -600,7 +600,7 @@ class Pedido:
             await crudLogPed.criar(log_id=self.log_id,
                                    pedido_id=pedido.get('id'),
                                    evento='C',
-                                   status=ack.get('success'),
+                                   sucesso=ack.get('success'),
                                    obs=ack.get('__exception__',None))
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
