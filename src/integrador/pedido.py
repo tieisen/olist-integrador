@@ -2,23 +2,22 @@ import os
 import re
 import time
 import logging
-from dotenv import load_dotenv
-from datetime import datetime
-from src.olist.pedido import Pedido as PedidoOlist
-from src.olist.nota import Nota as NotaOlist
-from src.sankhya.pedido import Pedido as PedidoSnk
-from src.parser.pedido import Pedido as ParserPedido
-from src.sankhya.nota import Nota as NotaSnk
-from src.sankhya.conferencia import Conferencia as ConferenciaSnk
-from src.parser.conferencia import Conferencia as ParserConferencia
-from src.services.viacep import Viacep
-from src.utils.log import Log
-from database.crud import pedido as crudPedido
-from database.crud import log_pedido as crudLogPed
-from database.crud import log as crudLog
-from src.utils.decorador.contexto  import contexto
-from src.utils.decorador.ecommerce import ensure_dados_ecommerce
-from src.utils.decorador.log       import log_execucao
+from dotenv                            import load_dotenv
+from datetime                          import datetime
+
+from src.olist.pedido                  import Pedido      as PedidoOlist
+from src.sankhya.pedido                import Pedido      as PedidoSnk
+from src.parser.pedido                 import Pedido      as ParserPedido
+from src.sankhya.conferencia           import Conferencia as ConferenciaSnk
+from src.parser.conferencia            import Conferencia as ParserConferencia
+from database.crud                     import pedido      as crudPedido
+from database.crud                     import log_pedido  as crudLogPed
+from database.crud                     import log         as crudLog
+from src.services.viacep               import Viacep
+from src.utils.log                     import Log
+from src.utils.decorador.contexto      import contexto
+from src.utils.decorador.ecommerce     import ensure_dados_ecommerce
+from src.utils.decorador.log           import log_execucao
 from src.utils.decorador.internal_only import internal_only
 
 load_dotenv('keys/.env')
@@ -31,7 +30,7 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Pedido:
 
-    def __init__(self, id_loja:int):        
+    def __init__(self, id_loja:int):
         self.id_loja:int=id_loja
         self.log_id:int=None
         self.contexto:str='pedido'
