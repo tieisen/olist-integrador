@@ -21,14 +21,14 @@ async def criar(
         log_id:int,
         pedido_id:int,
         evento:str,
-        status:bool=True,
+        sucesso:bool=True,
         obs:str=None
     ) -> bool:
     async with AsyncSessionLocal() as session:
         novo_log = LogPedido(log_id=log_id,
                              pedido_id=pedido_id,
                              evento=evento,
-                             status=status,
+                             sucesso=sucesso,
                              obs=obs)
         session.add(novo_log)
         await session.commit()
