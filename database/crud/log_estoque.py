@@ -20,7 +20,7 @@ async def criar(
         codprod:int,
         idprod:int,
         qtdmov:int=0,
-        status_estoque:bool=True,
+        sucesso:bool=True,
         status_lotes:bool=None,
         obs:str=None
     ) -> bool:
@@ -29,7 +29,7 @@ async def criar(
                               codprod=codprod,
                               idprod=idprod,
                               qtdmov=qtdmov,
-                              status_estoque=status_estoque,
+                              sucesso=sucesso,
                               status_lotes=status_lotes,                              
                               obs=obs)
         session.add(novo_log)
