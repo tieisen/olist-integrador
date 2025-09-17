@@ -38,7 +38,7 @@ class Separacao:
                                      contexto=kwargs.get('_contexto'))        
         # Busca lista de pedidos em separação
         print("-> Buscando lista de pedidos em separação...")
-        separacao = SeparacaoOlist(id_loja=self.id_loja)
+        separacao = SeparacaoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         lista_separacoes = await separacao.listar()
         if not lista_separacoes:
             print("Nenhum pedido em separação encontrado")
@@ -57,7 +57,7 @@ class Separacao:
                 logger.warning(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id_pedido'),
+                                          pedido_id=item.get('id'),
                                           evento='R',
                                           sucesso=False,
                                           obs=obs)
@@ -76,13 +76,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id_pedido'),
+                                          pedido_id=item.get('id'),
                                           evento='R',
                                           sucesso=False,
                                           obs=obs)
                 continue
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item.get('id_pedido'),
+                                      pedido_id=item.get('id'),
                                       evento='R')
             print("Pedido atualizado com sucesso!")
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
@@ -107,7 +107,7 @@ class Separacao:
                                     sucesso=True)
             return True        
         print(f"{len(lista_checkout)} pedidos para checkout encontrados.")
-        separacao = SeparacaoOlist(id_loja=self.id_loja)
+        separacao = SeparacaoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         for item in lista_checkout:
             time.sleep(self.req_time_sleep)  # Evita rate limit
             # Altera status da separação para Embalada
@@ -118,13 +118,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id_pedido'),
+                                          pedido_id=item.get('id'),
                                           evento='F',
                                           sucesso=False,
                                           obs=obs)
                 continue  
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item.get('id_pedido'),
+                                      pedido_id=item.get('id'),
                                       evento='F')
             print("Checkout realizado com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
@@ -149,7 +149,7 @@ class Separacao:
                                     sucesso=True)
             return True        
         print(f"{len(lista_checkout)} pedidos para separar encontrados.")
-        separacao = SeparacaoOlist(id_loja=self.id_loja)
+        separacao = SeparacaoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         for item in lista_checkout:
             time.sleep(self.req_time_sleep)  # Evita rate limit
             # Altera status da separação para Separada
@@ -160,13 +160,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item.get('id_pedido'),
+                                          pedido_id=item.get('id'),
                                           evento='F',
                                           sucesso=False,
                                           obs=obs)
                 continue  
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item.get('id_pedido'),
+                                      pedido_id=item.get('id'),
                                       evento='F')
             print("Separação realizada com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
