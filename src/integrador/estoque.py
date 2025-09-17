@@ -109,7 +109,7 @@ class Estoque:
                                        codprod=l['ajuste_estoque'].get('codprod'),
                                        idprod=l['ajuste_estoque'].get('id'),
                                        qtdmov=l.get('variacao'),
-                                       status_estoque=l.get('sucesso'))
+                                       sucesso=l.get('sucesso'))
             return True
         except Exception as e:
             logger.error("Erro ao atualizar log de estoques em lote: %s",e)            
@@ -197,7 +197,7 @@ class Estoque:
                                    idprod=0,
                                    qtdmov=0,
                                    obs=obs,
-                                   status_estoque=False)            
+                                   sucesso=False)
             await crudLog.atualizar(id=log_id,
                                     sucesso=False)
             return False
