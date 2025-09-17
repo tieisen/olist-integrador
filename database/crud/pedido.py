@@ -146,23 +146,7 @@ async def atualizar(
                 setattr(pedido, key, value)
             
         await session.commit()
-        return True        
-
-# async def atualizar_separacao(
-#         id_pedido: int,
-#         id_separacao: int
-#     ):
-#     async with AsyncSessionLocal() as session:
-#         result = await session.execute(
-#             select(Pedido).where(Pedido.id_pedido == id_pedido)
-#         )
-#         pedido = result.scalar_one_or_none()
-#         if not pedido:
-#             print(f"Pedido não encontrado. Parâmetro: {id_pedido}")
-#             return False
-#         setattr(pedido, "id_separacao", id_separacao)    
-#         await session.commit()
-#         return True        
+        return True
 
 async def buscar_importar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
@@ -179,23 +163,6 @@ async def buscar_importar(ecommerce_id:int):
                                         retorno=pedidos)
         return dados_pedido
 
-# async def atualizar_importado(
-#         id_pedido:int,
-#         nunota:int
-#     ):
-#     async with AsyncSessionLocal() as session:
-#         result = await session.execute(
-#             select(Pedido).where(Pedido.id_pedido == id_pedido)
-#         )
-#         pedido = result.scalar_one_or_none()
-#         if not pedido:
-#             print(f"Pedido não encontrado. Parâmetro: {id_pedido}")
-#             return False        
-#         setattr(pedido, "nunota", nunota)
-#         setattr(pedido, "dh_importacao", datetime.now())
-#         await session.commit()
-#         return True
-
 async def buscar_confirmar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -209,26 +176,6 @@ async def buscar_confirmar(ecommerce_id:int):
         dados_pedido = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                         retorno=pedidos)
         return dados_pedido
-
-# async def atualizar_confirmado(
-#         nunota:int,
-#         dh_confirmado: str=None
-#     ):
-#     async with AsyncSessionLocal() as session:
-#         result = await session.execute(
-#             select(Pedido).filter(Pedido.nunota == nunota)
-#         )
-#         pedidos = result.scalars().all()
-#         if not pedidos:
-#             print(f"Pedido não encontrado. Parâmetro: {nunota}")
-#             return False
-#         for pedido in pedidos:
-#             if pedido.dh_confirmacao:
-#                 # Pedido já confirmado,
-#                 continue
-#             setattr(pedido, "dh_confirmacao", datetime.strptime(dh_confirmado,'%d/%m/%Y') if dh_confirmado else datetime.now())
-#         await session.commit()
-#         return True
 
 async def buscar_checkout(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
@@ -254,42 +201,6 @@ async def buscar_faturar(ecommerce_id:int):
         dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                          retorno=pedidos)           
         return dados_pedidos
-
-async def atualizar_faturado(
-        nunota:int,
-        dh_faturamento: str=None
-    ):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Pedido).filter(Pedido.nunota == nunota)
-        )
-        pedidos = result.scalars().all()
-        if not pedidos:
-            print(f"Pedido não encontrado. Parâmetro: {nunota}")
-            return False
-        for pedido in pedidos:
-            if pedido.dh_faturamento:
-                # Pedido já faturado
-                continue
-            setattr(pedido, "dh_faturamento", datetime.strptime(dh_faturamento,'%d/%m/%Y') if dh_faturamento else datetime.now())
-        await session.commit()
-        return True
-
-async def atualizar_cancelado(
-        id_pedido:int,
-        dh_cancelamento: str=None
-    ):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Pedido).filter(Pedido.id_pedido == id_pedido)
-        )
-        pedido = result.scalar_one_or_none()
-        if not pedido:
-            print(f"Pedido não encontrado. Parâmetro: {id_pedido}")
-            return False
-        setattr(pedido, "dh_cancelamento", datetime.strptime(dh_cancelamento,'%d/%m/%Y') if dh_cancelamento else datetime.now())
-        await session.commit()
-        return True
 
 async def resetar(id_pedido:int):
     async with AsyncSessionLocal() as session:
