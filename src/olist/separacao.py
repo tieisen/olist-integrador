@@ -22,35 +22,6 @@ class Separacao:
         self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
-    def extrair_lista(
-            self,
-            res:dict
-        ) -> list:
-
-        if not isinstance(res, dict):
-            logger.error("Retorno da API não informado.")
-            print("Retorno da API não informado.")
-            return False
-
-        if not res.get('itens'):
-            logger.error("Retorno da API não possui itens.")
-            print("Retorno da API não possui itens.")
-            return False
-
-        lista = []
-
-        try:
-            for item in res.get('itens'):
-                lista.append({
-                    "id_pedido" : item['venda'].get('id'),
-                    "id_separacao" : item.get('id')
-                })
-            return lista
-        except Exception as e:
-            logger.error("Erro ao extrair lista. %s",e)
-            print("Erro ao extrair lista.")
-            return False
-
     @ensure_token
     async def listar(self) -> list:
         
@@ -82,8 +53,8 @@ class Separacao:
 
             if res.status_code == 200 and not res.json().get('itens'):
                 continue
-
-            lista+=self.extrair_lista(res.json())
+            
+            lista+=res.json().get('itens',[])
 
         return lista if status else status        
 
