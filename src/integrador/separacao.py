@@ -65,47 +65,42 @@ class Separacao:
             return True
         print(f"{len(lista_separacoes)} pedidos em separação encontrados.")
         for i, item in enumerate(lista_separacoes):
-            print(item)
-            time.sleep(self.req_time_sleep)  # Evita rate limit
-            print(f"-> Pedido {i + 1}/{len(lista_separacoes)}: {item['venda'].get('numero')}")            
-            # Valida existencia do pedido
-            print(f"Validando existencia do pedido...")
-            pedido = await crudPedido.buscar(id_pedido=item['venda'].get('id'))
-            # Pedido não encontrado
-            if not pedido:
-                obs = f"Pedido {item['venda'].get('numero')} não encontrado na base."
-                logger.warning(obs)
-                print(obs)
+            pedido:dict={}
+            try:
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                print(f"-> Pedido {i + 1}/{len(lista_separacoes)}: {item['venda'].get('numero')}")            
+                # Valida existencia do pedido
+                print(f"Validando existencia do pedido...")
+                res_pedido = await crudPedido.buscar(id_pedido=item['venda'].get('id'))
+                # Pedido não encontrado
+                if not res_pedido:
+                    msg = f"Pedido {item['venda'].get('numero')} não encontrado na base."
+                    raise Exception(msg)
+                pedido = res_pedido[0]
+                # Separação já vinculada ao pedido
+                if pedido.get('id_separacao') == item.get('id'):
+                    continue
+                # Vincula separação
+                print("Vinculando separação ao pedido...")
+                ack = await crudPedido.atualizar(id_pedido=item['venda'].get('id'),
+                                                 id_separacao=item.get('id'))
+                if not ack:
+                    msg = f"Erro ao vincular separação {item.get('id')} ao pedido {pedido.get('num_pedido')}."
+                    raise Exception(msg)
+                # Registra sucesso no log
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item['venda'].get('id'),
+                                          pedido_id=pedido.get('id'),
+                                          evento='R')
+                print("Pedido atualizado com sucesso!")
+            except Exception as e:
+                logger.error(str(e))
+                print(str(e))
+                await crudLogPedido.criar(log_id=log_id,
+                                          pedido_id=pedido.get('id',0),
                                           evento='R',
                                           sucesso=False,
-                                          obs=obs)
-                continue
-            pedido = pedido[0]
-            # Separação já vinculada ao pedido
-            if pedido.get('id_separacao') == item.get('id_separacao'):
-                obs = "Separação já vinculada ao pedido."
-                print(obs)
-                continue
-            # Vincula separação
-            print("Vinculando separação ao pedido...")
-            ack = await crudPedido.atualizar(id_pedido=item.get('id_pedido'),
-                                             id_separacao=item.get('id_separacao'))
-            if not ack:
-                obs = f"Erro ao vincular separação {item.get('id_separacao')} ao pedido ID {item.get('id_pedido')}."
-                logger.error(obs)
-                print(obs)
-                await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item['venda'].get('id'),
-                                          evento='R',
-                                          sucesso=False,
-                                          obs=obs)
-                continue
-            await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item['venda'].get('id'),
-                                      evento='R')
-            print("Pedido atualizado com sucesso!")
+                                          obs=str(e))
+                continue             
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
         print("--> RECEBIMENTO DE SEPARAÇÕES CONCLUÍDA!")
