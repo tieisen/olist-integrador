@@ -12,6 +12,7 @@ def log_execucao(func):
             nome_classe = args[0].__class__.__name__
             nome_funcao = f"{nome_classe}.{nome_funcao}"
 
+        print("=" * 60)
         print("\n" + nome_funcao)
         print("=" * 60)
         return await func(*args, **kwargs)
@@ -25,6 +26,7 @@ def log_execucao(func):
             nome_classe = args[0].__class__.__name__
             nome_funcao = f"{nome_classe}.{nome_funcao}"
 
+        print("=" * 60)
         print("\n" + nome_funcao)
         print("=" * 60)
         return func(*args, **kwargs)
