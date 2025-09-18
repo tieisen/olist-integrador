@@ -324,8 +324,8 @@ class Pedido:
             lista_pedidos:list[dict]
         ) -> tuple[list,list]:
         
-        pedidos:list[dict]=None
-        itens:list[dict]=None
+        pedidos:list[dict]=[]
+        itens:list[dict]=[]
         
         for pedido in lista_pedidos:
             status_itens:bool=True
@@ -387,7 +387,7 @@ class Pedido:
         
         pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-        dados_pedidos_olist:list[dict]=None
+        dados_pedidos_olist:list[dict]=[]
 
         try:
             for i, pedido in enumerate(lista_pedidos):
@@ -404,13 +404,14 @@ class Pedido:
                 # Valida itens e desmembra kits
                 print("Validando itens e desmembrando kits...")
                 itens_validados = await self.validar_item_desmembrar_kit(itens=dados_pedido_olist.get('itens'),
-                                                                        olist=pedido_olist)
+                                                                         olist=pedido_olist)
                 if not itens_validados:
                     msg = "Erro ao validar itens/desmembrar kits"
                     raise Exception(msg)
+                
                 dados_pedido_olist['itens'] = itens_validados
                 dados_pedidos_olist.append(dados_pedido_olist)
-
+                
             # Unifica os itens dos pedidos
             print("-> Unificando os pedidos...")
             pedidos_agrupados, itens_agrupados = await self.unificar(lista_pedidos=dados_pedidos_olist)
@@ -505,6 +506,9 @@ class Pedido:
             # Registra sucesso no log
             print("-> Registrando log...")
             for pedido in pedidos_importar:
+                if not ack.get('success'):
+                    logger.error(f"Erro ao importar pedido {pedido.get('num_pedido')}: {ack.get('__exception__',None)}")
+                    print(f"Erro ao importar pedido {pedido.get('num_pedido')}: {ack.get('__exception__',None)}")
                 await crudLogPed.criar(log_id=self.log_id,
                                        pedido_id=pedido.get('id'),
                                        evento='I',
