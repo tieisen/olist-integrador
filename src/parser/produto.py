@@ -18,15 +18,17 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Produto:
 
-    def __init__(
-            self,
-            codemp:int
-        ):
+    def __init__(self,codemp:int):
         self.formatter = Formatter()
         self.codemp = codemp
         self.dados_empresa = None
 
-    def to_sankhya(self, data_olist:dict=None, data_sankhya:dict=None, type:str='update') -> tuple[list,dict]:
+    def to_sankhya(
+            self,
+            data_olist:dict=None,
+            data_sankhya:dict=None,
+            type:str='update'
+        ) -> tuple[list,dict]:
 
         if not type or type not in ['update', 'insert', 'delete']:
             logger.error(f"Tipo de operação inválido: {type}")
