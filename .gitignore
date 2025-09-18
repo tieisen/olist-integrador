@@ -3,6 +3,8 @@ venv
 .venv
 vscode
 .vscode
+.pytest_cache
+.ipynb_checkpoints
 .env
 *.key
 *.db
@@ -11,3 +13,4 @@ vscode
 *.csv
 *.sql
 *.test.*
+alembic/versions/*
