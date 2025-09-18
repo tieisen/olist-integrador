@@ -68,10 +68,11 @@ async def buscar(
         id_pedido:int=None,
         num_pedido:int=None,
         cod_pedido:str=None,
+        nunota:str=None,
         lista:list[int]=None
     ) -> list[dict]:
 
-    if not any([id_pedido, num_pedido, cod_pedido, lista]):
+    if not any([id_pedido, num_pedido, cod_pedido, nunota, lista]):
         print("Nenhum parâmetro informado")
         return False
     
@@ -88,6 +89,10 @@ async def buscar(
             result = await session.execute(
                 select(Pedido).where(Pedido.cod_pedido == cod_pedido)
             )
+        elif nunota:
+            result = await session.execute(
+                select(Pedido).where(Pedido.nunota == nunota)
+            )
         elif lista:
             result = await session.execute(
                 select(Pedido).where(Pedido.id_pedido.in_(lista))
@@ -99,7 +104,7 @@ async def buscar(
         if not pedidos:
             return []
         dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
-                                        retorno=pedidos)
+                                         retorno=pedidos)
         return dados_pedidos
 
 async def atualizar(
