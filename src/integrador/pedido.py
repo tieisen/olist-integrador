@@ -474,7 +474,7 @@ class Pedido:
             return False
         ack = await olist.atualizar_nunota(id=id_pedido,
                                            nunota=nunota,
-                                           observacao=dados_pedido.get('observacoesInternas'))
+                                           observacao=dados_pedido.get('observacoes'))
         if not ack:
             return False         
         return True
