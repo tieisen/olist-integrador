@@ -326,7 +326,7 @@ class Pedido:
         
         pedidos:list[dict]=[]
         itens:list[dict]=[]
-        
+
         for pedido in lista_pedidos:
             status_itens:bool=True
             itens_pedido = pedido.get('itens')
@@ -411,10 +411,10 @@ class Pedido:
                 
                 dados_pedido_olist['itens'] = itens_validados
                 dados_pedidos_olist.append(dados_pedido_olist)
-                
+
             # Unifica os itens dos pedidos
             print("-> Unificando os pedidos...")
-            pedidos_agrupados, itens_agrupados = await self.unificar(lista_pedidos=dados_pedidos_olist)
+            pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos_olist)
             if not all([pedidos_agrupados, itens_agrupados]):
                 msg = "Erro ao unificar pedidos"
                 raise Exception(msg)
@@ -422,8 +422,8 @@ class Pedido:
             # Converte para o formato da API do Sankhya
             parser = ParserPedido(id_loja=self.id_loja)
             print("-> Convertendo para o formato da API do Sankhya...")        
-            dados_cabecalho, dados_itens = parser.to_sankhya_lote(lista_pedidos=pedidos_agrupados,
-                                                                lista_itens=itens_agrupados)
+            dados_cabecalho, dados_itens = await parser.to_sankhya_lote(lista_pedidos=pedidos_agrupados,
+                                                                        lista_itens=itens_agrupados)
             if not all([dados_cabecalho, dados_itens]):
                 msg = "Erro ao converter dados dos pedidos para o formato da API do Sankhya"
                 raise Exception(msg)            
