@@ -20,10 +20,17 @@ class Pedido:
 
     def __init__(self, id_loja:int):
         self.id_loja = id_loja
-        self.dados_ecommerce:dict=None
-        self.empresa_id = self.dados_ecommerce.get('empresa_id')        
-        self.dados_empresa:dict=None
-
+        self.dados_ecommerce:dict={}
+        self.dados_empresa:dict={}
+        
+    @property
+    def empresa_id(self):
+        return self.dados_ecommerce.get('empresa_id')
+    
+    @property
+    def codemp(self):
+        return self.dados_empresa.get('snk_codemp')
+    
     @ensure_dados_ecommerce
     @ensure_dados_empresa
     async def to_sankhya(
@@ -80,7 +87,7 @@ class Pedido:
             self,
             lista_pedidos:list,
             lista_itens:list
-        ) -> tuple[dict,list,int]:
+        ) -> tuple[dict,list]:
 
         def formatar_pedidos(lista_pedidos):
             linhas = [f"- {pedido['numero']}/{pedido['codigo']}" for pedido in lista_pedidos]
@@ -90,7 +97,7 @@ class Pedido:
         dados_itens = []
 
         data_negociacao = datetime.now().strftime('%d/%m/%Y')
-        observacao = formatar_pedidos(lista_pedidos) 
+        observacao = formatar_pedidos(lista_pedidos)
         
         dados_cabecalho['AD_MKP_ORIGEM'] = {"$":self.dados_ecommerce.get('id_loja')}
         dados_cabecalho['CIF_FOB'] = {"$":'C'}
