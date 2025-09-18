@@ -43,7 +43,7 @@ class Empresa(Base):
     snk_codlocal_venda = Column(Integer, nullable=True)
     snk_codparc = Column(Integer, nullable=True)
     snk_codemp_fornecedor = Column(Integer, nullable=False)    
-    snk_texto_transferencia = Column(String, nullable=True)
+    snk_obs_transferencia = Column(String, nullable=True)
     
     log_ = relationship("Log", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
     produto_ = relationship("Produto", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
