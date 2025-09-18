@@ -111,13 +111,13 @@ class Pedido:
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False 
-        
+            return False
+
         payload = {
             "dataPrevista": None,
             "dataEnvio": None,
-            "observacoes": None,
-            "observacoesInternas": observacao + f"<br>Nº do pedido no Sankhya: {nunota}",
+            "observacoes": observacao + f" | Pedido ERP: {nunota}",
+            "observacoesInternas": None,
             "pagamento": {
                 "parcelas": []
             }
@@ -165,15 +165,15 @@ class Pedido:
             print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
             return False
-        observacao = res_get.json().get('observacoesInternas')
+        observacao = res_get.json().get('observacoes')
         regex = r"[|].+"
         nova_observacao = re.sub(regex, '', observacao)
 
         payload = {
             "dataPrevista": None,
             "dataEnvio": None,
-            "observacoes": None,
-            "observacoesInternas": nova_observacao,
+            "observacoes": nova_observacao,
+            "observacoesInternas": None,
             "pagamento": {
                 "parcelas": []
             }
