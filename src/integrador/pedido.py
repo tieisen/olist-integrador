@@ -181,7 +181,6 @@ class Pedido:
         else:
             status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        print("--> RECEBIMENTO DOS PEDIDOS NOVOS CONCLUÍDO!")
         return True
 
     async def validar_item_desmembrar_kit(self, itens:list[dict], olist:PedidoOlist):
@@ -234,7 +233,7 @@ class Pedido:
                 
                 # Valida situação
                 print("Validando situação do pedido...")
-                if not self.validar_situacao(dados_pedido_olist):
+                if not await self.validar_situacao(dados_pedido_olist):
                     msg = "Pedido cancelado ou com dados incompletos"
                     raise Exception(msg)
 
@@ -389,7 +388,7 @@ class Pedido:
                 
                 # Valida situação e remove se cancelado
                 print("Validando situação do pedido...")
-                if not self.validar_situacao(dados_pedido_olist):
+                if not await self.validar_situacao(dados_pedido_olist):
                     msg = "Pedido cancelado ou com dados incompletos"
                     print(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
@@ -445,7 +444,7 @@ class Pedido:
             for pedido in lista_pedidos:
                 time.sleep(self.req_time_sleep)
                 retorno = {
-                    "id": pedido.get('id_pedido'),
+                    "pedido_id": pedido.get('id'),
                     "numero": pedido.get('num_pedido'),
                     "success": None,
                     "__exception__": None
@@ -546,7 +545,6 @@ class Pedido:
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        print("--> INTEGRAÇÃO DOS PEDIDOS CONCLUÍDA!")
         return True
 
     @contexto
@@ -570,7 +568,7 @@ class Pedido:
             if validacao.get('statusnota' == 'L'):
                 print(f"Pedido {nunota} já foi confirmado.")
                 ack = await crudPedido.atualizar(nunota=nunota,
-                                                dh_confirmado=validacao.get('dtmov'))
+                                                 dh_confirmacao=validacao.get('dtmov'))
                 if not ack:
                     msg = f"Erro ao atualizar situação do pedido {nunota} para confirmado"
                     raise Exception(msg)            
@@ -583,7 +581,7 @@ class Pedido:
             # Atualiza log
             print("Atualizando log...")
             ack = await crudPedido.atualizar(nunota=nunota,
-                                            dh_confirmado=datetime.now())
+                                             dh_confirmacao=datetime.now())
             if not ack:
                 msg = f"Erro ao atualizar situação do pedido {nunota} para confirmado"
                 raise Exception(msg)            
@@ -650,7 +648,67 @@ class Pedido:
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        print("--> CONFIRMAÇÃO DOS PEDIDOS CONCLUÍDA!")
+        return True
+
+    @contexto
+    @log_execucao
+    @ensure_dados_ecommerce
+    async def integrar_cancelamento(
+            self,
+            nunota:int,
+            **kwargs
+        ) -> bool:
+
+        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                          de='sankhya',
+                                          para='sankhya',
+                                          contexto=kwargs.get('_contexto'))
+        
+        # Valida pedido
+        print("-> Validando pedido...")
+        pedidos_cancelar = await crudPedido.buscar(nunota=nunota)
+        if not pedidos_cancelar:
+            print("--> Pedido não encontrado. Exclua diretamente no Sankhya")
+            await crudLog.atualizar(id=self.log_id,sucesso=False)            
+            return True
+        
+        pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
+
+        # Busca pedido Sankhya
+        dados_pedido_snk = await pedido_snk.buscar(nunota=nunota)
+        if not dados_pedido_snk:
+            print("--> Pedido não encontrado no Sankhya.")
+            await crudLog.atualizar(id=self.log_id,sucesso=False)            
+            return True
+
+        # Cancela pedido
+        print("-> Cancelando pedido...")
+        ack = await pedido_snk.excluir(nunota=nunota)
+        if not ack:
+            print("--> Erro ao cancelar pedido.")
+            await crudLog.atualizar(id=self.log_id,sucesso=False)            
+            return True
+        
+        # Remove vínculo do pedido
+        print("-> Removendo vínculo do pedido...")
+        ack = await crudPedido.cancelar(nunota=nunota)
+        if not ack:
+            print("--> Erro ao remover vínculo do pedido.")
+            await crudLog.atualizar(id=self.log_id,sucesso=False)            
+            return True
+        
+        # Remove observação
+        print("-> Removendo observação no Olist...")
+        for pedido in pedidos_cancelar:
+            ack = await pedido_olist.remover_nunota(id=pedido.get('id_pedido'))
+            if not ack:
+                print(f"--> Erro ao remover observação do pedido {pedido.get('num_pedido')} no Olist.")
+        
+        # Atualiza log
+        print("-> Atualizando log...")
+        ack = await crudLog.atualizar(id=self.log_id)
+
         return True
 
     @contexto
@@ -721,4 +779,6 @@ class Pedido:
         # status_log = False if obs else True
         # return status_log
         return True
+    
+
 
