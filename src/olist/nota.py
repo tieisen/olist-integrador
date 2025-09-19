@@ -1,7 +1,7 @@
 import os
 import logging
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 from src.utils.decorador.olist import ensure_token
@@ -18,7 +18,7 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Nota:
 
-    def __init__(self, id_loja:int, codemp:int=None, empresa_id:int=None):  
+    def __init__(self, id_loja:int=None, codemp:int=None, empresa_id:int=None):  
         self.id_loja = id_loja
         self.codemp = codemp
         self.empresa_id = empresa_id        
@@ -90,7 +90,8 @@ class Nota:
     @ensure_token
     async def buscar_canceladas(self) -> bool:
 
-        url = self.endpoint+f"/?situacao=3&tipo=S&dataInicial={datetime.now().strftime('%Y-%m-%d')}&dataFinal={datetime.now().strftime('%Y-%m-%d')}"
+        data = datetime.now().strftime('%Y-%m-%d')
+        url = self.endpoint+f"/?situacao=3&tipo=S&dataInicial={data}&dataFinal={data}"
 
         res = requests.get(
             url = url,
@@ -111,6 +112,38 @@ class Nota:
 
         lista_canceladas = [r.get('id') for r in res.json().get('itens')]
         return lista_canceladas
+    
+    @ensure_dados_ecommerce
+    @ensure_token
+    async def buscar_devolucoes(self,data:str=None) -> list[dict]:
+
+        if not data:
+            data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
+        else:
+            data = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
+            
+        url = self.endpoint+f"/?tipo=E&dataInicial={data}&dataFinal={data}"
+
+        print(url)
+
+        res = requests.get(
+            url = url,
+            headers = {
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        if res.status_code != 200:
+            logger.error("Erro %s: %s", res.status_code, res.text)
+            print(f"Erro {res.status_code}: {res.text}")
+            return False
+        
+        if not res.json().get('itens'):
+            return []
+
+        return res.json().get('itens')
 
     @ensure_dados_ecommerce
     @ensure_token
