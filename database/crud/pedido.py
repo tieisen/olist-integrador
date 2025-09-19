@@ -153,6 +153,30 @@ async def atualizar(
         await session.commit()
         return True
 
+async def cancelar(nunota:int):
+            
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                select(Pedido).where(Pedido.nunota == nunota)
+            )                
+            pedidos = result.scalars().all()
+            if not pedidos:
+                print(f"Pedido não encontrado. Parâmetro: {nunota}")
+                return False
+            
+            for pedido in pedidos:
+                setattr(pedido, 'nunota', None)
+                setattr(pedido, 'dh_importacao', None)
+                setattr(pedido, 'dh_confirmacao', None)
+                setattr(pedido, 'dh_faturamento', None)
+                
+            await session.commit()
+            return True
+        except Exception as e:
+            print(f"Erro ao cancelar pedido {nunota}: {e}")
+            return False
+
 async def buscar_importar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -223,14 +247,5 @@ async def resetar(id_pedido:int):
         setattr(pedido, "dh_faturamento", None)
         setattr(pedido, "dh_cancelamento", None)
         await session.commit()
-        return True    
-
-async def buscar_cancelar(ecommerce_id:int):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Pedido).filter(Pedido.nunota.isnot(None),
-                                  Pedido.dh_cancelamento.isnot(None),
-                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
-        )
-        pedidos = result.scalars().all()
-        return pedidos
+        return True
+    
