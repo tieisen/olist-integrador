@@ -13,7 +13,7 @@ def log_execucao(func):
             nome_funcao = f"{nome_classe}.{nome_funcao}"
 
         # Cabeçalho
-        print("\n" + nome_funcao)
+        print(nome_funcao)
         print("=" * 60)
         # print("ARGS:", args[1:] if len(args) > 1 else args)  # ignorar self
         # print("KWARGS:", kwargs)
@@ -25,7 +25,7 @@ def log_execucao(func):
         finally:
             fim = time.perf_counter()
             duracao = fim - inicio
-            print("\n" + "=" * 60)
+            print("=" * 60)
             print(f"--> ROTINA CONCLUÍDA! (Tempo: {duracao:.4f}s)\n")
 
     @functools.wraps(func)
@@ -38,7 +38,7 @@ def log_execucao(func):
             nome_funcao = f"{nome_classe}.{nome_funcao}"
 
         # Cabeçalho
-        print("\n" + nome_funcao)
+        print(nome_funcao)
         print("=" * 60)
         # print("ARGS:", args[1:] if len(args) > 1 else args)
         # print("KWARGS:", kwargs)
@@ -50,7 +50,7 @@ def log_execucao(func):
         finally:
             fim = time.perf_counter()
             duracao = fim - inicio
-            print("\n" + "=" * 60)
+            print("=" * 60)
             print(f"--> ROTINA CONCLUÍDA! (Tempo: {duracao:.4f}s)\n")
 
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
