@@ -103,7 +103,6 @@ class Separacao:
                 continue             
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("--> RECEBIMENTO DE SEPARAÇÕES CONCLUÍDA!")
         return True
 
     @contexto
@@ -145,7 +144,6 @@ class Separacao:
             print("Checkout realizado com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("--> CHECKOUT DOS PEDIDOS CONCLUÍDO!")
         return True
 
     @contexto
@@ -187,6 +185,5 @@ class Separacao:
             print("Separação realizada com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("--> SEPARAÇÃO DOS PEDIDOS CONCLUÍDA!")
         return True
 
