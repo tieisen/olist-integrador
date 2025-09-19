@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv('keys/.env')
 
+COLUNAS_CRIPTOGRAFADAS = None
+
 async def criar(
         empresa_id:int,
         de:str,
@@ -51,10 +53,11 @@ async def buscar(id:int) -> dict:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Log)
-            .where(Log.log_id == id)
+            .where(Log.id == id)
         )
         log = result.scalar_one_or_none()
-    dados_log = formatar_retorno(retorno=log)        
+    dados_log = formatar_retorno(retorno=log,
+                                 colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
     return dados_log
 
 async def validar_sucesso_pelo_historico(id:int) -> bool:
