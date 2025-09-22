@@ -63,9 +63,10 @@ async def criar(
 
 async def buscar(
         id_nota:int=None,
-        nunota:int=None
+        nunota:int=None,
+        chave_acesso:str=None
     ) -> dict:
-    if not any([id_nota,nunota]):
+    if not any([id_nota,nunota,chave_acesso]):
         return False
     async with AsyncSessionLocal() as session:
         if nunota:
@@ -78,9 +79,14 @@ async def buscar(
                 select(Nota)
                 .where(Nota.id_nota == id_nota)
             )
+        if chave_acesso:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.chave_acesso == chave_acesso)
+            )
         nota = result.scalar_one_or_none()
     if not nota:
-        print(f"Nota não encontrada. Parâmetro: {nunota or id_nota}")
+        print(f"Nota não encontrada. Parâmetro: {nunota or id_nota or chave_acesso}")
         return False
     dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                   retorno=nota)
@@ -123,7 +129,7 @@ async def atualizar(
                     .where(Nota.pedido_.has(Pedido.nunota == nunota_pedido))
                 )
 
-        notas = result.scalars().all()        
+        notas = result.scalars().all()
         if not notas:
             print(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido}")
             return False
