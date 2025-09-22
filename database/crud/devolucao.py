@@ -1,5 +1,5 @@
 from database.database import AsyncSessionLocal
-from database.models import Devolucao, Nota
+from database.models import Devolucao, Nota, Pedido
 from datetime import datetime
 from src.utils.log import Log
 from sqlalchemy.future import select
@@ -38,57 +38,37 @@ async def criar(
         print(f"Nota de devolução {id_nota} já existe")
         return False
     async with AsyncSessionLocal() as session:        
-        nota = await session.execute(
-            select(Devolucao)
-            .where(Nota.chave_acesso == chave_referenciada)
-        )
-        if nota:
-            nota_atendida = nota.scalar_one_or_none().numero
-            print(f"Nota {numero} já foi atendida na nota {nota_atendida}")
-            return False        
-        nota_original = await session.execute(
+        nota_referenciada = await session.execute(
             select(Nota)
             .where(Nota.chave_acesso == chave_referenciada)
         )
-        if not nota_original:
-            print(f"Nota original não encontrada para a devolução {id_nota}")
-            return False        
-        nova_devolucao = Devolucao(nota_id=nota_original.scalar_one_or_none().id,
+        if not nota_referenciada:
+            print(f"Nota referenciada não encontrada para a devolução {id_nota}")
+            return False
+        id_nota_referenciada = nota_referenciada.scalar_one_or_none().id
+        nova_devolucao = Devolucao(nota_id=id_nota_referenciada,
                                    id_nota=id_nota,
                                    numero=numero,
                                    serie=serie,
-                                   dh_emissao=datetime.strptime(dh_emissao,'%d/%m/%Y') if dh_emissao else datetime.now(),
+                                   dh_emissao=datetime.strptime(dh_emissao,'%Y-%m-%d %H:%M:%S') if dh_emissao else datetime.now(),
                                    **kwargs)
         session.add(nova_devolucao)
         await session.commit()
     return True
 
-async def buscar_atualizar_nunota() -> list[dict]:
+async def buscar_lancar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Devolucao)
-            .where(Devolucao.nunota.is_(None))
+            .where(Devolucao.nunota.is_(None),
+                   Devolucao.nota_.has(
+                        Nota.pedido_.has(
+                        Pedido.ecommerce_id==ecommerce_id)))
         )
         devolucoes = result.scalars().all()
         dados_devolucoes = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                             retorno=devolucoes)
         return dados_devolucoes
-
-async def atualizar_nunota(
-        id_nota:int,
-        nunota:int
-    ) -> bool:
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Devolucao).where(Devolucao.id_nota == id_nota)
-        )
-        devolucao = result.scalar_one_or_none()
-        if not devolucao:
-            print(f"Devolução não encontrada. Parâmetro: {id_nota}")
-            return False
-        setattr(devolucao, "nunota", nunota)
-        await session.commit()
-        return True
 
 async def buscar_confirmar() -> list[dict]:
     async with AsyncSessionLocal() as session:
@@ -104,9 +84,10 @@ async def buscar_confirmar() -> list[dict]:
 
 async def buscar(
         id_nota:int=None,
-        nunota:int=None
+        numero:int=None,
+        nunota:int=None,
     ) -> dict:
-    if not any([id_nota,nunota]):
+    if not any([id_nota,numero,nunota]):
         return False
     async with AsyncSessionLocal() as session:
         if nunota:
@@ -117,9 +98,13 @@ async def buscar(
             result = await session.execute(
                 select(Devolucao).where(Devolucao.id_nota == id_nota)
             )
+        if numero:
+            result = await session.execute(
+                select(Devolucao).where(Devolucao.numero == numero)
+            )
         devolucao = result.scalar_one_or_none()
     if not devolucao:
-        print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota}")
+        print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or numero}")
         return False
     dados_devolucao = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                        retorno=devolucao)        
@@ -127,11 +112,12 @@ async def buscar(
 
 async def atualizar(
         id_nota:int=None,
+        numero:int=None,
         nunota:int=None,
         **kwargs
     ) -> bool:
 
-    if not any([id_nota,nunota]):
+    if not any([id_nota,numero,nunota]):
         return False
     if kwargs:
         kwargs = validar_dados(modelo=Devolucao,
@@ -140,58 +126,30 @@ async def atualizar(
         if not kwargs:
             return False
     async with AsyncSessionLocal() as session:
-        if nunota:
+        if nunota and not any([id_nota,numero]):
             result = await session.execute(
                 select(Devolucao).where(Devolucao.nunota == nunota)
             )
-        if id_nota:
-            result = await session.execute(
-                select(Devolucao).where(Devolucao.id_nota == id_nota)
-            )
-        if not result:
-            print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota}")
-            return False        
-        if isinstance(result,list):
-            devolucoes = result.scalars().all()
-            for devolucao in devolucoes:
-                for key, value in kwargs.items():
-                    setattr(devolucao, key, value)
         else:
-            devolucao = result.scalar_one_or_none()
-            for key, value in kwargs.items():
-                    setattr(devolucao, key, value)
-        await session.commit()
-        return True
-    
-async def atualizar_confirmada(
-        nunota:int,
-        dh_confirmacao:str=None
-    ) -> bool:
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Devolucao).where(Devolucao.nunota == nunota)
-        )
-        devolucoes = result.scalars().all()
-        if not devolucoes:
-            print(f"Devolução não encontrada. Parâmetro: {nunota}")
-            return False
-        for devolucao in devolucoes:
-            setattr(devolucao, "dh_confirmacao", datetime.strptime(dh_confirmacao,'%d/%m/%Y') if dh_confirmacao else datetime.now())
-        await session.commit()
-        return True
+            kwargs['nunota'] = nunota
+            if id_nota:
+                result = await session.execute(
+                    select(Devolucao).where(Devolucao.id_nota == id_nota)
+                )
+            if numero:
+                result = await session.execute(
+                    select(Devolucao).where(Devolucao.numero == numero)
+                )
 
-async def atualizar_cancelamento(
-        id_nota:int,
-        dh_cancelamento:str=None
-    ) -> bool:
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Devolucao).where(Devolucao.id_nota == id_nota)
-        )
-        devolucao = result.scalar_one_or_none()
-        if not devolucao:
-            print(f"Devolução não encontrada. Parâmetro: {id_nota}")
+        if not result:
+            print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or numero}")
             return False
-        setattr(devolucao, "dh_cancelamento", datetime.strptime(dh_cancelamento,'%d/%m/%Y') if dh_cancelamento else datetime.now())
+    
+        devolucoes = result.scalars().all()
+
+        for devolucao in devolucoes:
+            for key, value in kwargs.items():
+                setattr(devolucao, key, value)    
+
         await session.commit()
         return True
