@@ -32,10 +32,11 @@ class Nota:
     async def buscar(
             self,
             id:int=None,
+            numero:int=None,
             cod_pedido:str=None
         ) -> bool:
 
-        if not any([id, cod_pedido]):
+        if not any([id, cod_pedido, numero]):
             logger.error("Nota não informada.")
             print("Nota não informada.")
             return False
@@ -46,6 +47,10 @@ class Nota:
         
         if cod_pedido:
             url_ = self.endpoint+f"/?numeroPedidoEcommerce={cod_pedido}"
+            id = None
+
+        if numero:
+            url_ = self.endpoint+f"/?numero={numero}"
             id = None             
 
         res = requests.get(
@@ -66,7 +71,7 @@ class Nota:
         if res.status_code == 200 and id and res.json().get('itens'):
             nota = res.json()
         
-        if res.status_code == 200 and cod_pedido and res.json().get('itens'):
+        if res.status_code == 200 and not id and res.json().get('itens'):
             url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
             res = requests.get(
                 url = url_id,
@@ -88,14 +93,14 @@ class Nota:
     
     @ensure_dados_ecommerce
     @ensure_token
-    async def buscar_canceladas(self,data:str=None) -> list[dict]:
+    async def buscar_canceladas(self,data:str=None,tipo:str='S') -> list[dict]:
 
         if not data:
             data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
         else:
             data = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
             
-        url = self.endpoint+f"/?tipo=S&situacao=3&dataInicial={data}&dataFinal={data}"
+        url = self.endpoint+f"/?tipo={tipo}&situacao=3&dataInicial={data}&dataFinal={data}"
 
         res = requests.get(
             url = url,
