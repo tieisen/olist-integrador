@@ -88,43 +88,14 @@ class Nota:
     
     @ensure_dados_ecommerce
     @ensure_token
-    async def buscar_canceladas(self) -> bool:
-
-        data = datetime.now().strftime('%Y-%m-%d')
-        url = self.endpoint+f"/?situacao=3&tipo=S&dataInicial={data}&dataFinal={data}"
-
-        res = requests.get(
-            url = url,
-            headers = {
-                "Authorization":f"Bearer {self.token}",
-                "Content-Type":"application/json",
-                "Accept":"application/json"
-            }
-        )
-
-        if res.status_code != 200:
-            logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
-            return False
-        
-        if not res.json().get('itens'):
-            return []
-
-        lista_canceladas = [r.get('id') for r in res.json().get('itens')]
-        return lista_canceladas
-    
-    @ensure_dados_ecommerce
-    @ensure_token
-    async def buscar_devolucoes(self,data:str=None) -> list[dict]:
+    async def buscar_canceladas(self,data:str=None) -> list[dict]:
 
         if not data:
             data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
         else:
             data = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
             
-        url = self.endpoint+f"/?tipo=E&dataInicial={data}&dataFinal={data}"
-
-        print(url)
+        url = self.endpoint+f"/?tipo=S&situacao=3&dataInicial={data}&dataFinal={data}"
 
         res = requests.get(
             url = url,
@@ -144,7 +115,37 @@ class Nota:
             return []
 
         return res.json().get('itens')
+    
+    @ensure_dados_ecommerce
+    @ensure_token
+    async def buscar_devolucoes(self,data:str=None) -> list[dict]:
 
+        if not data:
+            data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
+        else:
+            data = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
+            
+        url = self.endpoint+f"/?tipo=E&dataInicial={data}&dataFinal={data}"
+
+        res = requests.get(
+            url = url,
+            headers = {
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        if res.status_code != 200:
+            logger.error("Erro %s: %s", res.status_code, res.text)
+            print(f"Erro {res.status_code}: {res.text}")
+            return False
+        
+        if not res.json().get('itens'):
+            return []
+
+        return res.json().get('itens')
+    
     @ensure_dados_ecommerce
     @ensure_token
     async def buscar_legado(
