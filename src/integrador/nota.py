@@ -194,3 +194,18 @@ class Nota:
             return {"success": True}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
+        
+    async def registrar_cancelamento(self,dados_nota:dict) -> dict:
+        try:
+            # Atualiza a nota no banco de dados
+            print("Atualizando status da nota...")
+            ack = await crudNota.atualizar(id_nota=dados_nota.get('id'),
+                                           dh_cancelamento=datetime.now()) 
+            if not ack:
+                msg = f"Erro ao atualizar status da nota"
+                raise Exception(msg)                        
+            print(f"Nota cancelada com sucesso!")
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "__exception__": str(e)}
+        
