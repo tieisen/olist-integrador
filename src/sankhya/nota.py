@@ -4,6 +4,7 @@ import requests
 from dotenv import load_dotenv
 
 from src.utils.decorador.sankhya import ensure_token
+from src.utils.decorador.empresa import ensure_dados_empresa
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 
@@ -18,8 +19,9 @@ logging.basicConfig(filename=Log().buscar_path(),
 class Nota:
 
     def __init__(self, codemp:int=None, empresa_id:int=None):
-        self.token = None
+        self.token:int=None
         self.codemp = codemp
+        self.dados_empresa:dict={}
         self.empresa_id = empresa_id
         self.formatter = Formatter()
         self.campos_cabecalho = [
@@ -255,32 +257,25 @@ class Nota:
             return False
 
     @ensure_token
+    @ensure_dados_empresa
     async def devolver(
             self,
             nunota:int,
             itens:list
-        ) -> tuple[bool,int]:
+        ) -> int:
 
         url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False, 0
-
-        top_devolucao = int(os.getenv('SANKHYA_CODTIPOPER_DEVOLUCAO'))
-        serie_nf = os.getenv('SANKHYA_SERIE_NF')
-        if not all([top_devolucao,serie_nf]):
-            erro = f"Parâmetros da TOP de devolução ou série da NF não encontados"
-            logger.error(erro)
-            print(erro)
-            return False, 0
+            return False
 
         body = {
             "serviceName": "SelecaoDocumentoSP.faturar",
             "requestBody": {
                 "notas": {
-                    "codTipOper": top_devolucao,
-                    "serie": serie_nf,
+                    "codTipOper": self.dados_empresa.get('snk_top_devolucao'),
+                    "serie": self.dados_empresa.get('serie_nfe'),
                     "tipoFaturamento": "FaturamentoNormal",
                     "dataValidada": True,
                     "faturarTodosItens": False,
@@ -303,11 +298,11 @@ class Nota:
             json=body)
         
         if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
-            return True, int(res.json().get('responseBody').get('notas').get('nota').get('$'))
+            return int(res.json().get('responseBody').get('notas').get('nota').get('$'))
         else:
             print(f"Erro ao devolver pedidos. Nunota {nunota}. {res.text}")
             logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
-            return False, 0
+            return False
 
     @ensure_token
     async def alterar_observacao(
@@ -362,7 +357,7 @@ class Itens(Nota):
         self.campos_item = [
             "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG",
             "CODPROD", "CONTROLE", "CODTRIB","CODVEND", "CODVOL",
-            "NUNOTA", "QTDNEG", "RESERVA", "SEQUENCIA",
+            "NUNOTA", "QTDNEG", "QTDENTREGUE", "RESERVA", "SEQUENCIA",
             "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
