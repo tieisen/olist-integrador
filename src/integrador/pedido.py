@@ -8,17 +8,17 @@ from datetime                          import datetime
 from src.olist.pedido                  import Pedido      as PedidoOlist
 from src.sankhya.pedido                import Pedido      as PedidoSnk
 from src.parser.pedido                 import Pedido      as ParserPedido
-from src.sankhya.conferencia           import Conferencia as ConferenciaSnk
-from src.parser.conferencia            import Conferencia as ParserConferencia
+# from src.sankhya.conferencia           import Conferencia as ConferenciaSnk
 from database.crud                     import pedido      as crudPedido
 from database.crud                     import log_pedido  as crudLogPed
 from database.crud                     import log         as crudLog
 from src.services.viacep               import Viacep
 from src.utils.log                     import Log
-from src.utils.decorador.contexto      import contexto
-from src.utils.decorador.ecommerce     import ensure_dados_ecommerce
-from src.utils.decorador.log           import log_execucao
-from src.utils.decorador.internal_only import internal_only
+# from src.utils.decorador.contexto      import contexto
+# from src.utils.decorador.ecommerce     import carrega_dados_ecommerce
+# from src.utils.decorador.log           import log_execucao
+# from src.utils.decorador.interno import interno
+from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno, desabilitado
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class Pedido:
         self.dados_ecommerce:dict=None
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
-    @internal_only
+    @interno
     async def validar_existentes(
             self,
             lista_pedidos: list
@@ -48,7 +48,7 @@ class Pedido:
         pedidos_pendentes = [p for p in lista_pedidos if p.get('id') not in lista_pedidos_existentes]
         return pedidos_pendentes
 
-    @internal_only
+    @interno
     async def validar_situacao(
             self,
             dados_pedido:dict
@@ -62,8 +62,8 @@ class Pedido:
             return True
 
     @contexto
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def receber(
             self,
             num_pedido:int=None,
@@ -108,8 +108,8 @@ class Pedido:
         except Exception as e:
             return {"success": False, "id": None, "__exception__": str(e)}
 
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def consultar_pedidos_novos(
             self,
             atual:bool=True
@@ -137,7 +137,7 @@ class Pedido:
 
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def receber_novos(
             self,
             atual:bool=True,
@@ -200,8 +200,8 @@ class Pedido:
         return itens_validados
 
     @contexto
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def importar_unico(
             self,
             dados_pedido:dict,
@@ -354,8 +354,8 @@ class Pedido:
         return pedidos, itens
 
     @contexto
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def importar_agrupado(
             self,
             lista_pedidos:list[dict],
@@ -476,7 +476,7 @@ class Pedido:
         except Exception as e:
             return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}]
 
-    @internal_only
+    @interno
     async def atualizar_nunota(
             self,
             id_pedido:int,
@@ -496,7 +496,7 @@ class Pedido:
 
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce        
+    @carrega_dados_ecommerce        
     async def integrar_novos(
             self,
             **kwargs
@@ -548,7 +548,7 @@ class Pedido:
         return True
 
     @contexto
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def confirmar(
             self,
             nunota:int,
@@ -589,7 +589,7 @@ class Pedido:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
 
-    @internal_only
+    @interno
     def formata_lista_pedidos_confirmar(self, lista_pedidos_confirmar:list[dict]):
         lista_nunotas = list(set(pedido.get('nunota') for pedido in lista_pedidos_confirmar))
         lista_pedidos:list[dict] = []
@@ -602,7 +602,7 @@ class Pedido:
 
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def integrar_confirmacao(
             self,
             **kwargs
@@ -652,7 +652,7 @@ class Pedido:
 
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def integrar_cancelamento(
             self,
             nunota:int,
@@ -712,28 +712,26 @@ class Pedido:
         return True
 
     @contexto
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
+    @desabilitado
     async def conferir(
             self,
             **kwargs
         ) -> dict:
-        if not self.log_id:
-            self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                              de='sankhya',
-                                              para='sankhya',
-                                              contexto=kwargs.get('_contexto'))
-
-        conferencia = ConferenciaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-
-        # Busca pedidos para conferir
-        print(f"Buscando pedidos da loja {self.dados_ecommerce.get('nome')} para conferir...")
-        lista_pedidos = await conferencia.buscar_aguardando_conferencia(id_loja=self.id_loja)
-        if not lista_pedidos:
-            print("--> Nenhum pedido para conferir.")
-            await crudLog.atualizar(id=self.log_id)
-            return True        
-        print(f"{len(lista_pedidos)} pedidos para conferir")        
-        
+        # if not self.log_id:
+        #     self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+        #                                       de='sankhya',
+        #                                       para='sankhya',
+        #                                       contexto=kwargs.get('_contexto'))
+        # conferencia = ConferenciaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        # # Busca pedidos para conferir
+        # print(f"Buscando pedidos da loja {self.dados_ecommerce.get('nome')} para conferir...")
+        # lista_pedidos = await conferencia.buscar_aguardando_conferencia(id_loja=self.id_loja)
+        # if not lista_pedidos:
+        #     print("--> Nenhum pedido para conferir.")
+        #     await crudLog.atualizar(id=self.log_id)
+        #     return True        
+        # print(f"{len(lista_pedidos)} pedidos para conferir")        
         # parser_conferencia = ParserConferencia()
         # for i, pedido in enumerate(lista_pedidos):
         #     time.sleep(self.req_time_sleep)

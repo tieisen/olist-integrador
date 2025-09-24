@@ -13,7 +13,8 @@ from urllib.parse                  import urlparse, parse_qs
 
 from database.crud               import olist as crud
 from src.utils.log               import Log
-from src.utils.decorador.empresa import ensure_dados_empresa
+# from src.utils.decorador.empresa import carrega_dados_empresa
+from src.utils.decorador import carrega_dados_empresa
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class Autenticacao:
         self.path_token = os.getenv('OLIST_PATH_TOKENS')
         self.dados_empresa = None
         
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def solicitar_auth_code(self) -> str:
         url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}'
         try:
@@ -63,7 +64,7 @@ class Autenticacao:
         finally:
             driver.quit()
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def solicitar_token(self,authorization_code:str) -> dict:
         
         header = {
@@ -94,7 +95,7 @@ class Autenticacao:
             logger.error("Erro de conexão: %s",e)
             return False
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def solicitar_atualizacao_token(self,refresh_token:str) -> dict:
 
         header = {
@@ -124,7 +125,7 @@ class Autenticacao:
             logger.error("Erro de conexão: %s",e)
             return False
     
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def salvar_token(self, dados_token: dict) -> bool:
         try:
             access_token = json.dumps(dados_token['access_token']).encode("utf-8")
@@ -149,7 +150,7 @@ class Autenticacao:
         
         return True
 
-    @ensure_dados_empresa        
+    @carrega_dados_empresa        
     async def atualizar_token(self, refresh_token:str) -> str:
         
         novo_token = await self.solicitar_atualizacao_token(refresh_token=refresh_token)
@@ -162,7 +163,7 @@ class Autenticacao:
         
         return novo_token.get('access_token')        
          
-    @ensure_dados_empresa        
+    @carrega_dados_empresa        
     async def buscar_token_salvo(self) -> str:
         
         # Busca o token mais recente na base
@@ -183,7 +184,7 @@ class Autenticacao:
             logger.warning(f"Refresh token expirado para a empresa {self.codemp or self.empresa_id}")            
             return None     
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def primeiro_login(self) -> str:
         
         authcode = await self.solicitar_auth_code()
@@ -200,7 +201,7 @@ class Autenticacao:
         
         return token.get('access_token')
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def autenticar(self) -> str:
         try:
             token = await self.buscar_token_salvo()

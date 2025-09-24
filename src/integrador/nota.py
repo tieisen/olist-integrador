@@ -2,18 +2,17 @@ import logging
 import os
 import time
 from datetime import datetime
-from src.sankhya.nota import Nota as NotaSnk
-from src.olist.nota   import Nota as NotaOlist
+from src.olist.nota import Nota as NotaOlist
 from src.olist.pedido import Pedido as PedidoOlist
-from database.crud                     import nota       as crudNota
-from database.crud                     import log_pedido as crudLogPed
-from database.crud                     import log        as crudLog
+from database.crud import nota as crudNota
+from database.crud import log as crudLog
 from dotenv import load_dotenv
 from src.utils.log import Log
-from src.utils.decorador.contexto      import contexto
-from src.utils.decorador.ecommerce     import ensure_dados_ecommerce
-from src.utils.decorador.log           import log_execucao
-from src.utils.decorador.internal_only import internal_only
+# from src.utils.decorador.contexto      import contexto
+# from src.utils.decorador.ecommerce     import carrega_dados_ecommerce
+# from src.utils.decorador.log           import log_execucao
+# from src.utils.decorador.interno import interno
+from src.utils.decorador import contexto, carrega_dados_ecommerce, interno
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -33,8 +32,8 @@ class Nota:
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     @contexto
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def gerar(
             self,
             dados_pedido:dict,
@@ -70,8 +69,8 @@ class Nota:
             return {"success": False, "__exception__": str(e)}
 
     @contexto
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def emitir(
             self,
             dados_nota:dict,
@@ -107,8 +106,8 @@ class Nota:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}        
 
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def receber_conta(
             self,
             dados_nota:dict,
@@ -147,8 +146,8 @@ class Nota:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
 
-    @internal_only
-    @ensure_dados_ecommerce
+    @interno
+    @carrega_dados_ecommerce
     async def baixar_conta(
             self,
             id_nota:int,

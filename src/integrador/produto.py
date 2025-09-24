@@ -11,9 +11,10 @@ from database.crud                import log_produto as crudLogProd
 from database.crud                import log         as crudLog
 from database.crud                import produto     as crudProduto
 from src.utils.log                import Log
-from src.utils.decorador.contexto import contexto
-from src.utils.decorador.empresa  import ensure_dados_empresa
-from src.utils.decorador.log      import log_execucao
+# from src.utils.decorador.contexto import contexto
+# from src.utils.decorador.empresa  import carrega_dados_empresa
+# from src.utils.decorador.log      import log_execucao
+from src.utils.decorador import contexto, carrega_dados_empresa, log_execucao
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class Produto:
 
     @contexto
     @log_execucao
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def receber_alteracoes(self,**kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='olist',
@@ -144,7 +145,7 @@ class Produto:
         print("--> RECEBIMENTO DE ALTERAÇÕES NOS PRODUTOS DO OLIST CONCLUÍDA!")         
         return True
     
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def incluir_olist(self, produto:dict):                    
         print("Inclusão:")
         # Valida existencia do produto no Olist
@@ -272,7 +273,7 @@ class Produto:
         print("Produto atualizado com sucesso!")
         return log_atualizacoes_olist
     
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def atualizar_sankhya(self, produto:dict):
         print("Atualização:")
         # Busca os dados do produto no Olist
@@ -348,7 +349,7 @@ class Produto:
 
     @contexto
     @log_execucao
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def integrar_olist(self, **kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='sankhya',
@@ -414,7 +415,7 @@ class Produto:
 
     @contexto
     @log_execucao
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def integrar_snk(self, **kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='olist',

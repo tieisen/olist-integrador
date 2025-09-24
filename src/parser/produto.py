@@ -4,7 +4,8 @@ import json
 import logging
 from datetime import datetime
 from src.utils.formatter import Formatter
-from src.utils.decorador.empresa import ensure_dados_empresa
+#from src.utils.decorador.empresa import carrega_dados_empresa
+from src.utils.decorador import carrega_dados_empresa
 from dotenv import load_dotenv
 from src.utils.log import Log
 
@@ -119,7 +120,7 @@ class Produto:
 
         return updates, new_data
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     def to_olist(self, data_sankhya:dict, data_olist:dict=None, ) -> tuple[list,dict]:
         updates = []
         new_data = data_olist.copy() if data_olist else None

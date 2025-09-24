@@ -11,9 +11,10 @@ from database.crud                 import devolucao   as crudDev
 from src.olist.nota                import Nota        as NotaOlist
 from src.sankhya.nota              import Nota        as NotaSnk
 from src.parser.devolucao          import Devolucao as parser
-from src.utils.decorador.contexto  import contexto
-from src.utils.decorador.ecommerce import ensure_dados_ecommerce
-from src.utils.decorador.log       import log_execucao
+#from src.utils.decorador.contexto  import contexto
+#from src.utils.decorador.ecommerce import carrega_dados_ecommerce
+#from src.utils.decorador.log       import log_execucao
+from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao
 from src.utils.log                 import Log
 
 load_dotenv('keys/.env')
@@ -35,7 +36,7 @@ class Devolucao:
         self.dados_ecommerce:dict={}
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))   
 
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def receber(self,numero:int) -> dict:
 
         nota_olist = NotaOlist(id_loja=self.id_loja)
@@ -75,7 +76,7 @@ class Devolucao:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
         
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def lancar(self,dados_devolucao:dict) -> dict:
 
         nota_olist = NotaOlist(id_loja=self.id_loja)
@@ -148,7 +149,7 @@ class Devolucao:
                 raise Exception(msg)
                         
             print(f"Nota de devolução lançada com sucesso!")
-            return {"success": True, "nunota":nunota_devolucao}
+            return {"success": True, "nunota":nunota_devolucao, "pedido_id":dados_nota_referenciada.get('pedido_id')}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
         
@@ -166,31 +167,29 @@ class Devolucao:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
         
-    async def cancelar(self,dados_devolucao:dict) -> dict:
-        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-        try:
-            # Busca nota de devolução
-            print("Buscando nota de devolução...")
-            dados_devolucao = await crudDev.buscar(id_nota=dados_devolucao.get('id_nota'))
-            if not dados_devolucao:
-                msg = f"Nota de devolução não encontrada"
-                raise Exception(msg) 
-            
-            # Excluir devolução
-            print(f"Excluindo devolução...")
-            ack = await nota_snk.excluir(nunota=dados_devolucao.get('nunota'))
-            if not ack:
-                msg = "Erro ao excluir nota de devolução."
-                raise Exception(msg)
-                        
-            print(f"Nota de devolução excluída com sucesso!")
-            return {"success": True}
-        except Exception as e:
-            return {"success": False, "__exception__": str(e)}   
+    # async def cancelar(self,dados_devolucao:dict) -> dict:
+    #     nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+    #     try:
+    #         # Busca nota de devolução
+    #         print("Buscando nota de devolução...")
+    #         dados_devolucao = await crudDev.buscar(id_nota=dados_devolucao.get('id_nota'))
+    #         if not dados_devolucao:
+    #             msg = f"Nota de devolução não encontrada"
+    #             raise Exception(msg)            
+    #         # Excluir devolução
+    #         print(f"Excluindo devolução...")
+    #         ack = await nota_snk.excluir(nunota=dados_devolucao.get('nunota'))
+    #         if not ack:
+    #             msg = "Erro ao excluir nota de devolução."
+    #             raise Exception(msg)                        
+    #         print(f"Nota de devolução excluída com sucesso!")
+    #         return {"success": True}
+    #     except Exception as e:
+    #         return {"success": False, "__exception__": str(e)}   
     
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def integrar_devolucoes(self,**kwargs):
 
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
@@ -220,7 +219,7 @@ class Devolucao:
                     logger.error(msg)
                     print(msg)
                 await crudLogPed.criar(log_id=self.log_id,
-                                       #pedido_id=pedido.get('id'),
+                                       pedido_id=ack.get('pedido_id'),
                                        evento='D',
                                        sucesso=ack.get('success'),
                                        obs=ack.get('__exception__',None))              

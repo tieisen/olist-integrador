@@ -5,8 +5,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from src.utils.log import Log
-from src.utils.decorador.empresa import ensure_dados_empresa
-from src.utils.decorador.ecommerce import ensure_dados_ecommerce
+# from src.utils.decorador.empresa import carrega_dados_empresa
+# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
+from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
+
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -31,8 +33,8 @@ class Pedido:
     def codemp(self):
         return self.dados_empresa.get('snk_codemp')
     
-    @ensure_dados_ecommerce
-    @ensure_dados_empresa
+    @carrega_dados_ecommerce
+    @carrega_dados_empresa
     async def to_sankhya(
             self,
             dados_olist:dict,
@@ -81,8 +83,8 @@ class Pedido:
             
         return dados_sankhya, lista_itens
     
-    @ensure_dados_ecommerce
-    @ensure_dados_empresa
+    @carrega_dados_ecommerce
+    @carrega_dados_empresa
     async def to_sankhya_lote(
             self,
             lista_pedidos:list,

@@ -3,8 +3,7 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador.sankhya import ensure_token
-from src.utils.decorador.empresa import ensure_dados_empresa
+from src.utils.decorador import token_snk, carrega_dados_empresa, interno
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 from src.utils.buscar_script import buscar_script
@@ -25,7 +24,7 @@ class Estoque:
         self.dados_empresa = None
         self.formatter = Formatter()
     
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             codprod:int=None,
@@ -85,7 +84,7 @@ class Estoque:
             print(f"Erro ao buscar saldo de estoque do item {codprod}. {res.json()}")
             return False
     
-    @ensure_token
+    @token_snk
     async def buscar_alteracoes(self) -> dict:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
@@ -127,7 +126,7 @@ class Estoque:
             print(f"Erro ao buscar alterações pendentes. {res.json()}")
             return False
     
-    @ensure_token
+    @token_snk
     async def remover_alteracoes(
             self,
             codprod:int=None,
@@ -181,7 +180,8 @@ class Estoque:
             print(f"Erro ao remover alterações pendentes. {res.json()}")
             return False
     
-    @ensure_dados_empresa
+    @interno
+    @carrega_dados_empresa
     async def formatar_query_busca_saldo_lote(
             self,
             codprod:int=None,
@@ -220,7 +220,7 @@ class Estoque:
 
         return query
 
-    @ensure_token
+    @token_snk
     async def buscar_saldo_por_lote(
             self,
             codprod:int=None,

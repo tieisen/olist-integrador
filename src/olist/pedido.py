@@ -4,8 +4,9 @@ import logging
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from src.utils.decorador.olist import ensure_token
-from src.utils.decorador.empresa import ensure_dados_empresa
+# from src.utils.decorador.olist import token_olist
+# from src.utils.decorador.empresa import carrega_dados_empresa
+from src.utils.decorador import carrega_dados_empresa, token_olist
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -26,7 +27,7 @@ class Pedido:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PEDIDOS')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
-    @ensure_token
+    @token_olist
     async def buscar(
             self,
             id:int=None,
@@ -99,7 +100,7 @@ class Pedido:
                 logger.error("Erro %s: %s pedido %s", res.status_code, res.text, codigo)
             return False
 
-    @ensure_token
+    @token_olist
     async def atualizar_nunota(
             self,
             id:int,
@@ -139,7 +140,7 @@ class Pedido:
             return False        
         return True
 
-    @ensure_token
+    @token_olist
     async def remover_nunota(
             self,
             id:int
@@ -196,7 +197,7 @@ class Pedido:
         
         return True
 
-    @ensure_token
+    @token_olist
     async def gerar_nf(
             self,
             id:int
@@ -225,7 +226,7 @@ class Pedido:
 
         return res.json()
 
-    @ensure_token
+    @token_olist
     async def validar_kit(
             self,
             id:int,
@@ -286,8 +287,8 @@ class Pedido:
             logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
             return False, {}
         
-    @ensure_token
-    @ensure_dados_empresa
+    @token_olist
+    @carrega_dados_empresa
     async def buscar_novos(
             self,
             atual:bool = True

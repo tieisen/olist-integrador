@@ -4,9 +4,7 @@ import requests
 from datetime import datetime
 from dotenv import load_dotenv
 
-from src.utils.decorador.sankhya import ensure_token
-from src.utils.decorador.empresa import ensure_dados_empresa
-from src.utils.decorador.internal_only import internal_only
+from src.utils.decorador import token_snk, carrega_dados_empresa, interno
 
 from src.utils.formatter import Formatter
 from src.utils.buscar_script import buscar_script
@@ -37,11 +35,11 @@ class Conferencia:
         ]
         self.nuconf = None
 
-    @internal_only
+    @interno
     def extrai_nuconf(self,payload:dict=None):
         return int(payload['responseBody']['result'][0][0])
 
-    @ensure_token
+    @token_snk
     async def buscar_aguardando_conferencia(self, id_loja:int=None):
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
@@ -71,7 +69,7 @@ class Conferencia:
             logger.error("Erro ao buscar status dos pedidos. %s",res.text)
             return False
     
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int
@@ -125,7 +123,7 @@ class Conferencia:
             print(res.json().get('statusMessage'))
             return False
 
-    @ensure_token
+    @token_snk
     async def criar(
             self,
             nunota:int
@@ -178,7 +176,7 @@ class Conferencia:
             print(res.json().get('statusMessage'))
             return False
 
-    @ensure_token
+    @token_snk
     async def vincular_pedido(
             self,
             nunota:int,
@@ -230,7 +228,7 @@ class Conferencia:
             print(res.text)
             return False
 
-    @ensure_token
+    @token_snk
     async def insere_itens(
             self,
             dados_item:list
@@ -264,8 +262,8 @@ class Conferencia:
             logger.error("Erro ao inserir item(ns) na conferência. %s",res.text)
             return False
 
-    @ensure_token
-    @ensure_dados_empresa
+    @token_snk
+    @carrega_dados_empresa
     async def concluir(
             self,
             nuconf:int

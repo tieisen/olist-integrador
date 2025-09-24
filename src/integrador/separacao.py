@@ -8,10 +8,11 @@ from database.crud                 import log        as crudLog
 from database.crud                 import log_pedido as crudLogPedido
 from src.olist.separacao           import Separacao  as SeparacaoOlist
 from src.utils.log                 import Log
-from src.utils.decorador.contexto  import contexto
-from src.utils.decorador.ecommerce import ensure_dados_ecommerce
-from src.utils.decorador.log       import log_execucao
-from src.utils.decorador.internal_only import internal_only
+# from src.utils.decorador.contexto  import contexto
+# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
+# from src.utils.decorador.log       import log_execucao
+# from src.utils.decorador.interno import interno
+from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ class Separacao:
         self.contexto = 'separacao'        
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
-    @internal_only
+    @interno
     async def valida_separacoes_registradas(
             self,
             lista_pedidos:list[dict]
@@ -42,7 +43,7 @@ class Separacao:
 
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def receber(self,**kwargs) -> bool:
         log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                      de='olist',
@@ -107,7 +108,7 @@ class Separacao:
 
     @contexto
     @log_execucao    
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def checkout(self,**kwargs) -> bool:
         log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                      de='base',
@@ -148,7 +149,7 @@ class Separacao:
 
     @contexto
     @log_execucao
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     async def separar(self,**kwargs) -> bool:
         log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                      de='base',

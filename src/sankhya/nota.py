@@ -3,8 +3,7 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador.sankhya import ensure_token
-from src.utils.decorador.empresa import ensure_dados_empresa
+from src.utils.decorador import token_snk, carrega_dados_empresa, interno
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 
@@ -37,10 +36,11 @@ class Nota:
                 "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
             ]
 
+    @interno
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int=None,
@@ -162,7 +162,7 @@ class Nota:
                 logger.error("Erro ao buscar notas pendentes. %s",res.json())
             return False
 
-    @ensure_token
+    @token_snk
     async def confirmar(
             self,
             nunota:int
@@ -199,7 +199,7 @@ class Nota:
             print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
             return False
 
-    @ensure_token
+    @token_snk
     async def informar_numero_e_chavenfe(
             self,
             nunota:int=None,
@@ -256,8 +256,8 @@ class Nota:
             print(f"Erro informar dados da NFe na nota de venda do Sankhya. Nunota {nunota}. Nota {numero}. {res.json()}")
             return False
 
-    @ensure_token
-    @ensure_dados_empresa
+    @token_snk
+    @carrega_dados_empresa
     async def devolver(
             self,
             nunota:int,
@@ -304,7 +304,7 @@ class Nota:
             logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
             return False
 
-    @ensure_token
+    @token_snk
     async def alterar_observacao(
             self,
             nunota:int,
@@ -361,7 +361,7 @@ class Itens(Nota):
             "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int

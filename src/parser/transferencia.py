@@ -3,8 +3,9 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 from src.utils.log import Log
-from src.utils.decorador.empresa import ensure_dados_empresa
-from src.utils.decorador.internal_only import internal_only
+# from src.utils.decorador.empresa import carrega_dados_empresa
+# from src.utils.decorador.interno import interno
+from src.utils.decorador import carrega_dados_empresa, interno
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class Transferencia:
         self.empresa_id = empresa_id
         self.dados_empresa = None
 
-    @internal_only
+    @interno
     def cabecalho(self):
         return {
                 "NUNOTA":  {"$": ""},
@@ -41,7 +42,7 @@ class Transferencia:
                 "OBSERVACAO":  {"$": self.dados_empresa.get('snk_texto_transferencia')}
             }
     
-    @internal_only
+    @interno
     def itens(
             self,
             itens_transferencia:list,
@@ -113,7 +114,7 @@ class Transferencia:
                 dados_item = {}
         return res
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def to_sankhya(
             self,
             objeto:str,

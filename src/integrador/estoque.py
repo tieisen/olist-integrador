@@ -5,10 +5,12 @@ from database.crud                 import log         as crudLog
 from database.crud                 import log_estoque as crudLogEst
 from src.sankhya.estoque           import Estoque     as EstoqueSnk
 from src.olist.estoque             import Estoque     as EstoqueOlist
-from src.utils.decorador.contexto  import contexto
-from src.utils.decorador.empresa   import ensure_dados_empresa
-from src.utils.decorador.ecommerce import ensure_dados_ecommerce
-from src.utils.decorador.log       import log_execucao
+# from src.utils.decorador.contexto  import contexto
+# from src.utils.decorador.empresa   import carrega_dados_empresa
+# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
+# from src.utils.decorador.log       import log_execucao
+
+from src.utils.decorador import contexto, carrega_dados_empresa, carrega_dados_ecommerce, log_execucao
 from src.utils.log                 import Log
 
 load_dotenv('keys/.env')
@@ -29,7 +31,7 @@ class Estoque:
         self.dados_ecommerce = None
 
     @contexto
-    @ensure_dados_ecommerce
+    @carrega_dados_ecommerce
     def calcular_variacao(
             self,
             estoque_snk:dict,
@@ -117,7 +119,7 @@ class Estoque:
 
     @contexto
     @log_execucao
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def atualizar_olist(self, **kwargs):
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='sankhya',

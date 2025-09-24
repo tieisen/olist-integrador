@@ -4,8 +4,9 @@ import requests
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-from src.utils.decorador.olist import ensure_token
-from src.utils.decorador.ecommerce import ensure_dados_ecommerce
+# from src.utils.decorador.olist import token_olist
+# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
+from src.utils.decorador import carrega_dados_ecommerce, token_olist
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -27,8 +28,8 @@ class Nota:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
         self.endpoint_fin = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO')
 
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def buscar(
             self,
             id:int=None,
@@ -91,8 +92,8 @@ class Nota:
             logger.error("Nota cancelada")
             return False
     
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def buscar_canceladas(self,data:str=None,tipo:str='S') -> list[dict]:
 
         if not data:
@@ -121,8 +122,8 @@ class Nota:
 
         return res.json().get('itens')
     
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def buscar_devolucoes(self,data:str=None) -> list[dict]:
 
         if not data:
@@ -151,8 +152,8 @@ class Nota:
 
         return res.json().get('itens')
     
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def buscar_legado(
             self,
             id:int=None,
@@ -269,8 +270,8 @@ class Nota:
             logger.error("Nota cancelada")
             return False
 
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def emitir(
             self,
             id:int
@@ -300,8 +301,8 @@ class Nota:
         if res.status_code == 200:
             return res.json()        
 
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def buscar_financeiro(
             self,
             serie:str=None,
@@ -335,8 +336,8 @@ class Nota:
         else:
             return res.json().get('itens')[0]
 
-    @ensure_dados_ecommerce
-    @ensure_token
+    @carrega_dados_ecommerce
+    @token_olist
     async def baixar_financeiro(
             self,
             id:int,

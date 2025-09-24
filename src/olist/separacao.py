@@ -3,7 +3,8 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador.olist import ensure_token
+#from src.utils.decorador.olist import token_olist
+from src.utils.decorador import token_olist
 from src.utils.log import Log
 
 load_dotenv('keys/.env')
@@ -22,7 +23,7 @@ class Separacao:
         self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
-    @ensure_token
+    @token_olist
     async def listar(self) -> list:
         
         url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
@@ -58,7 +59,7 @@ class Separacao:
 
         return lista if status else status        
 
-    @ensure_token
+    @token_olist
     async def buscar(
             self,
             id:int
@@ -86,7 +87,7 @@ class Separacao:
         
         return res.json()
     
-    @ensure_token
+    @token_olist
     async def separar(
             self,
             id:int
@@ -117,7 +118,7 @@ class Separacao:
         
         return True
 
-    @ensure_token
+    @token_olist
     async def concluir(
             self,
             id:int

@@ -7,7 +7,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from src.utils.log import Log
-from src.utils.decorador.olist import ensure_token
+#from src.utils.decorador.olist import token_olist
+from src.utils.decorador import token_olist
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class Produto:
         self.req_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL') + os.getenv('OLIST_ENDPOINT_PRODUTOS')
 
-    @ensure_token
+    @token_olist
     async def buscar(
             self,
             id:int=None,
@@ -84,7 +85,7 @@ class Produto:
                 logger.error("Erro %s: %s sku %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), sku)
             return False
 
-    @ensure_token
+    @token_olist
     async def incluir(self,data:dict) -> tuple[bool,dict]:
         
         if not isinstance(data, dict):
@@ -119,7 +120,7 @@ class Produto:
             print(erro)
             return False, {erro}
 
-    @ensure_token
+    @token_olist
     async def atualizar(
             self,
             id:int=None,
@@ -162,7 +163,7 @@ class Produto:
             logger.info(json.dumps(data))
             return False
 
-    @ensure_token
+    @token_olist
     async def buscar_todos(self) -> list:
 
         status = 200
@@ -193,7 +194,7 @@ class Produto:
 
         return itens
     
-    @ensure_token
+    @token_olist
     async def buscar_alteracoes(
             self,
             todo_historico:bool=False

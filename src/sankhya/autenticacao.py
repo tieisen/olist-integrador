@@ -5,7 +5,8 @@ import requests
 from dotenv   import load_dotenv
 from datetime import datetime, timedelta
 
-from src.utils.decorador.empresa import ensure_dados_empresa
+#from src.utils.decorador.empresa import carrega_dados_empresa
+from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.log import Log
 from database.crud import sankhya as crud
 
@@ -26,6 +27,7 @@ class Autenticacao:
         self.headers = None
         self.url = os.getenv('SANKHYA_URL_TOKEN')
 
+    @interno
     def formatar_header(self):
         self.headers = {
             'token':self.dados_empresa.get('snk_token'),
@@ -34,7 +36,8 @@ class Autenticacao:
             'password':self.dados_empresa.get('snk_admin_senha')
         }
 
-    @ensure_dados_empresa
+    @interno
+    @carrega_dados_empresa
     async def solicitar_token(self) -> dict:
 
         self.formatar_header()
@@ -54,7 +57,8 @@ class Autenticacao:
         
         return res.json()
     
-    @ensure_dados_empresa
+    @interno
+    @carrega_dados_empresa
     async def salvar_token(
             self,
             dados_token:dict
@@ -75,7 +79,8 @@ class Autenticacao:
         
         return True
 
-    @ensure_dados_empresa
+    @interno
+    @carrega_dados_empresa
     async def buscar_token_salvo(self) -> str:
         dados_token = await crud.buscar(empresa_id=self.dados_empresa.get('id'))
 
@@ -90,7 +95,8 @@ class Autenticacao:
             logger.warning(f"Token expirado para a empresa {self.codemp}")
             return None
 
-    @ensure_dados_empresa
+    @interno
+    @carrega_dados_empresa
     async def primeiro_login(self) -> str:
         
         token = await self.solicitar_token()
@@ -103,7 +109,7 @@ class Autenticacao:
         
         return token.get('bearerToken')
 
-    @ensure_dados_empresa
+    @carrega_dados_empresa
     async def autenticar(self) -> str:
         try:
             token = await self.buscar_token_salvo()

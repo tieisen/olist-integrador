@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from src.sankhya.nota import Nota
 from src.utils.log import Log
-from src.utils.decorador.sankhya import ensure_token
+from src.utils.decorador import token_snk, interno
 from src.utils.formatter import Formatter
 from src.utils.buscar_script import buscar_script
 
@@ -38,10 +38,11 @@ class Pedido:
             "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
         ]
 
+    @interno
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
     
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int=None,
@@ -149,7 +150,7 @@ class Pedido:
                 logger.error("Erro ao buscar pedido. Pedido %s. %s",codpedido,res.text)        
             return False
     
-    @ensure_token
+    @token_snk
     async def buscar_nunota_nota(
             self,
             nunota:int
@@ -204,7 +205,7 @@ class Pedido:
         
         return dados_nota
 
-    @ensure_token
+    @token_snk
     async def buscar_cidade(
             self,
             ibge:int
@@ -255,7 +256,7 @@ class Pedido:
             print(f"Erro ao buscar dados de localização da cidade {ibge}. {res.text}")
             return False
 
-    @ensure_token
+    @token_snk
     async def lancar(
             self,
             dados_cabecalho:dict,
@@ -297,7 +298,7 @@ class Pedido:
             print(f"Erro ao lançar pedido #{dados_cabecalho.get('AD_MKP_NUMPED')}. {res.text}")
             return False
 
-    @ensure_token
+    @token_snk
     async def confirmar(
             self,
             nunota:int
@@ -332,7 +333,7 @@ class Pedido:
         logger.error("Erro ao confirmar pedido. Nunota %s. %s",nunota,res.text)
         return False
 
-    @ensure_token
+    @token_snk
     async def faturar(
             self,
             nunota:int,
@@ -399,7 +400,7 @@ class Pedido:
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
-    @ensure_token
+    @token_snk
     async def excluir(
             self,
             nunota:int
@@ -444,7 +445,7 @@ class Itens(Pedido):
             "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int=None,

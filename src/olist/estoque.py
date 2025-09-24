@@ -4,7 +4,8 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador.olist import ensure_token
+#from src.utils.decorador.olist import token_olist
+from src.utils.decorador import token_olist
 from src.parser.estoque import Estoque as ParserEstoque
 from src.utils.log import Log
 
@@ -25,7 +26,7 @@ class Estoque:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_ESTOQUES')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         
-    @ensure_token
+    @token_olist
     async def buscar(
             self,
             id:int=None,
@@ -79,7 +80,7 @@ class Estoque:
         
         return result
     
-    @ensure_token
+    @token_olist
     async def enviar_saldo(
             self,
             id:int=None,

@@ -5,7 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from src.utils.formatter import Formatter
-from src.utils.decorador.sankhya import ensure_token
+from src.utils.decorador import token_snk, interno
 from src.utils.log import Log
 from src.utils.buscar_script import buscar_script
 
@@ -38,10 +38,11 @@ class Transferencia:
                 "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
             ]
 
+    @interno
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    @ensure_token
+    @token_snk
     async def criar(
             self,
             cabecalho:dict,
@@ -101,7 +102,7 @@ class Transferencia:
             print(f"Erro ao lançar nota de transferência. {res.json()}")
             return False, None
 
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int=None,
@@ -179,7 +180,7 @@ class Transferencia:
             print(f"Erro ao buscar dados da nota de transferência vigente. {res.json()}")
             return False, {}
 
-    @ensure_token
+    @token_snk
     async def confirmar(
             self,
             nunota:int
@@ -226,7 +227,7 @@ class Itens(Transferencia):
             "SEQUENCIA", "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    @ensure_token
+    @token_snk
     async def lancar(
             self,
             nunota:int,
@@ -271,7 +272,7 @@ class Itens(Transferencia):
             logger.error("Erro ao lançar item da nota de transferência. Nunota %s. %s",nunota,res.json())      
             return False
 
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             nunota:int
@@ -322,7 +323,7 @@ class Itens(Transferencia):
             logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
             return False
 
-    @ensure_token
+    @token_snk
     async def busca_valor_transferencia(
             self,
             codprod:int=None,

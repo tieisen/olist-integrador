@@ -3,7 +3,7 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador.sankhya import ensure_token
+from src.utils.decorador import token_snk, interno
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 
@@ -29,7 +29,7 @@ class Produto:
             "NCM","ORIGPROD","PESOBRUTO","PESOLIQ","QTDEMB","REFERENCIA","REFFORN","TIPCONTEST"
         ]
 
-    @ensure_token
+    @token_snk
     async def buscar(
             self,
             codprod:int=None,
@@ -107,6 +107,7 @@ class Produto:
                 print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
             return False
 
+    @interno
     def prepapar_dados(
             self,
             payload:dict
@@ -122,7 +123,7 @@ class Produto:
             dados[f'{self.campos_lista.index(str.upper(i))}'] = f'{payload.get(i)}'
         return dados
 
-    @ensure_token
+    @token_snk
     async def atualizar(
             self,
             codprod:int,
@@ -168,7 +169,7 @@ class Produto:
             print(f"Erro ao atualizar produto. Cód. {codprod}. {res.text}")
             return False        
 
-    @ensure_token
+    @token_snk
     async def buscar_alteracoes(self) -> dict:
         
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
@@ -210,7 +211,7 @@ class Produto:
         else:                
             return self.formatter.return_format(res.json())
 
-    @ensure_token
+    @token_snk
     async def excluir_alteracoes(
             self,
             codprod:int=None,
