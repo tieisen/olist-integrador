@@ -3,7 +3,7 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador import token_snk
+from src.utils.autenticador import token_snk
 from src.utils.buscar_script import buscar_script
 from src.utils.formatter import Formatter
 from src.utils.log import Log

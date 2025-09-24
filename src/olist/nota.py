@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 
 # from src.utils.decorador.olist import token_olist
 # from src.utils.decorador.ecommerce import carrega_dados_ecommerce
-from src.utils.decorador import carrega_dados_ecommerce, token_olist
+from src.utils.decorador import carrega_dados_ecommerce
+from src.utils.autenticador import token_olist
 from src.utils.log import Log
 
 load_dotenv('keys/.env')

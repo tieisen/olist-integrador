@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 # from src.utils.decorador.olist import token_olist
 # from src.utils.decorador.empresa import carrega_dados_empresa
-from src.utils.decorador import carrega_dados_empresa, token_olist
+from src.utils.decorador import carrega_dados_empresa
+from src.utils.autenticador import token_olist
 from src.utils.log import Log
 
 load_dotenv('keys/.env')

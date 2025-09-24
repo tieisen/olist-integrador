@@ -3,7 +3,8 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador import token_snk, carrega_dados_empresa, interno
+from src.utils.decorador import carrega_dados_empresa, interno
+from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 from src.utils.buscar_script import buscar_script

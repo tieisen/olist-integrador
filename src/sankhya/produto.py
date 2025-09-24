@@ -3,7 +3,8 @@ import logging
 import requests
 from dotenv import load_dotenv
 
-from src.utils.decorador import token_snk, interno
+from src.utils.decorador import interno
+from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.log import Log
 

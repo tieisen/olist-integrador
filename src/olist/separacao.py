@@ -4,7 +4,7 @@ import requests
 from dotenv import load_dotenv
 
 #from src.utils.decorador.olist import token_olist
-from src.utils.decorador import token_olist
+from src.utils.autenticador import token_olist
 from src.utils.log import Log
 
 load_dotenv('keys/.env')

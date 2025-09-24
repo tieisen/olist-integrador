@@ -5,7 +5,7 @@ import requests
 from dotenv import load_dotenv
 
 #from src.utils.decorador.olist import token_olist
-from src.utils.decorador import token_olist
+from src.utils.autenticador import token_olist
 from src.parser.estoque import Estoque as ParserEstoque
 from src.utils.log import Log
 
