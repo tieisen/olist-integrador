@@ -51,16 +51,28 @@ async def criar(
         await session.commit()
         return True
 
-async def buscar(id_loja:int):
+async def buscar(empresa_id:int=None, id_loja:int=None):
+   
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Ecommerce).where(
-                Ecommerce.id_loja == id_loja
+        if empresa_id:
+            result = await session.execute(
+                select(Ecommerce)
+                .where(Ecommerce.empresa_id == empresa_id,
+                       Ecommerce.ativo.is_(True))
             )
-        )
-        ecommerce = result.scalar_one_or_none()
+        elif id_loja:
+            result = await session.execute(
+                select(Ecommerce)
+                .where(Ecommerce.id_loja == id_loja)
+            )
+        else:
+            result = await session.execute(
+                select(Ecommerce)
+                .where(Ecommerce.ativo.is_(True))
+            )  
+        ecommerce = result.scalars().all()
         dados_ecommerce = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
-                                         retorno=ecommerce)           
+                                           retorno=ecommerce)           
         return dados_ecommerce        
     
 async def atualizar(ecommerce_id:int, **kwargs):
