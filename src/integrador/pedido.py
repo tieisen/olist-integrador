@@ -2,22 +2,17 @@ import os
 import re
 import time
 import logging
-from dotenv                            import load_dotenv
-from datetime                          import datetime
-
-from src.olist.pedido                  import Pedido      as PedidoOlist
-from src.sankhya.pedido                import Pedido      as PedidoSnk
-from src.parser.pedido                 import Pedido      as ParserPedido
-# from src.sankhya.conferencia           import Conferencia as ConferenciaSnk
-from database.crud                     import pedido      as crudPedido
-from database.crud                     import log_pedido  as crudLogPed
-from database.crud                     import log         as crudLog
-from src.services.viacep               import Viacep
-from src.utils.log                     import Log
-# from src.utils.decorador.contexto      import contexto
-# from src.utils.decorador.ecommerce     import carrega_dados_ecommerce
-# from src.utils.decorador.log           import log_execucao
-# from src.utils.decorador.interno import interno
+from dotenv import load_dotenv
+from datetime import datetime
+from src.olist.pedido import Pedido as PedidoOlist
+from src.sankhya.pedido import Pedido as PedidoSnk
+from src.parser.pedido import Pedido as ParserPedido
+# from src.sankhya.conferencia import Conferencia as ConferenciaSnk
+from database.crud import pedido as crudPedido
+from database.crud import log_pedido as crudLogPed
+from database.crud import log as crudLog
+from src.services.viacep import Viacep
+from src.utils.log import Log
 from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno, desabilitado
 
 load_dotenv('keys/.env')
@@ -36,6 +31,8 @@ class Pedido:
         self.contexto:str='pedido'
         self.dados_ecommerce:dict=None
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
+        self.pedido_cancelado:int=int(os.getenv('OLIST_SIT_PEDIDO_CANCELADO'))
+        self.pedido_incompleto:int=int(os.getenv('OLIST_SIT_PEDIDO_INCOMPLETO'))
 
     @interno
     async def validar_existentes(
@@ -53,10 +50,13 @@ class Pedido:
             self,
             dados_pedido:dict
         ) -> bool:
-        if dados_pedido.get('situacao') in [2,8]:
-            # Cancelado / Dados incompletos
+        if dados_pedido.get('situacao') == self.pedido_cancelado:
+            # Cancelado
             await crudPedido.atualizar(id_pedido=dados_pedido.get('id'),
-                                       dh_cancelamento=datetime.now())            
+                                       dh_cancelamento=datetime.now())
+            return False
+        elif dados_pedido.get('situacao') == self.pedido_incompleto:
+            # Dados incompletos
             return False
         else:
             return True
@@ -153,7 +153,7 @@ class Pedido:
             ack = await self.receber(num_pedido=num_pedido)
             # Registra sucesso no log
             await crudLogPed.criar(log_id=self.log_id,
-                                   pedido_id=ack.get('id',0),
+                                   pedido_id=ack.get('id'),
                                    evento='R',
                                    sucesso=ack.get('success'),
                                    obs=ack.get('__exception__',None))            
@@ -169,7 +169,7 @@ class Pedido:
                     ack = await self.receber(dados_pedido=pedido)
                     # Registra sucesso no log
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=ack.get('id',0),
+                                           pedido_id=ack.get('id'),
                                            evento='R',
                                            sucesso=ack.get('success'),
                                            obs=ack.get('__exception__',None))                    
