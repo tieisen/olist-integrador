@@ -1,17 +1,12 @@
 import os
 import logging
 from dotenv import load_dotenv
-from database.crud                 import log         as crudLog
-from database.crud                 import log_estoque as crudLogEst
-from src.sankhya.estoque           import Estoque     as EstoqueSnk
-from src.olist.estoque             import Estoque     as EstoqueOlist
-# from src.utils.decorador.contexto  import contexto
-# from src.utils.decorador.empresa   import carrega_dados_empresa
-# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
-# from src.utils.decorador.log       import log_execucao
-
-from src.utils.decorador import contexto, carrega_dados_empresa, carrega_dados_ecommerce, log_execucao
-from src.utils.log                 import Log
+from database.crud import log as crudLog
+from database.crud import log_estoque as crudLogEst
+from src.sankhya.estoque import Estoque as EstoqueSnk
+from src.olist.estoque import Estoque as EstoqueOlist
+from src.utils.decorador import contexto, carrega_dados_empresa, carrega_dados_ecommerce, log_execucao, interno
+from src.utils.log import Log
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -31,6 +26,7 @@ class Estoque:
         self.dados_ecommerce = None
 
     @contexto
+    @interno
     @carrega_dados_ecommerce
     def calcular_variacao(
             self,
@@ -104,6 +100,7 @@ class Estoque:
 
         return resultado
 
+    @interno
     async def atualizar_log_lote(self, log_id:int, lista_estoque:list):
         try:
             for l in lista_estoque:            
