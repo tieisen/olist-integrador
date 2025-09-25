@@ -97,7 +97,7 @@ class Separacao:
                 logger.error(str(e))
                 print(str(e))
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=pedido.get('id',0),
+                                          pedido_id=pedido.get('id'),
                                           evento='R',
                                           sucesso=False,
                                           obs=str(e))
@@ -134,13 +134,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item['venda'].get('id'),
+                                          pedido_id=item.get('id'),
                                           evento='F',
                                           sucesso=False,
                                           obs=obs)
                 continue  
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item['venda'].get('id'),
+                                      pedido_id=item.get('id'),
                                       evento='F')
             print("Checkout realizado com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
@@ -175,13 +175,13 @@ class Separacao:
                 logger.error(obs)
                 print(obs)
                 await crudLogPedido.criar(log_id=log_id,
-                                          pedido_id=item['venda'].get('id'),
+                                          pedido_id=item.get('id'),
                                           evento='F',
                                           sucesso=False,
                                           obs=obs)
                 continue  
             await crudLogPedido.criar(log_id=log_id,
-                                      pedido_id=item['venda'].get('id'),
+                                      pedido_id=item.get('id'),
                                       evento='F')
             print("Separação realizada com sucesso!")        
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
