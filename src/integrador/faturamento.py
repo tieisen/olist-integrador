@@ -4,27 +4,21 @@ import logging
 from dotenv import load_dotenv
 from datetime import datetime
 
-from src.sankhya.faturamento       import Faturamento   as FaturamentoSnk
-from src.sankhya.estoque           import Estoque       as EstoqueSnk
-from src.sankhya.transferencia     import Transferencia as TransferenciaSnk
-from src.sankhya.transferencia     import Itens         as ItemTransfSnk
-from src.sankhya.pedido            import Pedido        as PedidoSnk
-from src.sankhya.nota              import Nota          as NotaSnk
-from src.integrador.nota           import Nota          as IntegradorNota
-from src.parser.transferencia      import Transferencia as ParserTransferencia
-from src.olist.separacao           import Separacao     as SeparacaoOlist
-from database.crud                 import log           as crudLog
-from database.crud                 import log_pedido    as crudLogPed
-from database.crud                 import pedido        as crudPedido
-from database.crud                 import nota          as crudNota
-from src.utils.log                 import Log
-# from src.utils.decorador.contexto  import contexto
-# from src.utils.decorador.empresa   import carrega_dados_empresa
-# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
-# from src.utils.decorador.log       import log_execucao
-# from src.utils.decorador.interno import interno
+from src.sankhya.faturamento import Faturamento   as FaturamentoSnk
+from src.sankhya.estoque import Estoque as EstoqueSnk
+from src.sankhya.transferencia import Transferencia as TransferenciaSnk
+from src.sankhya.transferencia import Itens as ItemTransfSnk
+from src.sankhya.pedido import Pedido as PedidoSnk
+from src.sankhya.nota import Nota as NotaSnk
+from src.integrador.nota import Nota as IntegradorNota
+from src.parser.transferencia import Transferencia as ParserTransferencia
+from src.olist.separacao import Separacao as SeparacaoOlist
+from database.crud import log as crudLog
+from database.crud import log_pedido as crudLogPed
+from database.crud import pedido as crudPedido
+from database.crud import nota as crudNota
+from src.utils.log import Log
 from src.utils.decorador import contexto, carrega_dados_empresa, carrega_dados_ecommerce, log_execucao, interno
-
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -379,7 +373,7 @@ class Faturamento:
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         print("--> FATURAMENTO DOS PEDIDOS NO OLIST CONCLUÍDO!")
-        return True
+        return status_log
     
     @contexto
     @log_execucao
@@ -415,7 +409,7 @@ class Faturamento:
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         print("--> FATURAMENTO DOS PEDIDOS NO SANKHYA CONCLUÍDO!")
-        return True    
+        return status_log    
     
     @contexto
     @log_execucao
@@ -427,12 +421,12 @@ class Faturamento:
                                           contexto=kwargs.get('_contexto'))
         ack_venda = await self.venda_entre_empresas_em_lote()    
         await crudLogPed.criar(log_id=self.log_id,
-                               pedido_id=0,
+                               pedido_id=None,
                                evento='F',
                                status=ack_venda.get('success'),
                                obs=ack_venda.get('__exception__',None))        
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         print(f"--> VENDA INTERNA FINALIZADA")        
-        return True
+        return status_log
     
