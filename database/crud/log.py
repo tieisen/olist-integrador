@@ -6,8 +6,16 @@ from sqlalchemy.future import select
 from src.utils.db import formatar_retorno
 import os
 from dotenv import load_dotenv
+from src.utils.log import Log as lg
+import logging
 
 load_dotenv('keys/.env')
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename=lg().buscar_path(),
+                    encoding='utf-8',
+                    format=os.getenv('LOGGER_FORMAT'),
+                    datefmt='%Y-%m-%d %H:%M:%S',
+                    level=logging.INFO)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
@@ -94,18 +102,19 @@ async def buscar_falhas(empresa_id:int) -> list[dict]:
             result = await session.execute(
                 select(Log)
                 .where(Log.sucesso.isnot(True),
-                    Log.dh_execucao >= tempo_limite,
-                    Log.empresa_id == empresa_id)
-                .order_by(Log.dh_execucao)
+                       Log.dh_execucao >= tempo_limite,
+                       Log.empresa_id == empresa_id)
+                .order_by(Log.dh_execucao.desc())
             )
             logs = result.scalars().all()
-        dados_logs = formatar_retorno(retorno=logs)
+        dados_logs = formatar_retorno(retorno=logs,colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         if not dados_logs:
             dados_logs = []
         elif not isinstance(dados_logs,list):
             dados_logs = [dados_logs]
         else:
-            dados_logs = []
+            #dados_logs = []
+            pass
         return dados_logs
         
 async def listar_falhas(
@@ -121,10 +130,13 @@ async def listar_falhas(
     if not logs:
         logs = await buscar_falhas(empresa_id=empresa_id)    
     
+    l:dict={}
     for l in logs:
         contexto = None
         match l.get('contexto'):
             case c if 'pedido' in c:
+                contexto = log_pedido
+            case c if 'separacao' in c:
                 contexto = log_pedido
             case c if 'produto' in c:
                 contexto = log_produto
@@ -141,7 +153,33 @@ async def listar_falhas(
             "contexto": l.get('contexto'),
             "de": l.get('de'),
             "para": l.get('para'),
+            "hora": l.get('dh_execucao'),
             "falhas": detalhamento_falhas})
     
     return lista_falhas
+
+async def excluir_cache():
+
+    try:
+        dias = int(os.getenv('DIAS_LIMPA_CACHE',7))*2
+    except Exception as e:
+        erro = f"Valor para intervalo de dias do cache não encontrado. {e}"
+        logger.error(erro)
+        return False
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Log).where(Log.dh_execucao < (datetime.now()-timedelta(days=dias)))
+        )
+        logs = result.scalars().all()
+        if not logs:
+            return None
+        try:
+            for log in logs:
+                await session.delete(log)
+            await session.commit()
+            return True
+        except Exception as e:
+            logger.error("Erro ao excluir logs do banco de dados: %s", e)
+            return False
   
