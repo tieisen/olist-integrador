@@ -64,6 +64,7 @@ async def criar(
 async def buscar(
         id_nota:int=None,
         nunota:int=None,
+        numero_ecommerce:dict=None,
         chave_acesso:str=None
     ) -> dict:
     if not any([id_nota,nunota,chave_acesso]):
@@ -74,19 +75,26 @@ async def buscar(
                 select(Nota)
                 .where(Nota.nunota == nunota)
             )
-        if id_nota:
+        elif id_nota:
             result = await session.execute(
                 select(Nota)
                 .where(Nota.id_nota == id_nota)
             )
-        if chave_acesso:
+        elif chave_acesso:
             result = await session.execute(
                 select(Nota)
                 .where(Nota.chave_acesso == chave_acesso)
             )
+        elif numero_ecommerce:
+            result = await session.execute(
+                select(Nota)
+                .where(Nota.numero == numero_ecommerce.get('numero'),
+                       Nota.pedido_
+                           .has(Pedido.ecommerce_id==numero_ecommerce.get('ecommerce')))
+            )            
         nota = result.scalar_one_or_none()
     if not nota:
-        print(f"Nota não encontrada. Parâmetro: {nunota or id_nota or chave_acesso}")
+        print(f"Nota não encontrada. Parâmetro: {nunota or id_nota or chave_acesso or numero_ecommerce}")
         return False
     dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                   retorno=nota)
