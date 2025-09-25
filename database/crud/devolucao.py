@@ -73,9 +73,10 @@ async def buscar_lancar(ecommerce_id:int) -> list[dict]:
 async def buscar_confirmar() -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Devolucao).where(Devolucao.nunota.isnot(None),
-                                    Devolucao.dh_cancelamento.is_(None),
-                                    Devolucao.dh_confirmacao.is_(None))
+            select(Devolucao)
+            .where(Devolucao.nunota.isnot(None),
+                   Devolucao.dh_cancelamento.is_(None),
+                   Devolucao.dh_confirmacao.is_(None))
         )
         devolucoes = result.scalars().all()
         dados_devolucoes = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
@@ -84,27 +85,47 @@ async def buscar_confirmar() -> list[dict]:
 
 async def buscar(
         id_nota:int=None,
-        numero:int=None,
         nunota:int=None,
+        chave:str=None,
+        numero_ecommerce:dict=None,
+        lista_chave:list[str]=None
     ) -> dict:
-    if not any([id_nota,numero,nunota]):
+    if not any([id_nota,nunota,lista_chave]):
         return False
     async with AsyncSessionLocal() as session:
         if nunota:
             result = await session.execute(
-                select(Devolucao).where(Devolucao.nunota == nunota)
+                select(Devolucao)
+                .where(Devolucao.nunota == nunota)
             )
-        if id_nota:
+        elif id_nota:
             result = await session.execute(
-                select(Devolucao).where(Devolucao.id_nota == id_nota)
+                select(Devolucao)
+                .where(Devolucao.id_nota == id_nota)
             )
-        if numero:
+        elif chave:
             result = await session.execute(
-                select(Devolucao).where(Devolucao.numero == numero)
+                select(Devolucao)
+                .where(Devolucao.chave_acesso == chave)
             )
+        elif numero_ecommerce:
+            result = await session.execute(
+                select(Devolucao)
+                .where(Devolucao.numero == numero_ecommerce.get('numero'),
+                       Devolucao.nota_.has(
+                            Nota.pedido_.has(
+                          Pedido.ecommerce_id==numero_ecommerce.get('ecommerce'))))
+            )
+        elif lista_chave:
+            result = await session.execute(
+                select(Devolucao)
+                .where(Devolucao.chave_acesso.in_(lista_chave))
+            )
+        else:
+            return False
         devolucao = result.scalar_one_or_none()
     if not devolucao:
-        print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or numero}")
+        print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or chave or numero_ecommerce or lista_chave}")
         return False
     dados_devolucao = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                        retorno=devolucao)        
@@ -128,17 +149,20 @@ async def atualizar(
     async with AsyncSessionLocal() as session:
         if nunota and not any([id_nota,numero]):
             result = await session.execute(
-                select(Devolucao).where(Devolucao.nunota == nunota)
+                select(Devolucao)
+                .where(Devolucao.nunota == nunota)
             )
         else:
             kwargs['nunota'] = nunota
             if id_nota:
                 result = await session.execute(
-                    select(Devolucao).where(Devolucao.id_nota == id_nota)
+                    select(Devolucao)
+                    .where(Devolucao.id_nota == id_nota)
                 )
             if numero:
                 result = await session.execute(
-                    select(Devolucao).where(Devolucao.numero == numero)
+                    select(Devolucao)
+                    .where(Devolucao.numero == numero)
                 )
 
         if not result:
