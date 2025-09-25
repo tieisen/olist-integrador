@@ -16,23 +16,17 @@ def default():
 @router.get("/integrar")
 def integrar_pedidos():
     """
-    Valida devoluções.
     Busca os pedidos novos do Olist que estão com status Preparando Envio.
-    Valida pedidos cancelados.
-    Importa os pedidos pendentes do Olist em um único pedido no Sankhya.
+    Importa os pedidos pendentes do Olist.
     Confirma o pedido no Sankhya.
     """
-    if not asyncio.run(pedido.validar_cancelamentos()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
-    if not asyncio.run(pedido.devolver_lote()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
-    if not asyncio.run(pedido.receber()):
+    if not asyncio.run(pedido.receber_novos()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")
     if not asyncio.run(separacao.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
-    if not asyncio.run(pedido.importar_lote()):
+    if not asyncio.run(pedido.integrar_novos()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao importar pedidos")
-    if not asyncio.run(pedido.confirmar_lote()):
+    if not asyncio.run(pedido.integrar_confirmacao()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao confirmar pedidos")
     return True
 
@@ -45,8 +39,20 @@ def faturar_pedidos():
     Fatura o pedido no Sankhya.
     Confirma a nota gerada no Sankhya.
     """    
-    if not asyncio.run(faturamento.faturar_lote()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
+    if not asyncio.run(faturamento.integrar_olist()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Olist")
+    if not asyncio.run(faturamento.integrar_snk()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Sankhya")
+    return True
+
+@router.get("/faturar/olist")
+def faturar_olist():
+    """
+    Emite e autoriza as NFs dos pedidos no Olist.
+    Envia os pedidos para separação no Olist.
+    """    
+    if not asyncio.run(faturamento.integrar_olist()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Olist")
     return True
 
 @router.get("/faturar/sankhya")
@@ -56,8 +62,17 @@ def faturar_sankhya():
     Fatura o pedido no Sankhya.
     Confirma a nota gerada no Sankhya.
     """    
-    if not asyncio.run(faturamento.faturar_sankhya()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
+    if not asyncio.run(faturamento.integrar_snk()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Sankhya")
+    return True
+
+@router.get("/faturar/venda-interna")
+def faturar_venda_interna():
+    """
+    Cria e confirma a nota de transferência no Sankhya.
+    """    
+    if not asyncio.run(faturamento.realizar_venda_interna()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao criar venda interna")
     return True
 
 @router.get("/receber/{numero}")
@@ -78,24 +93,11 @@ def buscar_separacao():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
     return True
 
-@router.get("/devolver")
-def devolver_pedidos():
-    """
-    Valida devoluções e cancelamentos
-    """
-    if not asyncio.run(pedido.validar_cancelamentos()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
-    if not asyncio.run(pedido.devolver_lote()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
-    if not asyncio.run(pedido.receber()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")    
-    return True
-
 @router.get("/anular/{nunota}")
 def anular_pedidos(nunota: int):
     """
     Exclui pedido não faturado do Sankhya
     """
-    if not asyncio.run(pedido.anular(nunota=nunota)):
+    if not asyncio.run(pedido.integrar_cancelamento(nunota=nunota)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao anular pedido")
     return True
