@@ -167,25 +167,25 @@ class Devolucao:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
         
-    # async def cancelar(self,dados_devolucao:dict) -> dict:
-    #     nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-    #     try:
-    #         # Busca nota de devolução
-    #         print("Buscando nota de devolução...")
-    #         dados_devolucao = await crudDev.buscar(id_nota=dados_devolucao.get('id_nota'))
-    #         if not dados_devolucao:
-    #             msg = f"Nota de devolução não encontrada"
-    #             raise Exception(msg)            
-    #         # Excluir devolução
-    #         print(f"Excluindo devolução...")
-    #         ack = await nota_snk.excluir(nunota=dados_devolucao.get('nunota'))
-    #         if not ack:
-    #             msg = "Erro ao excluir nota de devolução."
-    #             raise Exception(msg)                        
-    #         print(f"Nota de devolução excluída com sucesso!")
-    #         return {"success": True}
-    #     except Exception as e:
-    #         return {"success": False, "__exception__": str(e)}   
+    async def cancelar(self,dados_devolucao:dict) -> dict:
+        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        try:
+            # Busca nota de devolução
+            print("Buscando nota de devolução...")
+            dados_devolucao = await crudDev.buscar(id_nota=dados_devolucao.get('id_nota'))
+            if not dados_devolucao:
+                msg = f"Nota de devolução não encontrada"
+                raise Exception(msg)            
+            # Excluir devolução
+            print(f"Excluindo devolução...")
+            ack = await nota_snk.excluir(nunota=dados_devolucao.get('nunota'))
+            if not ack:
+                msg = "Erro ao excluir nota de devolução."
+                raise Exception(msg)                        
+            print(f"Nota de devolução excluída com sucesso!")
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "__exception__": str(e)}   
     
     @contexto
     @log_execucao
