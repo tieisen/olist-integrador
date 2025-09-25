@@ -181,7 +181,7 @@ class Pedido:
         else:
             status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        return True
+        return status_log
 
     async def validar_item_desmembrar_kit(self, itens:list[dict], olist:PedidoOlist):
         itens_validados:list=[]        
@@ -545,7 +545,7 @@ class Pedido:
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        return True
+        return status_log
 
     @contexto
     @carrega_dados_ecommerce
