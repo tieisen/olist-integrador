@@ -96,21 +96,22 @@ async def buscar(
         codemp:int=None
     ) -> dict:
 
-    if not any([id,codemp]):
-        return False
     async with AsyncSessionLocal() as session:
         if id:
             result = await session.execute(
                 select(Empresa).where(Empresa.id == id)
             )
-        if codemp:
+        elif codemp:
             result = await session.execute(
                 select(Empresa).where(Empresa.snk_codemp == codemp)
             )
-        empresa = result.scalar_one_or_none()
+        else:
+            result = await session.execute(
+                select(Empresa).where(Empresa.ativo.is_(True))
+            )        
+        empresa = result.scalars().all()
         if not empresa:
-            print(f"Empresa não encontrada. Parâmetro: {id}")
-            return False        
+            return []
         dados_empresa = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                          retorno=empresa)        
         return dados_empresa
