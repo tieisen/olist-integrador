@@ -83,7 +83,7 @@ async def excluir(id:int):
 
 async def excluir_cache():    
     try:
-        dias = os.getenv('DIAS_LIMPA_CACHE',7)
+        dias = int(os.getenv('DIAS_LIMPA_CACHE',7))
     except Exception as e:
         erro = f"Valor para intervalo de dias do cache não encontrado. {e}"
         logger.error(erro)
@@ -94,8 +94,7 @@ async def excluir_cache():
         )
         tokens = result.scalars().all()
         if not tokens:
-            print("Tokens não encontrados")
-            return False
+            return None
         try:
             for token in tokens:
                 await session.delete(token)
