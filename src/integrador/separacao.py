@@ -2,16 +2,11 @@ import os
 import time
 import logging
 from dotenv import load_dotenv
-
-from database.crud                 import pedido     as crudPedido
-from database.crud                 import log        as crudLog
-from database.crud                 import log_pedido as crudLogPedido
-from src.olist.separacao           import Separacao  as SeparacaoOlist
-from src.utils.log                 import Log
-# from src.utils.decorador.contexto  import contexto
-# from src.utils.decorador.ecommerce import carrega_dados_ecommerce
-# from src.utils.decorador.log       import log_execucao
-# from src.utils.decorador.interno import interno
+from database.crud import pedido as crudPedido
+from database.crud import log as crudLog
+from database.crud import log_pedido as crudLogPedido
+from src.olist.separacao import Separacao  as SeparacaoOlist
+from src.utils.log import Log
 from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno
 
 load_dotenv('keys/.env')
@@ -104,7 +99,7 @@ class Separacao:
                 continue             
         status_log = False if await crudLogPedido.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        return True
+        return status_log
 
     @contexto
     @log_execucao    
