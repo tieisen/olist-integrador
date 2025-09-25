@@ -17,9 +17,9 @@ def integrar_produtos():
     Atualiza no Sankhya os dados dos produtos que tiveram alteração no cadastro do Olist.
     """
     if not asyncio.run(produto.receber_alteracoes()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar produtos")
-    if not asyncio.run(produto.atualizar_olist()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar produtos")        
-    if not asyncio.run(produto.atualizar_snk()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar produtos")        
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber alterações nos cadastros de produtos do Olist")
+    if not asyncio.run(produto.integrar_olist()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao enviar produtos para Olist")        
+    if not asyncio.run(produto.integrar_snk()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao atualizar produtos no Sankhya")        
     return True
