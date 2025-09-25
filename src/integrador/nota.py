@@ -1,18 +1,15 @@
 import logging
 import os
-import time
 from datetime import datetime
 from src.olist.nota import Nota as NotaOlist
+from src.sankhya.nota import Nota as NotaSnk
 from src.olist.pedido import Pedido as PedidoOlist
 from database.crud import nota as crudNota
 from database.crud import log as crudLog
+from database.crud import log_pedido as crudLogPed
 from dotenv import load_dotenv
 from src.utils.log import Log
-# from src.utils.decorador.contexto      import contexto
-# from src.utils.decorador.ecommerce     import carrega_dados_ecommerce
-# from src.utils.decorador.log           import log_execucao
-# from src.utils.decorador.interno import interno
-from src.utils.decorador import contexto, carrega_dados_ecommerce, interno
+from src.utils.decorador import contexto, carrega_dados_ecommerce, interno, log_execucao
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -193,7 +190,8 @@ class Nota:
             return {"success": True}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
-        
+    
+    @interno
     async def registrar_cancelamento(self,dados_nota:dict) -> dict:
         try:
             # Atualiza a nota no banco de dados
@@ -207,4 +205,78 @@ class Nota:
             return {"success": True}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
+    
+    @carrega_dados_ecommerce
+    async def cancelar(self,id:int=None,chave:str=None,numero:int=None) -> dict:
+        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        try:
+            # Busca nota
+            print("Buscando nota...")
+            numero_ecommerce:dict={}
+            if numero:
+                numero_ecommerce = {
+                    "numero":numero,
+                    "ecommerce":self.dados_ecommerce.get('id')
+                }            
+            dados_nota = await crudNota.buscar(id_nota=id,
+                                               chave_acesso=chave,
+                                               numero_ecommerce=numero_ecommerce)
+            if not dados_nota:
+                msg = f"Nota não encontrada"
+                raise Exception(msg)            
+            # Excluir nota
+            print(f"Excluindo nota...")
+            ack = await nota_snk.excluir(nunota=dados_nota.get('nunota'))
+            if not ack:
+                msg = "Erro ao excluir nota."
+                raise Exception(msg)                        
+            print(f"Nota excluída com sucesso!")
+            return {"success": True, "dados_nota":dados_nota}
+        except Exception as e:
+            return {"success": False, "__exception__": str(e)}
+
+    @contexto
+    @log_execucao
+    @carrega_dados_ecommerce
+    async def integrar_cancelamento(
+            self,
+            id:int=None,
+            chave:str=None,
+            numero:int=None,
+            **kwargs
+        ) -> bool:
+
+        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                          de='olist',
+                                          para='sankhya',
+                                          contexto=kwargs.get('_contexto'))
+
+        dados_nota:dict={}
+        try:
+            ack = await self.cancelar(id=id,
+                                      chave=chave,
+                                      numero=numero)
+            if not ack.get('success'):
+                raise Exception
+            
+            dados_nota = ack.get('dados_nota')
+            if not dados_nota:
+                raise Exception                
+            
+            ack = await self.registrar_cancelamento(dados_nota=dados_nota)
+            if not ack.get('success'):
+                raise Exception          
+        except:
+            pass
+        finally:
+            await crudLogPed.criar(log_id=self.log_id,
+                                   pedido_id=ack.get('pedido_id'),
+                                   evento='N',
+                                   sucesso=ack.get('success'),
+                                   obs=ack.get('__exception__',None))             
+
+        # Atualiza log
+        status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
+        await crudLog.atualizar(id=self.log_id,sucesso=status_log)
+        return status_log
         
