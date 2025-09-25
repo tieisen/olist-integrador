@@ -2,19 +2,15 @@ import os
 import time
 import logging
 from datetime import datetime
-from dotenv   import load_dotenv
-
-from src.parser.produto           import Produto     as Parser
-from src.olist.produto            import Produto     as ProdutoOlist
-from src.sankhya.produto          import Produto     as ProdutoSnk
-from database.crud                import log_produto as crudLogProd
-from database.crud                import log         as crudLog
-from database.crud                import produto     as crudProduto
-from src.utils.log                import Log
-# from src.utils.decorador.contexto import contexto
-# from src.utils.decorador.empresa  import carrega_dados_empresa
-# from src.utils.decorador.log      import log_execucao
-from src.utils.decorador import contexto, carrega_dados_empresa, log_execucao
+from dotenv import load_dotenv
+from src.parser.produto import Produto as Parser
+from src.olist.produto import Produto as ProdutoOlist
+from src.sankhya.produto import Produto as ProdutoSnk
+from database.crud import log_produto as crudLogProd
+from database.crud import log as crudLog
+from database.crud import produto as crudProduto
+from src.utils.log import Log
+from src.utils.decorador import contexto, carrega_dados_empresa, log_execucao, interno
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -146,6 +142,7 @@ class Produto:
         return True
     
     @carrega_dados_empresa
+    @interno
     async def incluir_olist(self, produto:dict):                    
         print("Inclusão:")
         # Valida existencia do produto no Olist
@@ -218,6 +215,7 @@ class Produto:
         print("Produto sincronizado com sucesso!")
         return True
     
+    @interno
     async def atualizar_olist(self, produto:dict):
         print("Atualização:")
         if not produto.get('idprod'):
@@ -274,6 +272,7 @@ class Produto:
         return log_atualizacoes_olist
     
     @carrega_dados_empresa
+    @interno
     async def atualizar_sankhya(self, produto:dict):
         print("Atualização:")
         # Busca os dados do produto no Olist
