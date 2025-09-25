@@ -349,6 +349,39 @@ class Nota:
             logger.error("Erro ao informar campo observacao. Nunota %s. %s",nunota,res.text)
             return False
 
+    @token_snk
+    async def excluir(
+            self,
+            nunota:int
+        ) -> bool:
+        
+        url = os.getenv('SANKHYA_URL_DELETE')
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False, None
+
+        body = {
+            "serviceName": "DatasetSP.removeRecord",
+            "requestBody": {
+                "entityName": "CabecalhoNota",
+                "standAlone": False,
+                "pks": [{"NUNOTA": f"{nunota}"}]
+            }
+        }
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json=body)
+        
+        if res.status_code in (200,201) and res.json().get('status') in ('0','1'):
+            return True
+        else:
+            logger.error("Erro ao excluir pedido. %s",res.json())
+            print(f"Erro ao excluir pedido. {res.json()}")
+            return False
+
 class Itens(Nota):
 
     def __init__(self, nota_instance: 'Nota'=None, codemp:int=None):
