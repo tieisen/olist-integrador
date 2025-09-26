@@ -128,6 +128,10 @@ class Faturamento:
                         while multiplo < qtd_transferir:
                             multiplo += int(estoque.get('agrupmin'))                        
                         qtd_transferir = multiplo
+                        # Transfere a quantidade disponível, mesmo fora do agrupamento min.
+                        if qtd_transferir > int(estoque.get('qtd')):
+                            qtd_transferir = int(estoque.get('qtd'))
+
                         
                 lista_transferir.append({
                     "codprod": pedido.get('codprod'),
