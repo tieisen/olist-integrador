@@ -51,7 +51,8 @@ class Produto:
                                       codprod=alteracoes_raw[i-1].get('sku',0),
                                       idprod=alteracoes_raw[i-1].get('id',0),
                                       sucesso=False,
-                                      obs=obs)                    
+                                      obs=obs)
+                    obs = None                    
                 
                 if not alteracao.get('sku'):
                     # Produto tipo simples porém sem SKU no cadastro do Olist
@@ -62,7 +63,7 @@ class Produto:
                 if not hist_produto:
                     # Se o produto estiver ativo, adiciona ele na base
                     dados_produto_olist = await self.produto_olist.buscar(id=alteracao.get('id'))
-                    if dados_produto_olist.get('situacao') == 'A':
+                    if dados_produto_olist.get('situacao') in ['A','I']:
                         crudProduto.criar(cod_snk=alteracao.get('sku'),
                                           cod_olist=alteracao.get('id'))
                         crudLogProd.criar(log_id=log_id,
@@ -93,6 +94,7 @@ class Produto:
             status_log = False if crudLogProd.buscar_status_false(log_id) else True
             crudLog.atualizar(id=log_id,sucesso=status_log)
             return True
+        
         except Exception as e:
             erro = f"Erro: {e}"
             logger.error(erro)
