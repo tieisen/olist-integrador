@@ -40,6 +40,10 @@ class Faturamento:
 
         print("Buscando itens conferidos no dia...")
         saldo_pedidos = await faturamento.buscar_itens()
+        if isinstance(saldo_pedidos,list) and not saldo_pedidos:
+            print("Nenhum item pendente de transferência.")
+            return True
+        
         if not saldo_pedidos:
             logger.error("Erro ao buscar itens conferidos no dia.")
             print("Erro ao buscar itens conferidos no dia.")
