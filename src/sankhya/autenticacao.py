@@ -2,10 +2,8 @@ import os
 import json
 import logging
 import requests
-from dotenv   import load_dotenv
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
-
-#from src.utils.decorador.empresa import carrega_dados_empresa
 from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.log import Log
 from database.crud import sankhya as crud
