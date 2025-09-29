@@ -58,7 +58,6 @@ async def buscar(
             )
         token = result.scalar_one_or_none()
     if not token:
-        print("Token não encontrado")
         return False        
     dados_token = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                     retorno=token)        
