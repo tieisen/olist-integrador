@@ -6,24 +6,123 @@ from src.integrador.separacao import Separacao
 # ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 15 MINUTOS
 # APÓS A ROTINA DE ESTOQUE
 
-if __name__=="__main__":
+async def receber_pedido_lote(codemp:int=None):
 
+    retorno:dict={}
     empresas:list[dict]=[]
     ecommerces:list[dict]=[]
     emp:dict={}
     ecom:dict={}
 
-    empresas = asyncio.run(empresa.buscar())
+    empresas = await empresa.buscar(codemp=codemp)
+
+    print("===================: RECEBIMENTO DE PEDIDOS :===================")    
+
+    try:
+        for i, emp in enumerate(empresas):
+            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+            ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+            for j, ecom in ecommerces:
+                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                pedido = Pedido(id_loja=ecom.get('id_loja'))
+                separacao = Separacao(id_loja=ecom.get('id_loja'))
+                await pedido.receber_novos()
+                await separacao.receber()
+        retorno = {
+            "status": True,
+            "exception": None
+        }
+    except Exception as e:
+        retorno = {
+            "status": False,
+            "exception": e
+        }
+    finally:
+        return retorno
+    
+async def receber_pedido_unico(id_loja:int,numero:int):
+    retorno:dict={}
+    print("===================: RECEBIMENTO DE PEDIDO ÚNICO :===================")    
+    pedido = Pedido(id_loja=id_loja)
+    try:
+        ack = await pedido.receber(num_pedido=numero)
+        retorno = {
+            "status": ack.get('success'),
+            "exception": ack.get('__exception__')
+        }
+    except Exception as e:
+        retorno = {
+            "status": False,
+            "exception": e
+        }
+    finally:
+        return retorno
+
+async def integrar_pedidos(codemp:int=None):
+
+    retorno:dict={}
+    empresas:list[dict]=[]
+    ecommerces:list[dict]=[]
+    emp:dict={}
+    ecom:dict={}
+
+    empresas = await empresa.buscar(codemp=codemp)
 
     print("===================: INTEGRAÇÃO DE PEDIDOS :===================")    
 
-    for i, emp in enumerate(empresas):
-        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
-        ecommerces = asyncio.run(ecommerce.buscar(empresa_id=emp.get('id')))
-        for j, ecom in ecommerces:
-            print(f"E-commerce {ecom.get('nome')} ({i+1}/{len(ecom)})".upper())
-            pedido = Pedido(id_loja=ecom.get('id_loja'))
-            separacao = Separacao(id_loja=ecom.get('id_loja'))
+    try:
+        for i, emp in enumerate(empresas):
+            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+            ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+            for j, ecom in ecommerces:
+                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                pedido = Pedido(id_loja=ecom.get('id_loja'))
+                await pedido.integrar_novos()
+                await pedido.integrar_confirmacao()
+        retorno = {
+            "status": True,
+            "exception": None
+        }
+    except Exception as e:
+        retorno = {
+            "status": False,
+            "exception": e
+        }
+    finally:
+        return retorno                
 
-            asyncio.run(pedido.receber_novos())
-            asyncio.run(separacao.receber())
+async def integrar_separacoes(codemp:int=None):
+
+    retorno:dict={}
+    empresas:list[dict]=[]
+    ecommerces:list[dict]=[]
+    emp:dict={}
+    ecom:dict={}
+
+    empresas = await empresa.buscar(codemp=codemp)
+
+    print("===================: INTEGRAÇÃO DE SEPARAÇÕES :===================")    
+
+    try:
+        for i, emp in enumerate(empresas):
+            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+            ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+            for j, ecom in ecommerces:
+                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                separacao = Separacao(id_loja=ecom.get('id_loja'))
+                await separacao.receber()
+        retorno = {
+            "status": True,
+            "exception": None
+        }
+    except Exception as e:
+        retorno = {
+            "status": False,
+            "exception": e
+        }
+    finally:
+        return retorno           
+
+if __name__=="__main__":
+
+    asyncio.run(receber_pedido_lote())
