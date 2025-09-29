@@ -1,19 +1,11 @@
 from database.database import AsyncSessionLocal
 from database.models import Empresa
-from src.utils.log import Log
 from src.utils.db import validar_dados, formatar_retorno
 from sqlalchemy.future import select
-import os
-import logging
-from dotenv import load_dotenv
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = [
         'client_secret',

@@ -1,7 +1,7 @@
 import os
-from dotenv import load_dotenv
 from cryptography.fernet import Fernet
-load_dotenv('keys/.env')
+from src.utils.load_env import load_env
+load_env()
 
 class Criptografia:
     def __init__(self):

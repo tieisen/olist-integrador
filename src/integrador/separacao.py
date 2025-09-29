@@ -1,21 +1,14 @@
 import os
 import time
-import logging
-from dotenv import load_dotenv
 from database.crud import pedido as crudPedido
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPedido
 from src.olist.separacao import Separacao  as SeparacaoOlist
-from src.utils.log import Log
 from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Separacao:
 

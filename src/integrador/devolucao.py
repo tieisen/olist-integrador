@@ -1,9 +1,7 @@
 import os
 import re
 import time
-import logging
 from datetime import datetime
-from dotenv import load_dotenv
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPed
 from database.crud import nota as crudNota
@@ -12,15 +10,10 @@ from src.olist.nota import Nota as NotaOlist
 from src.sankhya.nota import Nota as NotaSnk
 from src.parser.devolucao import Devolucao as parser
 from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 REGEX_CHAVE_ACESSO = r'\d{44}'
 

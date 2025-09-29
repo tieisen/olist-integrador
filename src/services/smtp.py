@@ -1,19 +1,12 @@
 import os
-import logging
 import smtplib
-from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database.crud import log
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Email:
 

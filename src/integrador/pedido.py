@@ -1,8 +1,6 @@
 import os
 import re
 import time
-import logging
-from dotenv import load_dotenv
 from datetime import datetime
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
@@ -12,16 +10,11 @@ from database.crud import pedido as crudPedido
 from database.crud import log_pedido as crudLogPed
 from database.crud import log as crudLog
 from src.services.viacep import Viacep
-from src.utils.log import Log
 from src.utils.decorador import contexto, carrega_dados_ecommerce, carrega_dados_empresa, log_execucao, interno, desabilitado
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Pedido:
 

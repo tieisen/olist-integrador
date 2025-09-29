@@ -4,18 +4,11 @@ from database.models import Log
 from database.crud import log_produto, log_estoque, log_pedido
 from sqlalchemy.future import select
 from src.utils.db import formatar_retorno
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
 import os
-from dotenv import load_dotenv
-from src.utils.log import Log as lg
-import logging
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=lg().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+load_env()
+logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
