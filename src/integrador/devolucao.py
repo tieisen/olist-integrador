@@ -26,11 +26,13 @@ REGEX_CHAVE_ACESSO = r'\d{44}'
 
 class Devolucao:
 
-    def __init__(self, id_loja:int):
+    def __init__(self, id_loja:int=None, codemp:int=None):
         self.id_loja:int=id_loja
+        self.codemp:int=codemp
         self.log_id:int=None
         self.contexto:str='devolucao'
         self.dados_ecommerce:dict={}
+        self.dados_empresa:dict={}
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))   
 
     @interno
@@ -44,10 +46,10 @@ class Devolucao:
         devolucoes_pendentes = [d for d in lista_notas if d.get('id') not in lista_devolucoes_existentes]
         return devolucoes_pendentes
 
-    @carrega_dados_ecommerce
     async def receber(self,id:int=None,numero:int=None) -> dict:
 
-        nota_olist = NotaOlist(id_loja=self.id_loja)
+        nota_olist = NotaOlist(id_loja=self.id_loja,
+                               codemp=self.codemp)
 
         try:
             # Busca nota de devolução
@@ -87,8 +89,12 @@ class Devolucao:
     @carrega_dados_ecommerce
     async def lancar(self,dados_devolucao:dict) -> dict:
 
-        nota_olist = NotaOlist(id_loja=self.id_loja)
-        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        dados_nota_devolucao:dict={}
+
+        nota_olist = NotaOlist(id_loja=self.id_loja,
+                               codemp=self.codemp)
+        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                           codemp=self.codemp)     
 
         try:
             # Busca nota de devolução
@@ -174,7 +180,8 @@ class Devolucao:
             return {"success": True}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
-        
+    
+    @carrega_dados_ecommerce
     async def cancelar(self,id:int=None,chave:str=None,numero:int=None) -> dict:
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         try:
