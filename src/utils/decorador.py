@@ -23,7 +23,8 @@ def desabilitado(func):
 # DADOS DO ECOMMERCE
 async def buscar_dados_ecommerce(self):
     if not self.dados_ecommerce:
-        self.dados_ecommerce = await ecommerce.buscar(id_loja=self.id_loja)
+        res = await ecommerce.buscar(id_loja=self.id_loja)
+        self.dados_ecommerce = res[0]
 
 def carrega_dados_ecommerce(func):
     @wraps(func)
@@ -37,7 +38,8 @@ def carrega_dados_ecommerce(func):
 # DADOS DA EMPRESA
 async def buscar_dados_empresa(self):
     if not self.dados_empresa:
-        self.dados_empresa = await empresa.buscar(id=self.empresa_id, codemp=self.codemp)
+        res = await empresa.buscar(id=self.empresa_id, codemp=self.codemp)
+        self.dados_empresa = res[0]
 
 def carrega_dados_empresa(func):
     @wraps(func)
