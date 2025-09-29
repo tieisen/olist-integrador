@@ -92,6 +92,8 @@ class Faturamento:
                                                 itens=itens)        
         if not ack:
             logger.error("Erro ao lançar nota de transferência.")
+            logger.info(f"cabecalho\n{cabecalho}")
+            logger.info(f"itens\n{itens}")
             print("Erro ao lançar nota de transferência.")
             return False
         
