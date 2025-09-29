@@ -4,14 +4,13 @@ from src.integrador.devolucao import Devolucao
 
 # ROTINA A SER EXECUTADA DIARIAMENTE, ÀS 19H
 
-if __name__=="__main__":
-
+async def integrar_devolucoes(codemp:int=None):
     empresas:list[dict]=[]
     ecommerces:list[dict]=[]
     emp:dict={}
     ecom:dict={}
 
-    empresas = asyncio.run(empresa.buscar())
+    empresas = await empresa.buscar(codemp=codemp)
 
     print("===================: INTEGRAÇÃO DE DEVOLUÇÕES :===================")    
 
@@ -19,7 +18,11 @@ if __name__=="__main__":
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
         ecommerces = asyncio.run(ecommerce.buscar(empresa_id=emp.get('id')))
         for j, ecom in ecommerces:
-            print(f"E-commerce {ecom.get('nome')} ({i+1}/{len(ecom)})".upper())
+            print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
             devolucao = Devolucao(id_loja=ecom.get('id_loja'))
-            asyncio.run(devolucao.integrar_receber())
-            asyncio.run(devolucao.integrar_devolucoes())
+            await devolucao.integrar_receber()
+            await devolucao.integrar_devolucoes()
+
+if __name__=="__main__":
+
+    asyncio.run(integrar_devolucoes())
