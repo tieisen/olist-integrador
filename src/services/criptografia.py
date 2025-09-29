@@ -27,7 +27,10 @@ class Criptografia:
         """
         Criptografa uma string e retorna em bytes.
         """
-        return self.fernet.encrypt(mensagem.encode())
+        if isinstance(mensagem,bytes):
+            return self.fernet.encrypt(mensagem)
+        else:
+            return self.fernet.encrypt(mensagem.encode())
 
     def descriptografar(self, mensagem: bytes) -> str:
         """
