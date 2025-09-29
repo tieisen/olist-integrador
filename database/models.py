@@ -7,11 +7,6 @@ class Empresa(Base):
 
     __tablename__ = "empresa"
 
-    __table_args__ = (
-        # Unificado, Separado (por Ecommerce)
-        CheckConstraint("modo_importacao_pedidos IN ('U', 'S')", name='ck_modo_importacao_pedidos'),
-    )    
-
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))
@@ -22,14 +17,13 @@ class Empresa(Base):
     serie_nfe = Column(String, nullable=True)
     client_id = Column(String, nullable=True)
     client_secret = Column(String, nullable=True)
-    modo_importacao_pedidos = Column(String, default='U')
     olist_admin_email = Column(String, nullable=True)
     olist_admin_senha = Column(String, nullable=True)
     olist_id_fornecedor_padrao = Column(Integer, nullable=True)
     olist_id_deposito_padrao = Column(Integer, nullable=True)
     olist_dias_busca_pedidos = Column(Integer, nullable=True)
     olist_situacao_busca_pedidos = Column(Integer, nullable=True)
-    olist_id_conta_destino = Column(Integer, nullable=False)
+    olist_id_conta_destino = Column(Integer, nullable=True)
     snk_token = Column(String, nullable=True)
     snk_appkey = Column(String, nullable=True)
     snk_admin_email = Column(String, nullable=True)
