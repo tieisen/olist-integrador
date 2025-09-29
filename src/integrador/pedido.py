@@ -13,7 +13,7 @@ from database.crud import log_pedido as crudLogPed
 from database.crud import log as crudLog
 from src.services.viacep import Viacep
 from src.utils.log import Log
-from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno, desabilitado
+from src.utils.decorador import contexto, carrega_dados_ecommerce, carrega_dados_empresa, log_execucao, interno, desabilitado
 
 load_dotenv('keys/.env')
 logger = logging.getLogger(__name__)
@@ -25,11 +25,13 @@ logging.basicConfig(filename=Log().buscar_path(),
 
 class Pedido:
 
-    def __init__(self, id_loja:int):
+    def __init__(self, id_loja:int=None, codemp:int=None):
         self.id_loja:int=id_loja
+        self.codemp:int=codemp
         self.log_id:int=None
         self.contexto:str='pedido'
         self.dados_ecommerce:dict=None
+        self.dados_empresa:dict=None
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
         self.pedido_cancelado:int=int(os.getenv('OLIST_SIT_PEDIDO_CANCELADO'))
         self.pedido_incompleto:int=int(os.getenv('OLIST_SIT_PEDIDO_INCOMPLETO'))
@@ -652,14 +654,14 @@ class Pedido:
 
     @contexto
     @log_execucao
-    @carrega_dados_ecommerce
+    @carrega_dados_empresa
     async def integrar_cancelamento(
             self,
             nunota:int,
             **kwargs
         ) -> bool:
 
-        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+        self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                           de='sankhya',
                                           para='sankhya',
                                           contexto=kwargs.get('_contexto'))
@@ -672,8 +674,8 @@ class Pedido:
             await crudLog.atualizar(id=self.log_id,sucesso=False)            
             return True
         
-        pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-        pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        pedido_snk = PedidoSnk(empresa_id=self.dados_empresa.get('id'))
+        pedido_olist = PedidoOlist(empresa_id=self.dados_empresa.get('id'))
 
         # Busca pedido Sankhya
         dados_pedido_snk = await pedido_snk.buscar(nunota=nunota)
