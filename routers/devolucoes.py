@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from src.integrador.devolucao import Devolucao
+from routines.devolucoes import integrar_devolucoes
 import asyncio
 
 router = APIRouter()
@@ -9,24 +10,15 @@ devolucao = Devolucao()
 def default():
     return {"message": "Devoluções"}
 
-@router.get("/receber")
-def receber_devolucoes():
-    """
-    Busca as notas de devolução no Olist
-    """
-    if not asyncio.run(devolucao.integrar_receber()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber notas de devolução")
-    return True
-
-@router.get("/integrar")
-def integrar_devolucoes():
+@router.get("{codemp}/integrar")
+def integrar_devolucoes(codemp:int):
     """
     Busca as notas de devolução no Olist e lança no Sankhya
     """
-    if not asyncio.run(devolucao.integrar_receber()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber notas de devolução")
-    if not asyncio.run(devolucao.integrar_devolucoes()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao lançar devoluções no Sankhya")
+    res:dict={}
+    res = asyncio.run(integrar_devolucoes(codemp=codemp))
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar devoluções")
     return True
 
 @router.get("/devolver/{numero}")
