@@ -24,6 +24,8 @@ class Empresa(Base):
     olist_dias_busca_pedidos = Column(Integer, nullable=True)
     olist_situacao_busca_pedidos = Column(Integer, nullable=True)
     olist_id_conta_destino = Column(Integer, nullable=True)
+    olist_id_categoria_padrao = Column(Integer, nullable=True)
+    olist_id_marca_padrao = Column(Integer, nullable=True)
     snk_token = Column(String, nullable=True)
     snk_appkey = Column(String, nullable=True)
     snk_admin_email = Column(String, nullable=True)
@@ -56,8 +58,8 @@ class Produto(Base):
     __tablename__ = "produto"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    cod_snk = Column(Integer, nullable=False) 
-    cod_olist = Column(Integer, nullable=True)
+    codprod = Column(Integer, nullable=False) 
+    idprod = Column(Integer, nullable=True)
     dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))    
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True)
     pendencia = Column(Boolean, default=False)
