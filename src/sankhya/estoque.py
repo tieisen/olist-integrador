@@ -183,12 +183,16 @@ class Estoque:
             return False        
 
         query = f'''
-            SELECT PRO.CODPROD, EST.CONTROLE, NVL(SUM(EST.ESTOQUE),0) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN
+            SELECT PRO.CODPROD, EST.CONTROLE, NVL(SUM(EST.ESTOQUE),0) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, NVL(SUM(EST2.ESTOQUE),0) QTDMATRIZ
             FROM TGFPRO PRO
                 LEFT JOIN TGFEST EST ON EST.CODPROD = PRO.CODPROD
                                     AND EST.CODEMP = 31
                                     AND EST.CODLOCAL IN (101,911)
                                     AND TRIM(EST.CONTROLE) IS NOT NULL
+                LEFT JOIN TGFEST EST2 ON EST2.CODPROD = PRO.CODPROD
+                                     AND EST2.CODEMP = 1
+                                     AND EST2.CODLOCAL IN (101,911)
+                                     AND TRIM(EST2.CONTROLE) IS NOT NULL                                    
             WHERE EST.CODPROD = {codprod}
                 AND EST.CONTROLE = '{controle}'
             GROUP BY PRO.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
@@ -197,12 +201,16 @@ class Estoque:
         if lista_produtos:
             produtos = [produto.get('codprod') for produto in lista_produtos]
             query = f'''
-                SELECT PRO.CODPROD, EST.CONTROLE, NVL(SUM(EST.ESTOQUE),0) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN
+                SELECT PRO.CODPROD, EST.CONTROLE, NVL(SUM(EST.ESTOQUE),0) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, NVL(SUM(EST2.ESTOQUE),0) QTDMATRIZ
                 FROM TGFPRO PRO
                     LEFT JOIN TGFEST EST ON EST.CODPROD = PRO.CODPROD
                                         AND EST.CODEMP = 31
                                         AND EST.CODLOCAL IN (101,911)
                                         AND TRIM(EST.CONTROLE) IS NOT NULL
+                    LEFT JOIN TGFEST EST2 ON EST2.CODPROD = PRO.CODPROD
+                                         AND EST2.CODEMP = 1
+                                         AND EST2.CODLOCAL IN (101,911)
+                                         AND TRIM(EST2.CONTROLE) IS NOT NULL                                        
                 WHERE PRO.CODPROD IN ({','.join(map(str,produtos))})
                 GROUP BY PRO.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
             '''
