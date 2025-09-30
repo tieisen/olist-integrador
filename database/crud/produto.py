@@ -11,8 +11,8 @@ logger = set_logger(__name__)
 COLUNAS_CRIPTOGRAFADAS = None
 
 async def criar(
-        cod_snk:int,
-        cod_olist:int,
+        codprod:int,
+        idprod:int,
         empresa_id:int,
         **kwargs
     ):
@@ -26,7 +26,7 @@ async def criar(
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Produto).where(Produto.cod_snk == cod_snk,
+            select(Produto).where(Produto.codprod == codprod,
                                   Produto.empresa_id == empresa_id)
         )
         produto = result.scalar_one_or_none()
@@ -36,8 +36,8 @@ async def criar(
             return False
         
         novo_produto = Produto(
-            cod_snk=cod_snk,
-            cod_olist=cod_olist,
+            codprod=codprod,
+            idprod=idprod,
             empresa_id=empresa_id,
             **kwargs
         )
@@ -48,7 +48,7 @@ async def criar(
     return True
 
 async def atualizar(
-        cod_snk:int,
+        codprod:int,
         empresa_id:int,
         pendencia:bool=False,
         **kwargs
@@ -63,7 +63,7 @@ async def atualizar(
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Produto).where(Produto.cod_snk == cod_snk,
+            select(Produto).where(Produto.codprod == codprod,
                                   Produto.empresa_id == empresa_id)
         )
         produto = result.scalar_one_or_none()
@@ -96,20 +96,20 @@ async def buscar_pendencias(empresa_id: int):
         
         return dados_produtos
 
-async def buscar(empresa_id: int, cod_olist: int=None, cod_snk: int=None):
+async def buscar(empresa_id: int, idprod: int=None, codprod: int=None):
 
-    if not any([cod_olist, cod_snk]):
+    if not any([idprod, codprod]):
         return False
 
     async with AsyncSessionLocal() as session:
-        if cod_olist:
+        if idprod:
             result = await session.execute(
-                select(Produto).where(Produto.cod_olist == cod_olist,
+                select(Produto).where(Produto.idprod == idprod,
                                       Produto.empresa_id == empresa_id)
             )
-        if cod_snk:
+        if codprod:
             result = await session.execute(
-                select(Produto).where(Produto.cod_snk == cod_snk,
+                select(Produto).where(Produto.codprod == codprod,
                                       Produto.empresa_id == empresa_id)
             )
         produto = result.scalar_one_or_none()
@@ -119,10 +119,10 @@ async def buscar(empresa_id: int, cod_olist: int=None, cod_snk: int=None):
 
         return dados_produto
 
-async def excluir(cod_snk: int, empresa_id: int):
+async def excluir(codprod: int, empresa_id: int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Produto).where(Produto.cod_snk == cod_snk,
+            select(Produto).where(Produto.codprod == codprod,
                                   Produto.empresa_id == empresa_id)
         )
         produto = result.scalar_one_or_none()
