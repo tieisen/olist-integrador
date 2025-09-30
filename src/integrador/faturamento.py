@@ -30,7 +30,7 @@ class Faturamento:
     def __init__(self):
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
-    async def venda_entre_empresas_em_lote(self):
+    async def venda_entre_empresas_em_lote(self, nunota:int=None):
 
         faturamento = FaturamentoSnk()
         estoque = EstoqueSnk()
@@ -39,7 +39,7 @@ class Faturamento:
         parser = ParserTransferencia()
 
         print("Buscando itens conferidos no dia...")
-        saldo_pedidos = await faturamento.buscar_itens()
+        saldo_pedidos = await faturamento.buscar_itens(nunota=nunota)
         if isinstance(saldo_pedidos,list) and not saldo_pedidos:
             print("Nenhum item pendente de transferência.")
             return True
