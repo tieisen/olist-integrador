@@ -1,6 +1,8 @@
 import os
 import requests
+import time
 from src.utils.decorador import interno
+from src.utils.buscar_script import buscar_script
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
@@ -10,17 +12,13 @@ logger = set_logger(__name__)
 
 class Produto:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int, empresa_id:int=None) -> None:
         self.token = None
         self.codemp = codemp
-        self.formatter = Formatter()        
-        self.campos_lista = [
-            "AD_MKP_CATEGORIA","AD_MKP_DESCRICAO","AD_MKP_DHATUALIZADO","AD_MKP_ESTPOL",
-            "AD_MKP_ESTREGBAR","AD_MKP_ESTREGBARTIP","AD_MKP_ESTREGBARVAL","AD_MKP_IDPROD",
-            "AD_MKP_IDPRODPAI","AD_MKP_INTEGRADO","AD_MKP_MARCA","AD_MKP_NOME","ALTURA",
-            "CODESPECST","CODPROD","CODVOL","DESCRPROD","ESPESSURA","ESTMAX","ESTMIN","LARGURA",
-            "NCM","ORIGPROD","PESOBRUTO","PESOLIQ","QTDEMB","REFERENCIA","REFFORN","TIPCONTEST"
-        ]
+        self.empresa_id = empresa_id
+        self.formatter = Formatter()
+        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
+        self.campos_atualiza_snk = [ "ID", "IDPRODPAI" ]
 
     @token_snk
     async def buscar(
@@ -34,61 +32,31 @@ class Produto:
             print("Nenhum critério de busca fornecido. Deve ser informado 'codprod' ou 'idprod'.")
             return False
 
-        url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False   
+            return False  
 
-        if codprod:
-            criteria = {
-                "expression": {
-                    "$": "this.CODPROD = ?"
-                },
-                "parameter": [
-                    {
-                        "$": f"{codprod}",
-                        "type": "I"
-                    }
-                ]
-            }
-
-        if idprod:
-            criteria = {
-                "expression": {
-                    "$": "this.AD_MKP_IDPROD = ?"
-                },
-                "parameter": [
-                    {
-                        "$": f"{idprod}",
-                        "type": "I"
-                    }
-                ]
-            }       
+        parametero = 'SANKHYA_PATH_SCRIPT_PRODUTO'
+        script = buscar_script(parametro=parametero)
+        query = script.format_map({"codemp":self.codemp,
+                                   "codprod":codprod or "NULL",
+                                   "idprod":idprod or "NULL"})
 
         res = requests.get(
             url=url,
             headers={ 'Authorization':f"Bearer {self.token}" },
             json={
-                "serviceName": "CRUDServiceProvider.loadRecords",
+                "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
-                    "dataSet": {
-                        "rootEntity": "Produto",
-                        "includePresentationFields": "N",
-                        "offsetPage": "0",
-                        "criteria": criteria,
-                        "entity": {
-                            "fieldset": {
-                                "list": ','.join(self.campos_lista)
-                            }
-                        }
-                    }
+                    "sql":query
                 }
             })
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
             try:
-                return self.formatter.return_format(res.json())[0]
+                return self.formatter.return_format(res.json())
             except:
                 return []
         else:
@@ -100,27 +68,25 @@ class Produto:
                 print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
             return False
 
-    @interno
-    def prepapar_dados(
+    def preparar_dados(
             self,
             payload:dict
-        ):
-        
+        ):        
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
             print("O payload deve ser um dicionário.")
             return False
-
         dados = {}
         for i in payload:
-            dados[f'{self.campos_lista.index(str.upper(i))}'] = f'{payload.get(i)}'
+            dados[f'{self.campos_atualiza_snk.index(str.upper(i))}'] = f'{payload.get(i)}'
         return dados
 
     @token_snk
     async def atualizar(
             self,
             codprod:int,
-            payload:dict
+            payload:dict,
+            seq:int=None
         ) -> bool:
 
         if not isinstance(payload, dict):
@@ -133,26 +99,32 @@ class Produto:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-
-        res = requests.post(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+        
+        payload = {
                 "serviceName":"DatasetSP.save",
                 "requestBody":{
-                    "entityName":"Produto",
+                    "entityName":"AD_OLISTPRODUTO",
                     "standAlone":False,
-                    "fields":self.campos_lista,
+                    "fields":self.campos_atualiza_snk,
                     "records":[
                         {
                             "pk": {
-                                "CODPROD": str(codprod)
+                                "CODPROD": codprod,
+                                "SEQ": seq
                             },
                             "values": payload
                         }
                     ]
                 }
             }
+        
+        print("payload")
+        print(payload)
+
+        res = requests.post(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json=payload
         )
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
@@ -172,37 +144,53 @@ class Produto:
             logger.error(erro)
             return False
         
-        tabela = os.getenv('SAKNHYA_TABELA_RASTRO_PRODUTO')
+        tabela = os.getenv('SANKHYA_TABELA_RASTRO_PRODUTO')
         if not tabela:
             erro = f"Parâmetro da tabela de rastro de produto não encontrado"
             print(erro)
             logger.error(erro)
             return False
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
-                "serviceName": "CRUDServiceProvider.loadRecords",
-                "requestBody": {
-                    "dataSet": {
-                        "rootEntity": tabela,
-                        "includePresentationFields": "N",
-                        "offsetPage": "0",
-                        "entity": {
-                            "fieldset": {
-                                "list": "*"
+        offset = 0
+        limite_alcancado = False
+        todos_resultados = []
+
+        while not limite_alcancado:
+            time.sleep(self.req_time_sleep)
+            payload = {
+                    "serviceName": "CRUDServiceProvider.loadRecords",
+                    "requestBody": {
+                        "dataSet": {
+                            "rootEntity": tabela,
+                            "includePresentationFields": "N",
+                            "offsetPage": offset,
+                            "entity": {
+                                "fieldset": {
+                                    "list": "*"
+                                }
                             }
                         }
                     }
                 }
-            })
-        if res.status_code != 200:
-            print(f"Erro ao buscar produtos com alterações. {res.text}")
-            logger.error("Erro ao buscar produtos com alterações. %s",res.text)
-            return False
-        else:                
-            return self.formatter.return_format(res.json())
+            
+            res = requests.get(
+                url=url,
+                headers={ 'Authorization':f"Bearer {self.token}" },
+                json=payload)
+            
+            if res.status_code != 200:
+                print(f"Erro ao buscar produtos com alterações. {res.text}")
+                logger.error("Erro ao buscar produtos com alterações. %s",res.text)
+                return False
+            
+            if res.json().get('status') == '1':
+                todos_resultados.extend(self.formatter.return_format(res.json()))
+                if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
+                    offset += 1
+                else:   
+                    limite_alcancado = True
+        
+        return todos_resultados
 
     @token_snk
     async def excluir_alteracoes(
@@ -222,7 +210,7 @@ class Produto:
             logger.error("Erro relacionado à url. %s",url)
             return False
 
-        tabela = os.getenv('SAKNHYA_TABELA_RASTRO_PRODUTO')
+        tabela = os.getenv('SANKHYA_TABELA_RASTRO_PRODUTO')
         if not tabela:
             erro = f"Parâmetro da tabela de rastro de produto não encontrado"
             print(erro)
@@ -230,19 +218,19 @@ class Produto:
             return False          
         
         if codprod:
-            filter = [{"CODPROD": f"{codprod}"}]
+            filter = [{"CODPROD": f"{codprod}","CODEMP": f"{self.codemp}"}]
             
         if lista_produtos:
             filter = []
             for produto in lista_produtos:
                 if isinstance(produto, dict):
                     if produto.get('sucesso'):
-                        filter.append({"CODPROD": f"{produto.get('codprod')}"})
+                        filter.append({"CODPROD": f"{codprod}","CODEMP": f"{self.codemp}"})
                 else:
                     try:
                         aux = produto.__dict__
                         if aux.get('sucesso'):
-                            filter.append({"CODPROD": f"{aux.get('cod_snk')}"})
+                            filter.append({"CODPROD": f"{aux.get('cod_snk')}","CODEMP": f"{self.codemp}"})
                     except:
                         logger.error("Erro ao extrair dados do objeto sqlalchemy.")
                         print("Erro ao extrair dados do objeto sqlalchemy.")
