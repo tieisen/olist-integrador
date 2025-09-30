@@ -60,6 +60,12 @@ def faturar_sankhya():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True
 
+@router.get("/faturar/venda-interna/{nunota}")
+def venda_interna(nunota:int):
+    if not asyncio.run(faturamento.venda_entre_empresas_em_lote(nunota=nunota)):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao realizar venda interna")
+    return True
+
 @router.get("/receber/{numero}")
 def receber_pedido(numero:int):
     """
