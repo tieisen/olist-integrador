@@ -118,9 +118,9 @@ class Autenticacao:
     @carrega_dados_empresa
     async def salvar_token(self, dados_token: dict) -> bool:
         try:
-            access_token = json.dumps(dados_token['access_token']).encode("utf-8")
-            refresh_token = json.dumps(dados_token['refresh_token']).encode("utf-8")
-            id_token = json.dumps(dados_token['id_token']).encode("utf-8")
+            access_token = dados_token['access_token']
+            refresh_token = dados_token['refresh_token']
+            id_token = dados_token['id_token']
             expire_date = datetime.now()+timedelta(0,dados_token['expires_in'])
             expire_date_refresh = datetime.now()+timedelta(0,dados_token['refresh_expires_in'])
         except Exception as e:
