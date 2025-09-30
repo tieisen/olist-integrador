@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.autenticador import token_snk
@@ -15,6 +16,7 @@ class Estoque:
         self.token = None
         self.codemp = codemp
         self.dados_empresa = None
+        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
         self.formatter = Formatter()
     
     @token_snk
@@ -93,16 +95,19 @@ class Estoque:
             logger.error(erro)
             return False
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+        offset = 0
+        limite_alcancado = False
+        todos_resultados = []
+
+        while not limite_alcancado:
+            time.sleep(self.req_time_sleep)
+            payload = {
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
                         "rootEntity": tabela,
                         "includePresentationFields": "N",
-                        "offsetPage": "0",
+                        "offsetPage": offset,
                         "entity": {
                             "fieldset": {
                                 "list": '*'
@@ -110,14 +115,25 @@ class Estoque:
                         }
                     }
                 }
-            })
+            }
+            res = requests.get(
+                url=url,
+                headers={ 'Authorization':f"Bearer {self.token}" },
+                json=payload
+            )
+            if res.status_code != 200:
+                print(f"Erro ao buscar alterações pendentes. {res.text}")
+                logger.error("Erro ao buscar alterações pendentes. %s",res.text)
+                return False
+            
+            if res.json().get('status') == '1':
+                todos_resultados.extend(self.formatter.return_format(res.json()))
+                if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
+                    offset += 1
+                else:   
+                    limite_alcancado = True
 
-        if res.status_code in (200,201) and res.json().get('status')=='1':
-            return self.formatter.return_format(res.json())
-        else:
-            logger.error("Erro ao buscar alterações pendentes. %s",res.json())
-            print(f"Erro ao buscar alterações pendentes. {res.json()}")
-            return False
+        return todos_resultados
     
     @token_snk
     async def remover_alteracoes(
