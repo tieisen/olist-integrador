@@ -54,7 +54,7 @@ def corrigir_timezone(dados:dict):
     br_tz = datetime.timezone(datetime.timedelta(hours=-3))
     for key, value in dados.items():
         if isinstance(value,datetime.datetime):
-            dados[key] = value.astimezone(br_tz).replace(tzinfo=None)    
+            dados[key] = value.astimezone(br_tz).replace(tzinfo=None)#.strftime('%Y-%m-%d %H:%M:%S')
     return dados
 
 def formatar_retorno(colunas_criptografadas:list[str], retorno):
@@ -68,13 +68,14 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno):
             if colunas_criptografadas:
                 dados = remover_criptografia(colunas_criptografadas,dados)            
             dados = corrigir_timezone(dados)
+            dados = dict(sorted(dados.items(), key=lambda x: x[0].lower()))
             retorno_formatado.append(dados)
         return retorno_formatado
     retorno.__dict__.pop('_sa_instance_state', None)
     if colunas_criptografadas:
         dados = remover_criptografia(colunas_criptografadas,retorno.__dict__)
     dados = corrigir_timezone(retorno.__dict__)
-    return dados
+    return dict(sorted(dados.items(), key=lambda x: x[0].lower()))
         
 def validar_colunas_existentes(modelo, kwargs:dict):
     if not modelo:
