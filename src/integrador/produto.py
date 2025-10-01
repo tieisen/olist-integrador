@@ -202,8 +202,8 @@ class Produto:
         
         # Atualiza ID no Sankhya
         print("Atualizando ID no Sankhya...")
-        ack_snk = await self.snk.atualizar(codprod=produto.get('codprod'),
-                                           seq=produto.get('seq'),
+        ack_snk = await self.snk.atualizar(codprod=int(produto.get('codprod')),
+                                           seq=produto.get('seqemp'),
                                            payload=dados_formato_snk)
         if not ack_snk:
             produto['obs'] = f"Erro ao inserir o ID {produto.get('idprod')} no produto {produto.get('codprod')} no sankhya"
@@ -286,7 +286,7 @@ class Produto:
             return False
         # Busca os dados do produto no Sankhya
         print(f"Buscando dados do produto no Sankhya...")
-        dados_produto_sankhya = await self.snk.buscar(codprod=produto.get('codprod'))
+        dados_produto_sankhya = await self.snk.buscar(codprod=int(produto.get('codprod')))
         if not dados_produto_sankhya:
             produto['obs'] = f'Produto {produto.get('codprod')}/{produto.get('idprod')} não encontrado no Sankhya'
             produto['sucesso'] = False
@@ -305,7 +305,7 @@ class Produto:
                 produto['sucesso'] = False
                 logger.warning(produto['obs'])
                 await crudProduto.atualizar(empresa_id=self.dados_empresa.get('id'),
-                                            codprod=produto.get('codprod'),
+                                            codprod=int(produto.get('codprod')),
                                             pendencia=False)        
         # Comparando dados dos sistemas
         print("Comparando dados dos sistemas...")        
@@ -322,15 +322,16 @@ class Produto:
             produto['obs'] = f'Sem dados divergentes para atualizar no produto {produto.get('codprod')}/{produto.get('idprod')}'
             produto['sucesso'] = True
             await crudProduto.atualizar(empresa_id=self.dados_empresa.get('id'),
-                                        codprod=produto.get('codprod'),
+                                        codprod=int(produto.get('codprod')),
                                         pendencia=False)
             return True
         # Converte para o formato da API do Sankhya
         print("Convertendo para o formato da API do Sankhya...")      
-        dados_formato_snk = self.snk.prepapar_dados(payload=dados_atualizados)
+        dados_formato_snk = self.snk.preparar_dados(payload=dados_atualizados)
         # Envia dados para o Sankhya
         print("Enviando dados para o Sankhya...") 
-        ack_atualizacao = await self.snk.atualizar(codprod=produto.get('codprod'),
+        ack_atualizacao = await self.snk.atualizar(codprod=int(produto.get('codprod')),
+                                                   seq=produto.get('seqemp'),
                                                    payload=dados_formato_snk)
         if not ack_atualizacao:
             produto['obs'] = f'''Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Sankhya.
@@ -341,7 +342,7 @@ class Produto:
             return False
         produto['sucesso'] = True
         await crudProduto.atualizar(empresa_id=self.dados_empresa.get('id'),
-                                    codprod=produto.get('codprod'),
+                                    codprod=int(produto.get('codprod')),
                                     pendencia=False)
         print("Produto atualizado com sucesso!")
         return log_atualizacoes
@@ -364,15 +365,15 @@ class Produto:
             return True
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
         for i, produto in enumerate(alteracoes_pendentes):
-            print(f"-> Produto #{i+1}/{len(alteracoes_pendentes)}")
+            print(f"\n-> Produto #{i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             if produto.get('evento') == 'I':
                 ack = await self.incluir_olist(produto=produto)
                 if ack:
                     # Registro no log
                     await crudLogProd.criar(log_id=log_id,
-                                            codprod=produto.get('codprod'),
-                                            idprod=produto.get('idprod'),
+                                            codprod=int(produto.get('codprod',0)),
+                                            idprod=int(produto.get('idprod',0)),
                                             sucesso=produto.get('sucesso'),
                                             campo='all')
                 else:
@@ -382,8 +383,8 @@ class Produto:
                     else:
                         # Registro no log
                         await crudLogProd.criar(log_id=log_id,
-                                                codprod=produto.get('codprod',0),
-                                                idprod=produto.get('idprod',0),
+                                                codprod=int(produto.get('codprod',0)),
+                                                idprod=int(produto.get('idprod',0)),
                                                 sucesso=produto.get('sucesso'),
                                                 obs=produto.get('obs'))
             elif produto.get('evento') == 'A':
@@ -392,8 +393,8 @@ class Produto:
                     # Registro no log
                     for atualizacao in log_atualizacoes:
                         await crudLogProd.criar(log_id=log_id,
-                                                codprod=produto.get('codprod',0),
-                                                idprod=produto.get('idprod',0),
+                                                codprod=int(produto.get('codprod',0)),
+                                                idprod=int(produto.get('idprod',0)),
                                                 sucesso=produto.get('sucesso'),
                                                 campo=log_atualizacoes.get('campo'),
                                                 valor_old=str(atualizacao.get('valorOld')),
@@ -401,8 +402,8 @@ class Produto:
                 else:
                     # Registro no log
                     await crudLogProd.criar(log_id=log_id,
-                                            codprod=produto.get('codprod',0),
-                                            idprod=produto.get('idprod',0),
+                                            codprod=int(produto.get('codprod',0)),
+                                            idprod=int(produto.get('idprod',0)),
                                             sucesso=produto.get('sucesso'),
                                             obs=produto.get('obs'))        
         print("-> Removendo da lista de alterações pendentes...")
@@ -437,8 +438,8 @@ class Produto:
                 # Registro no log
                 for atualizacao in log_atualizacoes:
                     await crudLogProd.criar(log_id=log_id,
-                                            codprod=produto.get('codprod',0),
-                                            idprod=produto.get('idprod',0),
+                                            codprod=int(produto.get('codprod',0)),
+                                            idprod=int(produto.get('idprod',0)),
                                             sucesso=produto.get('sucesso'),
                                             campo=log_atualizacoes.get('campo'),
                                             valor_old=str(atualizacao.get('valorOld')),
@@ -446,8 +447,8 @@ class Produto:
             else:
                 # Registro no log
                 await crudLogProd.criar(log_id=log_id,
-                                        codprod=produto.get('codprod',0),
-                                        idprod=produto.get('idprod',0),
+                                        codprod=int(produto.get('codprod',0)),
+                                        idprod=int(produto.get('idprod',0)),
                                         sucesso=produto.get('sucesso'),
                                         obs=produto.get('obs'))                
         print("-> Removendo da lista de alterações pendentes...")
