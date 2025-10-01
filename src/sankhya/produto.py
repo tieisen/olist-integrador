@@ -117,9 +117,6 @@ class Produto:
                     ]
                 }
             }
-        
-        print("payload")
-        print(payload)
 
         res = requests.post(
             url=url,
@@ -225,12 +222,12 @@ class Produto:
             for produto in lista_produtos:
                 if isinstance(produto, dict):
                     if produto.get('sucesso'):
-                        filter.append({"CODPROD": f"{codprod}","CODEMP": f"{self.codemp}"})
+                        filter.append({"CODPROD": f"{produto.get('codprod')}","CODEMP": f"{self.codemp}"})
                 else:
                     try:
-                        aux = produto.__dict__
+                        aux:dict=produto.__dict__
                         if aux.get('sucesso'):
-                            filter.append({"CODPROD": f"{aux.get('cod_snk')}","CODEMP": f"{self.codemp}"})
+                            filter.append({"CODPROD": f"{aux.get('codprod')}","CODEMP": f"{self.codemp}"})
                     except:
                         logger.error("Erro ao extrair dados do objeto sqlalchemy.")
                         print("Erro ao extrair dados do objeto sqlalchemy.")
