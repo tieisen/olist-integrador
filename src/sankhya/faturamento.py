@@ -41,19 +41,19 @@ class Faturamento:
             query = f'''
                 SELECT
                     COI.CODPROD,
-                    COI.CONTROLE,
+                    TRIM(COI.CONTROLE) CONTROLE,
                     SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
                 FROM TGFCON2 CON
                     INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
                     INNER JOIN TGFCAB CAB ON CON.NUCONF = CAB.NUCONFATUAL
                 WHERE CON.NUNOTAORIG = {nunota}
-                GROUP BY COI.CODPROD, COI.CONTROLE
+                GROUP BY COI.CODPROD, TRIM(COI.CONTROLE)
             '''
         else:
             query = '''
                 SELECT
                     COI.CODPROD,
-                    COI.CONTROLE,
+                    TRIM(COI.CONTROLE) CONTROLE,
                     SUM(COI.QTDCONFVOLPAD) QTDTOTALUNIT
                 FROM TGFCON2 CON
                     INNER JOIN TGFCOI2 COI ON CON.NUCONF = COI.NUCONF
@@ -61,7 +61,7 @@ class Faturamento:
                 WHERE TRUNC(CON.DHFINCONF) = TRUNC(SYSDATE)
                     AND CAB.AD_MKP_ORIGEM IS NOT NULL
                     AND CAB.PENDENTE = 'S'
-                GROUP BY COI.CODPROD, COI.CONTROLE
+                GROUP BY COI.CODPROD, TRIM(COI.CONTROLE)
             '''
 
         res = requests.get(
