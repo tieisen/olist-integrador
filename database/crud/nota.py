@@ -31,7 +31,7 @@ async def criar(
         return False
     
     # Verifica se o pedido existe
-    dados_pedido = await pedido.buscar(id_pedido=id_pedido)
+    dados_pedido:list[dict] = await pedido.buscar(id_pedido=id_pedido)
     if not dados_pedido:
         print(f"Pedido {id_pedido} não encontrado")
         return False    
@@ -43,7 +43,7 @@ async def criar(
         return False
 
     async with AsyncSessionLocal() as session:      
-        nova_nota = Nota(pedido_id=id_pedido,
+        nova_nota = Nota(pedido_id=dados_pedido[0].get('id'),
                          id_nota=id_nota,
                          numero=numero,
                          serie=serie,
