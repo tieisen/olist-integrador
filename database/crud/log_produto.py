@@ -1,11 +1,13 @@
 from database.database import AsyncSessionLocal
-from database.models import Produto, LogProduto
+from database.models import Produto, LogProduto, Log
 from sqlalchemy.future import select
 from src.utils.db import formatar_retorno
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
 logger = set_logger(__name__)
+
+COLUNAS_CRIPTOGRAFADAS = []
 
 async def criar(
         log_id:int,
@@ -20,11 +22,21 @@ async def criar(
     ) -> bool:
     async with AsyncSessionLocal() as session:
 
+        empresa = await session.execute(
+                    select(Log)
+                    .where(Log.id == log_id)
+                )
+        empresa = empresa.scalar_one_or_none()
+        if not empresa:
+            return False
+        empresa = empresa.empresa_id
+
         if not produto_id and not (codprod == 0 and idprod == 0):
             if codprod :
                 produto = await session.execute(
                     select(Produto)
-                    .where(Produto.cod_snk == codprod)
+                    .where(Produto.codprod == codprod,
+                           Produto.empresa_id == empresa)
                 )
                 produto = produto.scalar_one_or_none()
                 if not produto:
@@ -33,7 +45,8 @@ async def criar(
             elif idprod:
                 produto = await session.execute(
                     select(Produto)
-                    .where(Produto.cod_olist == idprod)
+                    .where(Produto.idprod == idprod,
+                           Produto.empresa_id == empresa)
                 )
                 produto = produto.scalar_one_or_none()
                 if not produto:
@@ -64,7 +77,7 @@ async def buscar_falhas(log_id: int) -> list[dict]:
                    LogProduto.sucesso.is_(False))
         )
         logs = result.scalars().all()
-        dados_logs = formatar_retorno(retorno=logs)        
+        dados_logs = formatar_retorno(retorno=logs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         return dados_logs
 
 async def buscar_id(log_id: int) -> list[dict]:
@@ -74,5 +87,5 @@ async def buscar_id(log_id: int) -> list[dict]:
             .where(LogProduto.log_id == log_id)
         )
         logs = result.scalars().all()
-        dados_logs = formatar_retorno(retorno=logs)        
+        dados_logs = formatar_retorno(retorno=logs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         return dados_logs
