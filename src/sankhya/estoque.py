@@ -183,36 +183,67 @@ class Estoque:
             return False        
 
         query = f'''
-            SELECT PRO.CODPROD, EST.CONTROLE, NVL(SUM(EST.ESTOQUE),0) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, NVL(SUM(EST2.ESTOQUE),0) QTDMATRIZ
+            SELECT PRO.CODPROD, TRIM(EST.CONTROLE) CONTROLE, EST.QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, EST2.QTDMATRIZ
             FROM TGFPRO PRO
-                LEFT JOIN TGFEST EST ON EST.CODPROD = PRO.CODPROD
-                                    AND EST.CODEMP = 31
-                                    AND EST.CODLOCAL IN (101,911)
-                                    AND TRIM(EST.CONTROLE) IS NOT NULL
-                LEFT JOIN TGFEST EST2 ON EST2.CODPROD = PRO.CODPROD
-                                     AND EST2.CODEMP = 1
-                                     AND EST2.CODLOCAL IN (101,911)
-                                     AND TRIM(EST2.CONTROLE) IS NOT NULL                                    
+                LEFT JOIN (SELECT CODPROD, CONTROLE, SUM(ESTOQUE) QTD
+                           FROM TGFEST EST
+                           WHERE EST.CODEMP = 31
+                               AND EST.CODLOCAL IN (101,911)
+                               AND TRIM(EST.CONTROLE) = '{controle}'
+                           GROUP BY CODPROD, CONTROLE
+                        ) EST ON EST.CODPROD = PRO.CODPROD
+                LEFT JOIN (SELECT CODPROD, SUM(ESTOQUE-RESERVADO) QTDMATRIZ
+                           FROM TGFEST EST
+                           WHERE EST.CODEMP = 1
+                               AND EST.CODLOCAL IN (101,911)
+                               AND TRIM(EST.CONTROLE) = '{controle}'
+                           GROUP BY CODPROD
+                        ) EST2 ON EST2.CODPROD = PRO.CODPROD                                  
             WHERE EST.CODPROD = {codprod}
-                AND EST.CONTROLE = '{controle}'
-            GROUP BY PRO.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
         '''
 
         if lista_produtos:
             produtos = [produto.get('codprod') for produto in lista_produtos]
             query = f'''
-                SELECT PRO.CODPROD, EST.CONTROLE, NVL(SUM(EST.ESTOQUE),0) QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, NVL(SUM(EST2.ESTOQUE),0) QTDMATRIZ
+                SELECT PRO.CODPROD, TRIM(EST.CONTROLE) CONTROLE, EST.QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, EST2.QTDMATRIZ
                 FROM TGFPRO PRO
-                    LEFT JOIN TGFEST EST ON EST.CODPROD = PRO.CODPROD
-                                        AND EST.CODEMP = 31
-                                        AND EST.CODLOCAL IN (101,911)
-                                        AND TRIM(EST.CONTROLE) IS NOT NULL
-                    LEFT JOIN TGFEST EST2 ON EST2.CODPROD = PRO.CODPROD
-                                         AND EST2.CODEMP = 1
-                                         AND EST2.CODLOCAL IN (101,911)
-                                         AND TRIM(EST2.CONTROLE) IS NOT NULL                                        
+                    LEFT JOIN (SELECT CODPROD, CONTROLE, SUM(ESTOQUE) QTD
+                                FROM TGFEST EST
+                                WHERE EST.CODEMP = 31
+                                    AND EST.CODLOCAL IN (101,911)
+                                    AND TRIM(EST.CONTROLE) IS NOT NULL
+                                GROUP BY CODPROD, CONTROLE
+                            ) EST ON EST.CODPROD = PRO.CODPROD
+                    LEFT JOIN (SELECT CODPROD, SUM(ESTOQUE-RESERVADO) QTDMATRIZ
+                                FROM TGFEST EST
+                                WHERE EST.CODEMP = 1
+                                    AND EST.CODLOCAL IN (101,911)
+                                    AND TRIM(EST.CONTROLE) IS NOT NULL
+                                GROUP BY CODPROD
+                            ) EST2 ON EST2.CODPROD = PRO.CODPROD
                 WHERE PRO.CODPROD IN ({','.join(map(str,produtos))})
-                GROUP BY PRO.CODPROD, EST.CONTROLE, PRO.AGRUPMIN
+                    AND PRO.TIPCONTEST != 'N'
+
+                UNION ALL
+
+                SELECT PRO.CODPROD, '' CONTROLE, EST.QTD, NVL(PRO.AGRUPMIN,1) AGRUPMIN, EST2.QTDMATRIZ
+                FROM TGFPRO PRO
+                    LEFT JOIN (SELECT CODPROD, CONTROLE, SUM(ESTOQUE) QTD
+                                FROM TGFEST EST
+                                WHERE EST.CODEMP = 31
+                                    AND EST.CODLOCAL IN (101,911)
+                                    AND EST.CONTROLE IS NOT NULL
+                                GROUP BY CODPROD, CONTROLE
+                            ) EST ON EST.CODPROD = PRO.CODPROD
+                    LEFT JOIN (SELECT CODPROD, SUM(ESTOQUE-RESERVADO) QTDMATRIZ
+                                FROM TGFEST EST
+                                WHERE EST.CODEMP = 1
+                                    AND EST.CODLOCAL IN (101,911)
+                                    AND EST.CONTROLE IS NOT NULL
+                                GROUP BY CODPROD
+                            ) EST2 ON EST2.CODPROD = PRO.CODPROD
+                WHERE PRO.CODPROD IN ({','.join(map(str,produtos))})
+                    AND PRO.TIPCONTEST = 'N'
             '''
 
         res = requests.get(
