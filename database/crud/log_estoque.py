@@ -7,6 +7,8 @@ from src.utils.load_env import load_env
 load_env()
 logger = set_logger(__name__)
 
+COLUNAS_CRIPTOGRAFADAS = []
+
 async def criar(
         log_id:int,
         codprod:int,
@@ -36,7 +38,7 @@ async def buscar_falhas(log_id: int) -> list[dict]:
                    LogEstoque.sucesso.is_(False))
         )
         logs = result.scalars().all()
-        dados_logs = formatar_retorno(retorno=logs)        
+        dados_logs = formatar_retorno(retorno=logs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         return dados_logs
 
 async def buscar_id(log_id: int) -> list[dict]:
@@ -46,5 +48,5 @@ async def buscar_id(log_id: int) -> list[dict]:
             .where(LogEstoque.log_id == log_id)
         )
         logs = result.scalars().all()
-        dados_logs = formatar_retorno(retorno=logs)        
+        dados_logs = formatar_retorno(retorno=logs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         return dados_logs
