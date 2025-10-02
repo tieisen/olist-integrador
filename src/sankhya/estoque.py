@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import requests
 from dotenv import load_dotenv
@@ -19,6 +20,8 @@ class Estoque:
     def __init__(self):   
         self.con = Connect()  
         self.formatter = Formatter()
+        self.req_time_sleep = int(os.getenv('REQ_TIME_SLEEP', 1))
+
         
     async def buscar(self, codprod:int=None, lista_produtos:list=None) -> dict:
         if not any([codprod, lista_produtos]):
@@ -86,18 +89,21 @@ class Estoque:
             token = self.con.get_token()
         except Exception as e:
             logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False      
+            return False
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization': token },
-            json={
+        offset = 0
+        limite_alcancado = False
+        todos_resultados = []
+
+        while not limite_alcancado:
+            time.sleep(self.req_time_sleep)
+            payload = {
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
                         "rootEntity": "AD_OLISTRASTEST",
                         "includePresentationFields": "N",
-                        "offsetPage": "0",
+                        "offsetPage": offset,
                         "entity": {
                             "fieldset": {
                                 "list": '*'
@@ -105,14 +111,25 @@ class Estoque:
                         }
                     }
                 }
-            })
+            }
+            res = requests.get(
+                url=url,
+                headers={ 'Authorization':f"{token}" },
+                json=payload
+            )
+            if res.status_code != 200:
+                print(f"Erro ao buscar alterações pendentes. {res.text}")
+                logger.error("Erro ao buscar alterações pendentes. %s",res.text)
+                return False
+            
+            if res.json().get('status') == '1':
+                todos_resultados.extend(self.formatter.return_format(res.json()))
+                if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
+                    offset += 1
+                else:   
+                    limite_alcancado = True
 
-        if res.status_code in (200,201) and res.json().get('status')=='1':
-            return self.formatter.return_format(res.json())
-        else:
-            logger.error("Erro ao buscar alterações pendentes. %s",res.json())
-            print(f"Erro ao buscar alterações pendentes. {res.json()}")
-            return False
+        return todos_resultados
         
     async def remover_alteracoes(self, codprod:int=None, lista_produtos:list=None) -> dict:
 
