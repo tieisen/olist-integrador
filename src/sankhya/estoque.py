@@ -15,11 +15,13 @@ class Estoque:
     def __init__(self, codemp:int):
         self.token = None
         self.codemp = codemp
+        self.empresa_id = None
         self.dados_empresa = None
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
         self.formatter = Formatter()
     
     @token_snk
+    @carrega_dados_empresa
     async def buscar(
             self,
             codprod:int=None,
@@ -30,45 +32,39 @@ class Estoque:
             print("Código do produto não informado ou lista de produtos vazia")
             return False
         
-        url = os.getenv('SANKHYA_URL_LOAD_VIEW')
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        view = os.getenv('SANKHYA_VIEW_SALDO_ESTOQUE')
-        if not view:
-            erro = f"Parâmetro da view de saldo de estoque não encontrado"
-            print(erro)
-            logger.error(erro)
-            return False        
-
+        filtro_produtos:str=''
         if codprod:
-            filter = f"CODPROD = {codprod}"
-
+            filtro_produtos = str(codprod)
         if lista_produtos:
             if len(lista_produtos) == 1:
-                filter = f"CODPROD = {lista_produtos[0]}"
+                filtro_produtos = str(lista_produtos[0])
             else:
-                filter = f"CODPROD IN ({','.join(map(str,lista_produtos))})"
+                filtro_produtos = ','.join(map(str,lista_produtos))
+
+        # Considera estoque da empresa ecommerce e da unidade física do estado
+        cod_empresas_estoque:str = ','.join(map(str,[self.dados_empresa.get('snk_codemp_fornecedor'),self.dados_empresa.get('snk_codemp')]))
+
+        parametero = 'SANKHYA_PATH_SCRIPT_SALDO_ESTOQUE'
+        script = buscar_script(parametro=parametero)
+        query = script.format_map({"codlocais": self.dados_empresa.get('snk_codlocal_estoque'),
+                                   "codemp": self.codemp,
+                                   "codempresas": cod_empresas_estoque,
+                                   "lista_produtos": filtro_produtos
+                                })
 
         res = requests.get(
             url=url,
             headers={ 'Authorization':f"Bearer {self.token}" },
             json={
-                "serviceName": "CRUDServiceProvider.loadView",
+                "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
-                    "query": {
-                        "viewName": view,
-                        "where": {
-                            "$": filter
-                        },
-                        "fields": {
-                            "field": {
-                                "$": "*"
-                            }
-                        }
-                    }
+                    "sql":query
                 }
             })
 
@@ -161,26 +157,38 @@ class Estoque:
             return False
 
         if codprod:
-            filter = [{"CODPROD": f"{codprod}"}]
+            filter = [
+                {
+                    "CODPROD": f"{codprod}",
+                    "CODEMP": f"{self.codemp}"
+                }
+            ]
 
         if lista_produtos:
             filter = []
             for produto in lista_produtos:
                 if produto.get('sucesso'):
-                    filter.append({"CODPROD": f"{produto['ajuste_estoque'].get('codprod')}"})
+                    filter.append({
+                        "CODPROD": f"{produto['ajuste_estoque'].get('codprod')}",
+                        "CODEMP": f"{self.codemp}"
+                    })
         
-        print("Enviando dados para remoção")
+        payload = {
+            "serviceName": "DatasetSP.removeRecord",
+            "requestBody": {
+                "entityName": tabela,
+                "standAlone": False,
+                "pks": filter
+            }
+        }
+
+        print(payload)
+
         res = requests.get(
             url=url,
             headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
-                "serviceName": "DatasetSP.removeRecord",
-                "requestBody": {
-                    "entityName": tabela,
-                    "standAlone": False,
-                    "pks": filter
-                }
-            })
+            json=payload
+        )
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
             return True
