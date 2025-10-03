@@ -38,8 +38,6 @@ class Pedido:
             list: Lista de IDs de pedidos que não existem na base de dados.
         """
         if not lista_pedidos:
-            print("Nenhum pedido encontrado.")
-            logger.info("Nenhum pedido encontrado.")
             return []
         
         existentes = venda.buscar_lista_id(lista_pedidos)
