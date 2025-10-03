@@ -57,11 +57,18 @@ class Produto:
                                     'valorNew':None})
                     new_data['ad_mkp_idprodpai'] = ''
 
-            if data_sankhya['ad_mkp_marca'] != str(data_olist['marca'].get('id')):
-                updates.append({'campo':'ad_mkp_marca',
-                                'valorOld':data_sankhya.get('ad_mkp_marca'),
-                                'valorNew':data_olist['marca'].get('id')})
-                new_data['ad_mkp_marca'] = str(data_olist['marca'].get('id'))
+            if data_olist.get('marca'):
+                if data_sankhya['ad_mkp_marca'] != str(data_olist['marca'].get('id')):
+                    updates.append({'campo':'ad_mkp_marca',
+                                    'valorOld':data_sankhya.get('ad_mkp_marca'),
+                                    'valorNew':data_olist['marca'].get('id')})
+                    new_data['ad_mkp_marca'] = str(data_olist['marca'].get('id'))
+            else:
+                if data_sankhya.get('ad_mkp_marca') != '25194':
+                    updates.append({'campo':'ad_mkp_marca',
+                                    'valorOld':data_sankhya.get('ad_mkp_marca'),
+                                    'valorNew':'25194'})
+                    new_data['ad_mkp_marca'] = '25194'
 
             if data_sankhya['ad_mkp_nome'] != data_olist.get('descricao'):
                 updates.append({'campo':'ad_mkp_nome',
