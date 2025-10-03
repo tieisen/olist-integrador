@@ -74,6 +74,8 @@ class Formatter:
         # RETORNO DE CONSULTA DE VIEW
         if res.get('serviceName') == 'CRUDServiceProvider.loadView':
             result = []
+            if not res['responseBody']['records']:
+                return result            
             aux = res['responseBody']['records']['record']
             if isinstance(aux, list):
                 for item in res['responseBody']['records']['record']:
