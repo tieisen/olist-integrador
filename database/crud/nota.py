@@ -56,9 +56,10 @@ async def buscar(
         id_nota:int=None,
         nunota:int=None,
         numero_ecommerce:dict=None,
-        chave_acesso:str=None
+        chave_acesso:str=None,
+        tudo:bool=False,
     ) -> dict:
-    if not any([id_nota,nunota,chave_acesso]):
+    if not any([id_nota,nunota,chave_acesso]) and not tudo:
         return False
     async with AsyncSessionLocal() as session:
         if nunota:
@@ -82,8 +83,12 @@ async def buscar(
                 .where(Nota.numero == numero_ecommerce.get('numero'),
                        Nota.pedido_
                            .has(Pedido.ecommerce_id==numero_ecommerce.get('ecommerce')))
-            )            
-        nota = result.scalar_one_or_none()
+            )
+        elif tudo:
+            result = await session.execute(
+                select(Nota)
+            )
+        nota = result.scalars().all()
     if not nota:
         print(f"Nota não encontrada. Parâmetro: {nunota or id_nota or chave_acesso or numero_ecommerce}")
         return False
