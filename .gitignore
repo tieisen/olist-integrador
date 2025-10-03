@@ -11,3 +11,4 @@ vscode
 *.csv
 *.sql
 *.test.*
+alembic
