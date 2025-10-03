@@ -410,7 +410,6 @@ class Produto:
         await self.snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)            
         status_log = False if await crudLogProd.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("--> INTEGRAÇÃO DE PRODUTOS NO OLIST CONCLUÍDA!")        
         return True
 
     @contexto
@@ -455,5 +454,4 @@ class Produto:
         await self.snk.excluir_alteracoes(lista_produtos=alteracoes_pendentes)
         status_log = False if await crudLogProd.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("--> INTEGRAÇÃO DE PRODUTOS NO SANKHYA CONCLUÍDA!")
         return True
