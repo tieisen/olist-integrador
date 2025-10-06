@@ -74,7 +74,8 @@ class Pedido:
     def to_sankhya_lote(self, lista_pedidos:list, lista_itens:list) -> tuple[dict,list,int]:
 
         def formatar_pedidos(lista_pedidos):
-            linhas = [f"- {pedido['numero']}/{pedido['codigo']}" for pedido in lista_pedidos]
+            #linhas = [f"- {pedido['numero']}/{pedido['codigo']}" for pedido in lista_pedidos]
+            linhas = [f"{pedido['numero']}" for pedido in lista_pedidos]
             return f"Referente à {len(lista_pedidos)} pedidos:\n" + "\n".join(linhas)        
 
         dados_cabecalho = {}
