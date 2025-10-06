@@ -92,9 +92,10 @@ class Pedido:
             # Adiciona pedido na base
             print("Adicionando pedido na base...")
             id = await crudPedido.criar(id_loja=dados_pedido['ecommerce'].get('id'),
-                                         id_pedido=dados_pedido.get('id'),
-                                         cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
-                                         num_pedido=dados_pedido.get('numeroPedido'))
+                                        id_pedido=dados_pedido.get('id'),
+                                        cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
+                                        num_pedido=dados_pedido.get('numeroPedido'),
+                                        dados_pedido=dados_pedido)
             if not id:
                 msg = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
                 raise Exception(msg)
