@@ -552,6 +552,9 @@ class Pedido:
         lote_pedidos = []
         obs = None
         for index, pedido in enumerate(novos_pedidos):
+            if index == 150:
+                break
+
             if not first:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
             first = False
