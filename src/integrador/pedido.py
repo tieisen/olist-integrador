@@ -119,7 +119,8 @@ class Pedido:
             ack = venda.criar(id_loja=dados_pedido['ecommerce'].get('id'),
                               id_pedido=dados_pedido.get('id'),
                               cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
-                              num_pedido=dados_pedido.get('numeroPedido'))
+                              num_pedido=dados_pedido.get('numeroPedido'),
+                              dados_pedido=dados_pedido)
             if not ack:
                 obs = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
                 print(obs)
@@ -191,7 +192,8 @@ class Pedido:
             ack = venda.criar(id_loja=dados_pedido['ecommerce'].get('id'),
                               id_pedido=dados_pedido.get('id'),
                               cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
-                              num_pedido=dados_pedido.get('numeroPedido'))
+                              num_pedido=dados_pedido.get('numeroPedido'),
+                              dados_pedido=dados_pedido)
             if not ack:
                 obs = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
                 logger.error("Erro ao adicionar pedido %s à base de dados.", dados_pedido.get('numeroPedido'))
