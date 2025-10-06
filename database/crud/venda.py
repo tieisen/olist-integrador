@@ -39,7 +39,8 @@ def buscar_importar():
 def buscar_hoje():
     session = SessionLocal()
     hoje = datetime.now().date()
-    venda = session.query(Venda).filter(func.date(Venda.dh_pedido) == hoje, Venda.dh_cancelamento_pedido.is_(None)).order_by(Venda.num_pedido).all()
+    venda = session.query(Venda).filter(func.date(Venda.dh_pedido) == hoje,
+                                        Venda.dh_cancelamento_pedido.is_(None)).order_by(Venda.num_pedido).all()
     session.close()
     return venda
 
@@ -63,6 +64,16 @@ def buscar_confirmar_nota():
                                         Venda.dh_faturamento_snk.is_not(None),
                                         Venda.dh_cancelamento_pedido.is_(None),
                                         Venda.dh_confirmacao_nota_snk.is_(None)).order_by(Venda.num_pedido).all()
+    session.close()
+    return venda
+
+def buscar_faturar_por_loja(id_loja:int):
+    session = SessionLocal()
+    venda = session.query(Venda).filter(Venda.nunota_pedido.is_not(None),
+                                        Venda.id_loja == id_loja,
+                                        Venda.dh_cancelamento_pedido.is_(None),
+                                        Venda.dh_confirmacao_pedido_snk.is_not(None),                                        
+                                        Venda.dh_faturamento_snk.is_(None)).order_by(Venda.num_pedido).all()
     session.close()
     return venda
 
