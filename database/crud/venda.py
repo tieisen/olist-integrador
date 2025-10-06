@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import func
 from database.models import Venda
 
-def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
+def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int, dados_pedido:dict):
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.id_pedido == id_pedido).first()
     if venda:
@@ -14,7 +14,8 @@ def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int):
                        id_pedido=id_pedido,
                        dh_pedido=datetime.now(),
                        cod_pedido=cod_pedido,
-                       num_pedido=num_pedido)
+                       num_pedido=num_pedido,
+                       dados_pedido=dados_pedido)
     session.add(nova_venda)
     session.commit()
     session.refresh(nova_venda)
