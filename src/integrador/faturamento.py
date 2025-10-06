@@ -370,151 +370,172 @@ class Faturamento:
         
     async def faturar_lote(self):        
 
-        # Busca os pedidos pendentes de faturamento
-        pedidos_faturar = venda.buscar_faturar()
-        if not pedidos_faturar:
-            print("Nenhum pedido para faturamento.")
-            return True
+        async def faturar(pedidos_faturar):
 
-        print(f"Pedidos para faturamento: {len(pedidos_faturar)}")
+            print(f"Pedidos para faturamento: {len(pedidos_faturar)}")
 
-        pedido_olist = PedidoOlist()
-        nota_olist = NotaOlist()
-        separacao = SeparacaoOlist()
-        first = True
-        try:
-            print("-> FATURANDO NO OLIST...")
-            # Fatura os pedidos no Olist
-            for i, pedido in enumerate(pedidos_faturar):
-                if not first:                    
-                    time.sleep(self.req_time_sleep)  # Evita rate limit
-                first = False
+            pedido_olist = PedidoOlist()
+            nota_olist = NotaOlist()
+            separacao = SeparacaoOlist()
+            first = True
+            try:                
+                # Fatura os pedidos no Olist
+                for i, pedido in enumerate(pedidos_faturar):
+                    if not first:                    
+                        time.sleep(self.req_time_sleep)  # Evita rate limit
+                    first = False
 
-                print("")
-                print(f"Pedido {i + 1}/{len(pedidos_faturar)}: {pedido.num_pedido}")
+                    print("")
+                    print(f"Pedido {i + 1}/{len(pedidos_faturar)}: {pedido.num_pedido}")
 
-                # Fatura pedido no Olist
-                print("Gerando NF no Olist...")
-                dados_nota_olist = await pedido_olist.gerar_nf(id=pedido.id_pedido)
-                if not dados_nota_olist:
-                    print(f"Erro ao gerar NF do pedido {pedido.nunota_pedido}")
-                    logger.error("Erro ao gerar NF do pedido %s",pedido.nunota_pedido)
-                    continue
-                venda.atualizar_nf_gerada(cod_pedido=pedido.cod_pedido,
-                                          num_nota=dados_nota_olist.get('numero'),
-                                          id_nota=dados_nota_olist.get('id'))
-                
-                # Emite NF no Olist
-                print(f"Autorizando NF {dados_nota_olist.get('numero')} pelo Olist...")                
-                dados_emissao_nf_olist = await nota_olist.emitir(id=dados_nota_olist.get('id'))
-                if not dados_emissao_nf_olist:
-                    print(f"Erro ao emitir nota {dados_nota_olist.get('numero')} ref. pedido {pedido.cod_pedido}")
-                    logger.error("Erro ao emitir nota %s ref. pedido %s",dados_nota_olist.get('numero'),pedido.cod_pedido)
-                    continue
-                venda.atualizar_nf_autorizada(id_nota=dados_nota_olist.get('id'))                
-                
-                # Envia pedido pra separação no Olist
-                print("Enviando pedido para separação no Olist...")
-                id_separacao = venda.buscar_idseparacao(cod_pedido=pedido.cod_pedido)
-                if not id_separacao:
-                    print(f"Separação do pedido {pedido.num_pedido} não localizada na base")
-                    logger.error("Separação do pedido %s não localizada na base",pedido.num_pedido)
-                    continue
-                ack_separacao = await separacao.separar(id=id_separacao)
-                if not ack_separacao:
-                    print(f"Erro ao separar pedido {pedido.num_pedido}.")
-                    logger.error("Erro ao separar pedido %s.",pedido.num_pedido)
-                    continue
+                    # Fatura pedido no Olist
+                    print("Gerando NF no Olist...")
+                    dados_nota_olist = await pedido_olist.gerar_nf(id=pedido.id_pedido)
+                    if not dados_nota_olist:
+                        print(f"Erro ao gerar NF do pedido {pedido.nunota_pedido}")
+                        logger.error("Erro ao gerar NF do pedido %s",pedido.nunota_pedido)
+                        continue
+                    venda.atualizar_nf_gerada(cod_pedido=pedido.cod_pedido,
+                                            num_nota=dados_nota_olist.get('numero'),
+                                            id_nota=dados_nota_olist.get('id'))
+                    
+                    # Emite NF no Olist
+                    print(f"Autorizando NF {dados_nota_olist.get('numero')} pelo Olist...")                
+                    dados_emissao_nf_olist = await nota_olist.emitir(id=dados_nota_olist.get('id'))
+                    if not dados_emissao_nf_olist:
+                        print(f"Erro ao emitir nota {dados_nota_olist.get('numero')} ref. pedido {pedido.cod_pedido}")
+                        logger.error("Erro ao emitir nota %s ref. pedido %s",dados_nota_olist.get('numero'),pedido.cod_pedido)
+                        continue
+                    venda.atualizar_nf_autorizada(id_nota=dados_nota_olist.get('id'))                
+                    
+                    # Envia pedido pra separação no Olist
+                    print("Enviando pedido para separação no Olist...")
+                    id_separacao = venda.buscar_idseparacao(cod_pedido=pedido.cod_pedido)
+                    if not id_separacao:
+                        print(f"Separação do pedido {pedido.num_pedido} não localizada na base")
+                        logger.error("Separação do pedido %s não localizada na base",pedido.num_pedido)
+                        continue
+                    ack_separacao = await separacao.separar(id=id_separacao)
+                    if not ack_separacao:
+                        print(f"Erro ao separar pedido {pedido.num_pedido}.")
+                        logger.error("Erro ao separar pedido %s.",pedido.num_pedido)
+                        continue
 
-                # Baixa contas a receber no Olist
-                print("Baixando contas a receber no Olist...")
-                dados_financeiro = await nota_olist.buscar_financeiro(serie=dados_nota_olist.get('serie'),
-                                                                      numero=str(dados_nota_olist.get('numero')).zfill(6))
-                if not dados_financeiro:
-                    print(f"Erro ao buscar financeiro da nota no Olist")
-                    logger.error("Erro ao buscar financeiro da nota %s no Olist",dados_nota_olist.get('numero'))
-                    continue                
-                ack_financeiro = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),
-                                                                    valor=dados_financeiro.get('valor'))
-                if ack_financeiro is None:
-                    print(f"Financeiro da nota já está baixado no Olist")                    
-                if ack_financeiro is False:
-                    print(f"Erro ao baixar financeiro da nota no Olist")
-                    logger.error("Erro ao baixar financeiro da nota %s no Olist",dados_nota_olist.get('numero'))
-                    continue                
-                venda.atualizar_financeiro(num_nota=dados_nota_olist.get('numero'),
-                                           id_financeiro=dados_financeiro.get('id'))                
+                    # Baixa contas a receber no Olist
+                    print("Baixando contas a receber no Olist...")
+                    dados_financeiro = await nota_olist.buscar_financeiro(serie=dados_nota_olist.get('serie'),
+                                                                        numero=str(dados_nota_olist.get('numero')).zfill(6))
+                    if not dados_financeiro:
+                        print(f"Erro ao buscar financeiro da nota no Olist")
+                        logger.error("Erro ao buscar financeiro da nota %s no Olist",dados_nota_olist.get('numero'))
+                        continue                
+                    ack_financeiro = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),
+                                                                        valor=dados_financeiro.get('valor'))
+                    if ack_financeiro is None:
+                        print(f"Financeiro da nota já está baixado no Olist")                    
+                    if ack_financeiro is False:
+                        print(f"Erro ao baixar financeiro da nota no Olist")
+                        logger.error("Erro ao baixar financeiro da nota %s no Olist",dados_nota_olist.get('numero'))
+                        continue                
+                    venda.atualizar_financeiro(num_nota=dados_nota_olist.get('numero'),
+                                            id_financeiro=dados_financeiro.get('id'))                
 
-                print(f"-> Faturamento do pedido {pedido.num_pedido} concluído!")    
+                    print(f"-> Faturamento do pedido {pedido.num_pedido} concluído!")    
 
-            print("-> PROCESSO DE FATURAMENTO CONCLUÍDO NO OLIST!")
-            print("=====================================================")
-            print("-> FINALIZANDO PROCESSO NO SANKHYA...") 
-
-            pedidos_sankhya = list(set([p.nunota_pedido for p in pedidos_faturar]))
-            pedido_snk = PedidoSnk()
-            nota_snk = NotaSnk()
-
-            # Verifica se o pedido foi faturado ou trancou
-            print("Verificando se o pedido foi faturado...")
-            val = 0
-            for nunota in pedidos_sankhya:
-                status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
-                if status_faturamento:
-                    val+=1
-                    print(f"Pedido {nunota} já foi faturado.")
-                    # Atualiza base de dados
-                    venda.atualizar_faturada_lote(nunota_pedido=nunota,
-                                                  nunota_nota=status_faturamento[0].get('nunota'))                    
-                    venda.atualizar_confirmada_nota_lote(nunota_nota=status_faturamento[0].get('nunota'))
-            if val != 0:
+                print("-> PROCESSO DE FATURAMENTO CONCLUÍDO NO OLIST!")
                 print("=====================================================")
-                print("-> PROCESSO CONCLUÍDO!")                
+                print("-> FINALIZANDO PROCESSO NO SANKHYA...") 
+
+                pedidos_sankhya = list(set([p.nunota_pedido for p in pedidos_faturar]))
+                pedido_snk = PedidoSnk()
+                nota_snk = NotaSnk()
+
+                # Verifica se o pedido foi faturado ou trancou
+                print("Verificando se o pedido foi faturado...")
+                val = 0
+                for nunota in pedidos_sankhya:
+                    status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
+                    if status_faturamento:
+                        val+=1
+                        print(f"Pedido {nunota} já foi faturado.")
+                        # Atualiza base de dados
+                        venda.atualizar_faturada_lote(nunota_pedido=nunota,
+                                                    nunota_nota=status_faturamento[0].get('nunota'))                    
+                        venda.atualizar_confirmada_nota_lote(nunota_nota=status_faturamento[0].get('nunota'))
+                if val != 0:
+                    print("=====================================================")
+                    print("-> PROCESSO CONCLUÍDO!")                
+                    return True
+                
+                # Se o pedido não foi faturado...
+                # Faz a nota de transferência
+                print("Gerando a nota de transferência...")
+                if not await self.venda_entre_empresas_em_lote():
+                    logger.error("Erro ao gerar a nota de transferência.")
+                    print("Erro ao gerar a nota de transferência.")
+                    return False
+
+                # Fatura no Sankhya
+                nunotas_nota = []
+                for nunota in pedidos_sankhya:
+                    print(f"Faturando pedido {nunota} no Sankhya...")
+                    ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
+                    if not ack:
+                        print(f"Erro ao faturar pedido {nunota}")
+                        logger.error("Erro ao faturar pedido %s",nunota)
+                        continue
+                    nunotas_nota.append(nunota_nota)
+                    venda.atualizar_faturada_lote(nunota_pedido=nunota,
+                                                nunota_nota=nunota_nota)
+                if not nunotas_nota:
+                    print("Erro ao faturar pedido(s) no Sankhya")
+                    logger.error("Erro ao faturar pedido(s) no Sankhya")
+                    return False
+
+                # Confirma Nota(s) no Sankhya
+                for nunota in nunotas_nota:
+                    print(f"Confirmando Nota {nunota} no Sankhya...")
+                    ack = await nota_snk.confirmar(nunota=nunota)
+                    if not ack:
+                        print(f"Erro ao confirmar nota {nunota}")
+                        logger.error("Erro ao confirmar nota %s",nunota)                    
+                    else:
+                        venda.atualizar_confirmada_nota_lote(nunota_nota=nunota)
+                        print(f"-> Confirmação da Nota {nunota} concluída!")
+
                 return True
+            except:
+                return False
             
-            # Se o pedido não foi faturado...
-            # Faz a nota de transferência
-            print("Gerando a nota de transferência...")
-            if not await self.venda_entre_empresas_em_lote():
-                logger.error("Erro ao gerar a nota de transferência.")
-                print("Erro ao gerar a nota de transferência.")
-                return False
-
-            # Fatura no Sankhya
-            nunotas_nota = []
-            for nunota in pedidos_sankhya:
-                print(f"Faturando pedido {nunota} no Sankhya...")
-                ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
-                if not ack:
-                    print(f"Erro ao faturar pedido {nunota}")
-                    logger.error("Erro ao faturar pedido %s",nunota)
-                    continue
-                nunotas_nota.append(nunota_nota)
-                venda.atualizar_faturada_lote(nunota_pedido=nunota,
-                                              nunota_nota=nunota_nota)
-            if not nunotas_nota:
-                print("Erro ao faturar pedido(s) no Sankhya")
-                logger.error("Erro ao faturar pedido(s) no Sankhya")
-                return False
-
-            # Confirma Nota(s) no Sankhya
-            for nunota in nunotas_nota:
-                print(f"Confirmando Nota {nunota} no Sankhya...")
-                ack = await nota_snk.confirmar(nunota=nunota)
-                if not ack:
-                    print(f"Erro ao confirmar nota {nunota}")
-                    logger.error("Erro ao confirmar nota %s",nunota)                    
-                else:
-                    venda.atualizar_confirmada_nota_lote(nunota_nota=nunota)
-                    print(f"-> Confirmação da Nota {nunota} concluída!")                
-
-            print("=====================================================")
-            print("-> PROCESSO CONCLUÍDO!")
-
-            return True
-        except:
-            return False
+        # Busca os pedidos pendentes de faturamento
+        pedidos_faturar_shopee = venda.buscar_faturar_por_loja(id_loja=9227)
+        if not pedidos_faturar_shopee:
+            print("Nenhum pedido para faturamento na shopee.")            
         
+        # Busca os pedidos pendentes de faturamento
+        pedidos_faturar_blz = venda.buscar_faturar_por_loja(id_loja=10940)
+        if not pedidos_faturar_blz:
+            print("Nenhum pedido para faturamento na blz na web.")
+
+        if not all([pedidos_faturar_shopee,pedidos_faturar_blz]):
+            return True
+        
+        if pedidos_faturar_shopee:
+            print("-> FATURANDO SHOPEE NO OLIST...")
+            ack_shopee = await faturar(pedidos_faturar=pedidos_faturar_shopee)
+        else:
+            ack_shopee = True
+        
+        if pedidos_faturar_blz:
+            print("-> FATURANDO BLZ NO OLIST...")
+            ack_blz = await faturar(pedidos_faturar=pedidos_faturar_blz)
+        else:
+            ack_blz = True        
+
+        print("")
+        print(f"-> PROCESSO DE FATURAMENTO DE PEDIDOS CONCLUÍDO!")
+        return all([ack_shopee,ack_blz])
+
     async def faturar_sankhya(self):        
 
         # Busca os pedidos pendentes de faturamento
@@ -547,13 +568,14 @@ class Faturamento:
                 print("-> PROCESSO CONCLUÍDO!")                
                 return True
             
-            # Se o pedido não foi faturado...
-            # Faz a nota de transferência
-            print("Gerando a nota de transferência...")
-            if not await self.venda_entre_empresas_em_lote():
-                logger.error("Erro ao gerar a nota de transferência.")
-                print("Erro ao gerar a nota de transferência.")
-                return False
+            for nunota in pedidos_sankhya:
+                # Se o pedido não foi faturado...
+                # Faz a nota de transferência
+                print("Gerando a nota de transferência...")
+                if not await self.venda_entre_empresas_em_lote(nunota=nunota):
+                    logger.error("Erro ao gerar a nota de transferência.")
+                    print("Erro ao gerar a nota de transferência.")
+                    return False
 
             # Fatura no Sankhya
             nunotas_nota = []
