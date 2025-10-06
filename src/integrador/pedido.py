@@ -688,75 +688,91 @@ class Pedido:
                 venda.atualizar_importada(id_pedido=pedido.get('id'),nunota_pedido=nunota)
             return True
 
+        async def importar(log_id,pedidos_lote):
+            
+            # Unifica os pedidos
+            print("Unificando os pedidos...")
+            dados_pedidos, dados_itens = self.unificar(pedidos_lote)
+
+            # Converte para o formato da API do Sankhya
+            parser = ParserPedido()
+            print("Convertendo para o formato da API do Sankhya...")        
+            cabecalho, itens, id_origem = parser.to_sankhya_lote(lista_pedidos=dados_pedidos,lista_itens=dados_itens)
+
+            if not cabecalho and not itens:
+                print("Erro ao converter dados do pedido para o formato da API do Sankhya")
+                logger.error("Erro ao converter dados do pedido para o formato da API do Sankhya")
+                log_pedido.criar(log_id=log_id,
+                                id_loja=id_origem,
+                                id_pedido=0,
+                                pedido_ecommerce='varios',
+                                status=False,
+                                obs="Erro ao converter dados do pedido para o formato da API do Sankhya")            
+                return False
+
+            # Insere os dados do pedido
+            snk = PedidoSnk()
+            print("Inserindo os dados no Sankhya...")
+            pedido_incluido = await snk.lancar(dados_cabecalho=cabecalho,dados_itens=itens)
+            if pedido_incluido == 0:
+                print("Erro ao inserir pedido no Sankhya.")
+                logger.error("Erro ao inserir pedido no Sankhya.")
+                log_pedido.criar(log_id=log_id,
+                                id_loja=id_origem,
+                                id_pedido=0,
+                                pedido_ecommerce='varios',
+                                status=False,
+                                obs="Erro ao inserir pedido no Sankhya")                
+                return False
+            
+            atualizar_historico(lista_pedidos=pedidos_lote,nunota=pedido_incluido)
+            
+            # Envia número único do pedido pro Olist
+            print("Enviando número único para os pedidos no Olist...")
+            ack = await self.atualizar_nunota_lote(lista_pedidos=pedidos_lote,nunota=pedido_incluido)
+            if not ack:
+                print("Erro ao enviar número único para os pedidos no Olist.")
+                logger.error("Erro ao enviar número único para os pedidos no Olist.")
+                log_pedido.criar(log_id=log_id,
+                                id_loja=id_origem,
+                                id_pedido=0,
+                                pedido_ecommerce='varios',
+                                nunota_pedido=pedido_incluido,
+                                status=False,
+                                obs="Erro ao enviar número único para os pedidos no Olist")
+                return False
+            
+            print(f"Pedidos importados no código {pedido_incluido}")
+            log_pedido.criar(log_id=log_id,
+                             id_loja=id_origem,
+                             id_pedido=0,
+                             pedido_ecommerce='varios',
+                             nunota_pedido=pedido_incluido)
+            
+            return True        
+        
         # Busca pedidos
-        print("Buscando pedidos em lote...")
-        pedidos_lote = await self.buscar_lote(id_loja=9227)
+        print("Buscando pedidos em lote Shopee...")
+        pedidos_lote_shopee = await self.buscar_lote(id_loja=9227)        
+        print("Buscando pedidos em lote Blz na web...")
+        pedidos_lote_blz = await self.buscar_lote(id_loja=10940)
 
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_importar_lote')
-        if pedidos_lote is True:
+        if all([pedidos_lote_shopee,pedidos_lote_blz]):
             log.atualizar(id=log_id)
-            return pedidos_lote
+            return True
         
-        # Unifica os pedidos
-        print("Unificando os pedidos...")
-        dados_pedidos, dados_itens = self.unificar(pedidos_lote)
+        if pedidos_lote_shopee:
+            ack_shopee = await importar(log_id=log_id,pedidos_lote=pedidos_lote_shopee)
+        else:
+            ack_shopee = True
+        
+        if pedidos_lote_blz:
+            ack_blz = await importar(log_id=log_id,pedidos_lote=pedidos_lote_blz)
+        else:
+            ack_blz = True
 
-        # Converte para o formato da API do Sankhya
-        parser = ParserPedido()
-        print("Convertendo para o formato da API do Sankhya...")        
-        cabecalho, itens, id_origem = parser.to_sankhya_lote(lista_pedidos=dados_pedidos,lista_itens=dados_itens)
-
-        if not cabecalho and not itens:
-            print("Erro ao converter dados do pedido para o formato da API do Sankhya")
-            logger.error("Erro ao converter dados do pedido para o formato da API do Sankhya")
-            log_pedido.criar(log_id=log_id,
-                             id_loja=id_origem,
-                             id_pedido=0,
-                             pedido_ecommerce='varios',
-                             status=False,
-                             obs="Erro ao converter dados do pedido para o formato da API do Sankhya")            
-            return False
-
-        # Insere os dados do pedido
-        snk = PedidoSnk()
-        print("Inserindo os dados no Sankhya...")
-        pedido_incluido = await snk.lancar(dados_cabecalho=cabecalho,dados_itens=itens)
-        if pedido_incluido == 0:
-            print("Erro ao inserir pedido no Sankhya.")
-            logger.error("Erro ao inserir pedido no Sankhya.")
-            log_pedido.criar(log_id=log_id,
-                             id_loja=id_origem,
-                             id_pedido=0,
-                             pedido_ecommerce='varios',
-                             status=False,
-                             obs="Erro ao inserir pedido no Sankhya")                
-            return False
-        
-        atualizar_historico(lista_pedidos=pedidos_lote,nunota=pedido_incluido)
-        
-        # Envia número único do pedido pro Olist
-        print("Enviando número único para os pedidos no Olist...")
-        ack = await self.atualizar_nunota_lote(lista_pedidos=pedidos_lote,nunota=pedido_incluido)
-        if not ack:
-            print("Erro ao enviar número único para os pedidos no Olist.")
-            logger.error("Erro ao enviar número único para os pedidos no Olist.")
-            log_pedido.criar(log_id=log_id,
-                             id_loja=id_origem,
-                             id_pedido=0,
-                             pedido_ecommerce='varios',
-                             nunota_pedido=pedido_incluido,
-                             status=False,
-                             obs="Erro ao enviar número único para os pedidos no Olist")
-            return False
-        
-        print(f"Pedidos importados no código {pedido_incluido}")
-        log_pedido.criar(log_id=log_id,
-                         id_loja=id_origem,
-                         id_pedido=0,
-                         pedido_ecommerce='varios',
-                         nunota_pedido=pedido_incluido)
-        
-        log.atualizar(id=log_id, sucesso=True)
+        log.atualizar(id=log_id, sucesso=all([ack_shopee,ack_blz]))
         print("")
         print(f"-> PROCESSO DE IMPORTAÇÃO DE PEDIDOS CONCLUÍDO!")
         return True
