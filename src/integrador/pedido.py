@@ -552,7 +552,7 @@ class Pedido:
         lote_pedidos = []
         obs = None
         for index, pedido in enumerate(novos_pedidos):
-            if index == 150:
+            if index == 100:
                 break
 
             if not first:
