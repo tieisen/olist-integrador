@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CheckConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CheckConstraint, JSON
 from sqlalchemy.sql import func, text
 from sqlalchemy.orm import relationship
 from database.database import Base
@@ -122,3 +122,4 @@ class Venda(Base):
     dh_faturamento_snk = Column(DateTime(timezone=True), nullable=True)
     nunota_nota = Column(Integer, nullable=True)
     dh_confirmacao_nota_snk = Column(DateTime(timezone=True), nullable=True)
+    dados_pedido = Column(JSON,nullable=True)
