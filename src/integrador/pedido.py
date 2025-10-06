@@ -534,10 +534,11 @@ class Pedido:
         except:
             return False
 
-    async def buscar_lote(self):
+    async def buscar_lote(self, id_loja:int=None):
         # Busca novos pedidos
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_buscar_lote')
-        novos_pedidos = venda.buscar_importar()
+        # novos_pedidos = venda.buscar_importar()
+        novos_pedidos = venda.buscar_importar_por_loja(id_loja=id_loja)
         if not novos_pedidos:
             print("Nenhum novo pedido encontrado.")
             log.atualizar(id=log_id)
@@ -552,8 +553,6 @@ class Pedido:
         lote_pedidos = []
         obs = None
         for index, pedido in enumerate(novos_pedidos):
-            if index == 100:
-                break
 
             if not first:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
@@ -691,7 +690,7 @@ class Pedido:
 
         # Busca pedidos
         print("Buscando pedidos em lote...")
-        pedidos_lote = await self.buscar_lote()
+        pedidos_lote = await self.buscar_lote(id_loja=9227)
 
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_importar_lote')
         if pedidos_lote is True:
