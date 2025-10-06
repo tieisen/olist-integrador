@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CheckConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CheckConstraint, JSON
 from sqlalchemy.sql import text
 from sqlalchemy.orm import relationship
 from database.database import Base
@@ -120,6 +120,7 @@ class Pedido(Base):
     dh_pedido = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     cod_pedido = Column(String, nullable=False)
     num_pedido = Column(Integer, nullable=False)
+    dados_pedido = Column(JSON, nullable=True)
     dh_cancelamento = Column(DateTime(timezone=True), nullable=True)
     id_separacao = Column(Integer, nullable=True)
     nunota = Column(Integer, nullable=True)
