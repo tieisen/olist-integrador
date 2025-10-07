@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from src.integrador.produto import Produto
+from src.scheduler.jobs.produtos import integrar_produtos
 import asyncio
 
 router = APIRouter()
@@ -15,11 +15,6 @@ def integrar_produtos(codemp:int):
     Atualiza no Olist os dados dos produtos que tiveram alteração no cadastro do Sankhya.
     Atualiza no Sankhya os dados dos produtos que tiveram alteração no cadastro do Olist.
     """
-    produto = Produto(codemp=codemp)    
-    if not asyncio.run(produto.receber_alteracoes()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber alterações nos cadastros de produtos do Olist")
-    if not asyncio.run(produto.integrar_olist()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao enviar produtos para Olist")        
-    if not asyncio.run(produto.integrar_snk()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao atualizar produtos no Sankhya")        
+    if not asyncio.run(integrar_produtos(codemp=codemp)):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro integrar produtos")
     return True

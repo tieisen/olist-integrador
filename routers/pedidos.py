@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from src.integrador.pedido import Pedido
-from routines.faturamento import integrar_faturamento, integrar_faturamento_olist, integrar_faturamento_snk, integrar_venda_interna
-from routines.pedidos import integrar_pedidos, receber_pedido_lote, receber_pedido_unico, integrar_separacoes
+from src.scheduler.jobs.pedidos import integrar_pedidos, receber_pedido_lote, receber_pedido_unico, integrar_separacoes
+from src.scheduler.jobs.faturamento import integrar_faturamento, integrar_faturamento_olist, integrar_faturamento_snk, integrar_venda_interna
 import asyncio
 
 router = APIRouter()
@@ -10,8 +10,8 @@ router = APIRouter()
 def default():
     return {"message": "Pedidos"}
 
-@router.get("{codemp}/integrar")
-def integrar_pedidos(codemp:int):
+@router.get("/{codemp}/integrar-lote")
+def integrar(codemp:int):
     """
     Busca os pedidos novos do Olist que estão com status Preparando Envio.
     Importa os pedidos pendentes do Olist.
@@ -26,8 +26,24 @@ def integrar_pedidos(codemp:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
     return True
 
-@router.get("{codemp}/faturar")
-def faturar_pedidos(codemp:int):
+@router.get("/{id_loja}/integrar-loja")
+def integrar_loja(id_loja:int):
+    """
+    Busca os pedidos novos do Olist, por E-commerce, que estão com status Preparando Envio.
+    Importa os pedidos pendentes do Olist.
+    Confirma o pedido no Sankhya.
+    """
+    res:dict={}
+    res = asyncio.run(receber_pedido_lote(id_loja=id_loja))
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+    res = asyncio.run(integrar_pedidos(id_loja=id_loja))
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar pedidos")
+    return True
+
+@router.get("/{codemp}/faturar-lote")
+def faturar(codemp:int):
     """
     Emite e autoriza as NFs dos pedidos no Olist.
     Envia os pedidos para separação no Olist.
@@ -41,7 +57,22 @@ def faturar_pedidos(codemp:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
     return True
 
-@router.get("{codemp}/faturar/olist")
+@router.get("/{id_loja}/faturar-loja")
+def faturar_loja(id_loja:int):
+    """
+    Emite e autoriza as NFs dos pedidos no Olist, por E-commerce.
+    Envia os pedidos para separação no Olist.
+    Cria e confirma a nota de transferência no Sankhya.
+    Fatura o pedido no Sankhya.
+    Confirma a nota gerada no Sankhya.
+    """
+    res:dict={}
+    res = asyncio.run(integrar_faturamento(id_loja=id_loja))
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos")
+    return True
+
+@router.get("/{codemp}/faturar/olist")
 def faturar_olist(codemp:int):
     """
     Emite e autoriza as NFs dos pedidos no Olist.
@@ -53,7 +84,19 @@ def faturar_olist(codemp:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Olist")
     return True
 
-@router.get("{codemp}/faturar/snk")
+@router.get("/{id_loja}/faturar-loja/olist")
+def faturar_olist_loja(id_loja:int):
+    """
+    Emite e autoriza as NFs dos pedidos no Olist, por E-commerce.
+    Envia os pedidos para separação no Olist.
+    """
+    res:dict={}
+    res = asyncio.run(integrar_faturamento_olist(id_loja=id_loja))    
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Olist")
+    return True
+
+@router.get("/{codemp}/faturar/snk")
 def faturar_sankhya(codemp:int):
     """
     Cria e confirma a nota de transferência no Sankhya.
@@ -66,7 +109,7 @@ def faturar_sankhya(codemp:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao faturar pedidos no Sankhya")
     return True
 
-@router.get("{codemp}/faturar/venda-interna")
+@router.get("/{codemp}/faturar/venda-interna")
 def faturar_venda_interna(codemp:int):
     """
     Cria e confirma a nota de transferência no Sankhya.
@@ -77,7 +120,7 @@ def faturar_venda_interna(codemp:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao criar venda interna")
     return True
 
-@router.get("{idloja}/receber/{numero}")
+@router.get("/{idloja}/receber/{numero}")
 def receber_pedido(idloja:int,numero:int):
     """
     Busca um pedido específico do Olist
@@ -88,7 +131,7 @@ def receber_pedido(idloja:int,numero:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao buscar pedido {numero}")
     return True
 
-@router.get("{codemp}/separacao/buscar")
+@router.get("/{codemp}/separacao/buscar")
 def buscar_separacao(codemp:int):
     """
     Busca as separações pendentes no Olist
@@ -99,7 +142,7 @@ def buscar_separacao(codemp:int):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
     return True
 
-@router.get("{codemp}/anular/{nunota}")
+@router.get("/{codemp}/anular/{nunota}")
 def anular_pedidos(codemp:int,nunota: int):
     """
     Exclui pedido não faturado do Sankhya
