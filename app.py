@@ -1,10 +1,27 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from routers import estoque, pedidos, produtos, notas, devolucoes
+from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
+
+async def startup_event():
+    iniciar_agendador()
+
+async def shutdown_event():
+    encerrar_agendador()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup code
+    await startup_event()
+    yield
+    # Shutdown code
+    await shutdown_event()
 
 app = FastAPI(title="Integrador Olist x Sankhya",
               description="Integrador Olist x Sankhya",
-              version="0.1.0")
+              version="1.0",
+              lifespan=lifespan)    
 
 app.add_middleware(
     CORSMiddleware,
