@@ -4,7 +4,7 @@ from database.crud import empresa
 
 # ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 1H
 
-if __name__=="__main__":
+async def enviar_notificacao(codemp:int=None):
     empresas:list[dict]=[]
     emp:dict={}
     
@@ -16,3 +16,7 @@ if __name__=="__main__":
     for i, emp in enumerate(empresas):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
         asyncio.run(email.notificar(empresa_id=emp.get('id')))
+
+if __name__=="__main__":
+
+    asyncio.run(enviar_notificacao())

@@ -5,9 +5,10 @@ from src.integrador.produto import Produto
 # ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 15 MINUTOS
 # ANTES DA ROTINA DE ESTOQUE
 
-async def integrar_produtos(codemp:int=None):
+async def integrar_produtos(codemp:int=None) -> bool:
 
     empresas:list[dict]=[]
+    ack:list[bool]=[]
 
     empresas = await empresa.buscar(codemp=codemp)
 
@@ -16,9 +17,11 @@ async def integrar_produtos(codemp:int=None):
     for i, emp in enumerate(empresas):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
         produto = Produto(codemp=emp.get('snk_codemp'))        
-        await produto.receber_alteracoes()
-        await produto.integrar_olist()
-        await produto.integrar_snk()
+        ack.append(await produto.receber_alteracoes())
+        ack.append(await produto.integrar_olist())
+        ack.append(await produto.integrar_snk())
+    
+    return all(ack)
 
 if __name__=="__main__":
 

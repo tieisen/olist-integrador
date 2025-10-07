@@ -9,6 +9,7 @@ async def integrar_devolucoes(codemp:int=None):
     ecommerces:list[dict]=[]
     emp:dict={}
     ecom:dict={}
+    ack:list[bool]=[]    
 
     empresas = await empresa.buscar(codemp=codemp)
 
@@ -20,8 +21,10 @@ async def integrar_devolucoes(codemp:int=None):
         for j, ecom in ecommerces:
             print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
             devolucao = Devolucao(id_loja=ecom.get('id_loja'))
-            await devolucao.integrar_receber()
-            await devolucao.integrar_devolucoes()
+            ack.append(await devolucao.integrar_receber())
+            ack.append(await devolucao.integrar_devolucoes())
+    
+    return all(ack)
 
 if __name__=="__main__":
 
