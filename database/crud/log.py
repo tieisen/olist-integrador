@@ -154,7 +154,7 @@ async def listar_falhas(
 async def excluir_cache():
 
     try:
-        dias = int(os.getenv('DIAS_LIMPA_CACHE',7))*2
+        dias = int(os.getenv('DIAS_LIMPA_CACHE',7))*4
     except Exception as e:
         erro = f"Valor para intervalo de dias do cache não encontrado. {e}"
         logger.error(erro)
