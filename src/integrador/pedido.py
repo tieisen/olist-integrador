@@ -30,10 +30,22 @@ class Pedido:
         self.pedido_incompleto:int=int(os.getenv('OLIST_SIT_PEDIDO_INCOMPLETO'))
 
     @interno
-    async def validar_existentes(
+    async def validar_cancelados(
             self,
             lista_pedidos: list
         ) -> list:
+            
+        lista_ids = [p.get('id') for p in lista_pedidos]
+        pedidos_nao_cancelados = await crudPedido.buscar_cancelar(lista=lista_ids)
+        lista_pedidos_pendentes_cancelar = [p.get('id_pedido') for p in pedidos_nao_cancelados]
+        return lista_pedidos_pendentes_cancelar
+    
+    @interno
+    async def validar_existentes(
+            self,
+            lista_pedidos: list
+        ) -> list:      
+
         lista_ids = [p.get('id') for p in lista_pedidos]
         pedidos_existentes = await crudPedido.buscar(lista=lista_ids)
         lista_pedidos_existentes = [p.get('id_pedido') for p in pedidos_existentes]
@@ -130,6 +142,40 @@ class Pedido:
             print("Todos os pedidos já foram recebidos")
             return True
         return lista_pedidos
+
+    @interno
+    @carrega_dados_ecommerce
+    async def consultar_cancelamentos(self) -> list:
+        pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        # Busca pedidos cancelados
+        print("Buscando pedidos cancelados...")
+        ack, lista = await pedido_olist.buscar(cancelados=True)            
+        if not ack:
+            # Erro na busca
+            print("Erro ao buscar pedidos cancelados")
+            return False
+        if not lista:
+            # Nenhum pedido cancelado encontrado
+            print("Nenhum pedido cancelado encontrado")
+            return True
+        # Valida pedidos cancelados
+        print("Validando pedidos cancelados...")
+        lista_pedidos = await self.validar_cancelados(lista)
+        if not lista_pedidos:
+            # Todos os pedidos já foram cancelados
+            print("Todos os pedidos já foram cancelados")
+            return True        
+        # Registra cancelamentos
+        print("Registrando cancelamentos...")
+        ack:list=[]
+        for i in lista_pedidos:
+            ack.append(await self.registrar_cancelamento(id_pedido=i))
+
+        return all(ack)
+
+    @interno
+    async def registrar_cancelamento(self, id_pedido:int) -> bool:        
+        return await crudPedido.atualizar(id_pedido=id_pedido,dh_cancelamento=datetime.now())
 
     @contexto
     @log_execucao
@@ -706,73 +752,3 @@ class Pedido:
         ack = await crudLog.atualizar(id=self.log_id)
 
         return True
-
-    @contexto
-    @carrega_dados_ecommerce
-    @desabilitado
-    async def conferir(
-            self,
-            **kwargs
-        ) -> dict:
-        # if not self.log_id:
-        #     self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-        #                                       de='sankhya',
-        #                                       para='sankhya',
-        #                                       contexto=kwargs.get('_contexto'))
-        # conferencia = ConferenciaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-        # # Busca pedidos para conferir
-        # print(f"Buscando pedidos da loja {self.dados_ecommerce.get('nome')} para conferir...")
-        # lista_pedidos = await conferencia.buscar_aguardando_conferencia(id_loja=self.id_loja)
-        # if not lista_pedidos:
-        #     print("--> Nenhum pedido para conferir.")
-        #     await crudLog.atualizar(id=self.log_id)
-        #     return True        
-        # print(f"{len(lista_pedidos)} pedidos para conferir")        
-        # parser_conferencia = ParserConferencia()
-        # for i, pedido in enumerate(lista_pedidos):
-        #     time.sleep(self.req_time_sleep)
-        #     print("")
-        #     print(f"Pedido {i+1}/{len(lista_pedidos)}: {pedido.get('nunota')}")
-        #     print("Busca a nota")
-        #     dados_nota = await nota_olist.buscar_legado(id_ecommerce=pedido.get('ad_mkp_codped'))
-        #     if not dados_nota:
-        #         obs = "Erro ao buscar nota"
-        #         print(obs)             
-        #         continue
-        #     print("Gerando conferência do pedido")            
-        #     if not await conferencia.criar(nunota=pedido.get('nunota')):
-        #         obs = "Erro ao criar conferência do pedido no Sankhya"
-        #         print(obs)
-        #         continue
-        #     # Vincula a conferencia ao pedido
-        #     print("Vincula a conferencia ao pedido")
-        #     if not await conferencia.vincular_pedido(nunota=pedido.get('nunota'), nuconf=conferencia.nuconf):
-        #         obs = "Erro ao vincular conferência ao pedido no Sankhya"
-        #         print(obs)
-        #         continue
-        #     # Informa os itens na conferência
-        #     print("Informa os itens na conferência")
-        #     itens_para_conferencia = parser_conferencia.to_sankhya_itens(nuconf=conferencia.nuconf, dados_olist=dados_nota.get('itens'))
-        #     if not itens_para_conferencia:
-        #         obs = "Erro ao converter itens da nota para o formato da API do Sankhya"
-        #         print(obs)
-        #         continue
-        #     ack_insercao_itens = await conferencia.insere_itens(dados_item=itens_para_conferencia)
-        #     if not ack_insercao_itens:
-        #         obs = "Erro ao inserir itens na conferência no Sankhya"
-        #         print(obs)
-        #         continue
-        #     print("Itens inseridos na conferência")            
-        #     # Conclui a conferência do pedido
-        #     print("Conclui a conferência do pedido")
-        #     if not await conferencia.concluir(nuconf=conferencia.nuconf):
-        #         obs = "Erro ao concluir conferência do pedido no Sankhya"
-        #         print(obs)
-        #         continue
-        #     print(f"Conferência do pedido {pedido.get('nunota')} concluída!")
-        # status_log = False if obs else True
-        # return status_log
-        return True
-    
-
-
