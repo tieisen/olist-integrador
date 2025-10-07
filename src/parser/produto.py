@@ -20,6 +20,8 @@ class Produto:
     def __init__(self):
         self.formatter = Formatter()
         self.fornecedor_padrao_id = int(os.getenv('OLIST_ID_FORN_PADRAO'))
+        self.marca_padrao_id = int(os.getenv('OLIST_ID_MARCA_PADRAO'))
+        self.categoria_padrao_id = int(os.getenv('OLIST_ID_CAT_PADRAO'))
 
     def to_sankhya(self, data_olist:dict=None, data_sankhya:dict=None, type:str='update') -> tuple[list,dict]:
 
@@ -57,42 +59,42 @@ class Produto:
                                     'valorNew':None})
                     new_data['ad_mkp_idprodpai'] = ''
 
-            if data_olist.get('marca'):
-                if data_sankhya['ad_mkp_marca'] != str(data_olist['marca'].get('id')):
-                    updates.append({'campo':'ad_mkp_marca',
-                                    'valorOld':data_sankhya.get('ad_mkp_marca'),
-                                    'valorNew':data_olist['marca'].get('id')})
-                    new_data['ad_mkp_marca'] = str(data_olist['marca'].get('id'))
-            else:
-                if data_sankhya.get('ad_mkp_marca') != '25194':
-                    updates.append({'campo':'ad_mkp_marca',
-                                    'valorOld':data_sankhya.get('ad_mkp_marca'),
-                                    'valorNew':'25194'})
-                    new_data['ad_mkp_marca'] = '25194'
+            # if data_olist.get('marca'):
+            #     if data_sankhya['ad_mkp_marca'] != str(data_olist['marca'].get('id')):
+            #         updates.append({'campo':'ad_mkp_marca',
+            #                         'valorOld':data_sankhya.get('ad_mkp_marca'),
+            #                         'valorNew':data_olist['marca'].get('id')})
+            #         new_data['ad_mkp_marca'] = str(data_olist['marca'].get('id'))
+            # else:
+            #     if data_sankhya.get('ad_mkp_marca') != '25194':
+            #         updates.append({'campo':'ad_mkp_marca',
+            #                         'valorOld':data_sankhya.get('ad_mkp_marca'),
+            #                         'valorNew':'25194'})
+            #         new_data['ad_mkp_marca'] = '25194'
 
-            if data_sankhya['ad_mkp_nome'] != data_olist.get('descricao'):
-                updates.append({'campo':'ad_mkp_nome',
-                                'valorOld':data_sankhya.get('ad_mkp_nome'),
-                                'valorNew':data_olist.get('descricao')})                
-                new_data['ad_mkp_nome'] = data_olist.get('descricao')
+            # if data_sankhya['ad_mkp_nome'] != data_olist.get('descricao'):
+            #     updates.append({'campo':'ad_mkp_nome',
+            #                     'valorOld':data_sankhya.get('ad_mkp_nome'),
+            #                     'valorNew':data_olist.get('descricao')})                
+            #     new_data['ad_mkp_nome'] = data_olist.get('descricao')
 
-            if data_olist.get('categoria'):
-                if data_sankhya['ad_mkp_categoria'] != str(data_olist['categoria'].get('id')):
-                    updates.append({'campo':'ad_mkp_categoria',
-                                    'valorOld':data_sankhya.get('ad_mkp_categoria'),
-                                    'valorNew':data_olist['categoria'].get('id')})                  
-                    new_data['ad_mkp_categoria'] = str(data_olist['categoria'].get('id'))
-            else:
-                updates.append({'campo':'ad_mkp_categoria',
-                                'valorOld':None,
-                                'valorNew':341974963})
-                new_data['ad_mkp_categoria'] = 341974963
+            # if data_olist.get('categoria'):
+            #     if data_sankhya['ad_mkp_categoria'] != str(data_olist['categoria'].get('id')):
+            #         updates.append({'campo':'ad_mkp_categoria',
+            #                         'valorOld':data_sankhya.get('ad_mkp_categoria'),
+            #                         'valorNew':data_olist['categoria'].get('id')})                  
+            #         new_data['ad_mkp_categoria'] = str(data_olist['categoria'].get('id'))
+            # else:
+            #     updates.append({'campo':'ad_mkp_categoria',
+            #                     'valorOld':None,
+            #                     'valorNew':341974963})
+            #     new_data['ad_mkp_categoria'] = 341974963
                 
-            if data_sankhya['ad_mkp_descricao'] != data_olist.get('descricaoComplementar'):
-                updates.append({'campo':'ad_mkp_descricao',
-                                'valorOld':data_sankhya.get('ad_mkp_descricao'),
-                                'valorNew':data_olist.get('descricaoComplementar')})                  
-                new_data['ad_mkp_descricao'] = data_olist.get('descricaoComplementar')
+            # if data_sankhya['ad_mkp_descricao'] != data_olist.get('descricaoComplementar'):
+            #     updates.append({'campo':'ad_mkp_descricao',
+            #                     'valorOld':data_sankhya.get('ad_mkp_descricao'),
+            #                     'valorNew':data_olist.get('descricaoComplementar')})
+            #     new_data['ad_mkp_descricao'] = data_olist.get('descricaoComplementar')
                 
             new_data['ad_mkp_dhatualizado'] = datetime.now().strftime('%d/%m/%Y %H:%M:%S')            
 
@@ -129,17 +131,17 @@ class Produto:
             return [], {}
 
         if new_data and data_sankhya:                
-            if new_data.get('descricao') != data_sankhya.get('ad_mkp_nome'):
-                updates.append({'campo':'descricao',
-                                'valorOld':new_data.get('descricao'),
-                                'valorNew':data_sankhya.get('ad_mkp_nome')})
-                new_data['descricao'] = data_sankhya.get('ad_mkp_nome')
+            # if new_data.get('descricao') != data_sankhya.get('ad_mkp_nome'):
+            #     updates.append({'campo':'descricao',
+            #                     'valorOld':new_data.get('descricao'),
+            #                     'valorNew':data_sankhya.get('ad_mkp_nome')})
+            #     new_data['descricao'] = data_sankhya.get('ad_mkp_nome')
 
-            if new_data.get('descricaoComplementar') != data_sankhya.get('ad_mkp_descricao'):
-                updates.append({'campo':'descricaoComplementar',
-                                'valorOld':new_data.get('descricaoComplementar'),
-                                'valorNew':data_sankhya.get('ad_mkp_descricao')})                    
-                new_data['descricaoComplementar'] = data_sankhya.get('ad_mkp_descricao')
+            # if new_data.get('descricaoComplementar') != data_sankhya.get('ad_mkp_descricao'):
+            #     updates.append({'campo':'descricaoComplementar',
+            #                     'valorOld':new_data.get('descricaoComplementar'),
+            #                     'valorNew':data_sankhya.get('ad_mkp_descricao')})
+            #     new_data['descricaoComplementar'] = data_sankhya.get('ad_mkp_descricao')
 
             if new_data.get('unidade') != data_sankhya.get('codvol'):
                 updates.append({'campo':'unidade',
@@ -165,23 +167,23 @@ class Produto:
                                 'valorNew':data_sankhya.get('referencia')})                      
                 new_data['gtin'] = str(data_sankhya.get('referencia'))
 
-            try:
-                if int(new_data['categoria'].get('id',0)) != int(data_sankhya.get('ad_mkp_categoria')):
-                    updates.append({'campo':'categoria_id',
-                                    'valorOld':new_data['categoria'].get('id'),
-                                    'valorNew':data_sankhya.get('ad_mkp_categoria')})  
-                    new_data['categoria'] = { 'id': int(data_sankhya.get('ad_mkp_categoria')) }
-            except:
-                pass
+            # try:
+            #     if int(new_data['categoria'].get('id',0)) != int(data_sankhya.get('ad_mkp_categoria')):
+            #         updates.append({'campo':'categoria_id',
+            #                         'valorOld':new_data['categoria'].get('id'),
+            #                         'valorNew':data_sankhya.get('ad_mkp_categoria')})  
+            #         new_data['categoria'] = { 'id': int(data_sankhya.get('ad_mkp_categoria')) }
+            # except:
+            #     pass
 
-            try:
-                if int(new_data['marca'].get('id')) != int(data_sankhya.get('ad_mkp_marca')):
-                    updates.append({'campo':'marca_id',
-                                    'valorOld':new_data['marca'].get('id'),
-                                    'valorNew':data_sankhya.get('ad_mkp_marca')})                      
-                    new_data['marca'] = { 'id': int(data_sankhya.get('ad_mkp_marca'))}
-            except:
-                pass
+            # try:
+            #     if int(new_data['marca'].get('id')) != int(data_sankhya.get('ad_mkp_marca')):
+            #         updates.append({'campo':'marca_id',
+            #                         'valorOld':new_data['marca'].get('id'),
+            #                         'valorNew':data_sankhya.get('ad_mkp_marca')})                      
+            #         new_data['marca'] = { 'id': int(data_sankhya.get('ad_mkp_marca'))}
+            # except:
+            #     pass
 
             try:
                 if float(new_data['dimensoes'].get('largura')) != float(data_sankhya.get('largura')):
@@ -255,9 +257,19 @@ class Produto:
             with open(os.getenv('OBJECT_PRODUTO',"src/json/produto.json"), "r", encoding="utf-8") as f:
                 modelo_api = json.load(f)
             new_data = self.formatter.limpar_json(new_data,modelo_api.get('put'))
-            if new_data['fornecedores'][0].get('id') == 0:
-                new_data['fornecedores'][0]['id'] = self.fornecedor_padrao_id 
-            new_data['fornecedores'][0]['padrao'] = True
+            print("new_data")
+            print(new_data)
+            if len(new_data['fornecedores']) > 1:
+                new_data['fornecedores']=[
+                    {
+                        "id": self.fornecedor_padrao_id,
+                        "padrao": True
+                    }
+                ]
+            else:
+                new_data['fornecedores'][0]['id'] = self.fornecedor_padrao_id
+                new_data['fornecedores'][0]['padrao'] = True
+
             new_data['seo']['keywords']=['produto']
 
             if not updates:
@@ -267,7 +279,8 @@ class Produto:
             updates.append(-1)
             new_data = {}
             new_data['sku'] = str(data_sankhya.get('codprod'))
-            new_data['descricaoComplementar'] = str(data_sankhya.get('ad_mkp_descricao'))
+            # new_data['descricaoComplementar'] = str(data_sankhya.get('ad_mkp_descricao'))
+            new_data['descricaoComplementar'] = str(data_sankhya.get('descrprod'))
             new_data['unidade'] = str(data_sankhya.get('codvol'))
             new_data['unidadePorCaixa'] = 1
             new_data['ncm'] = re.sub(r"(\d{4})(\d{2})(\d{2})", r"\1.\2.\3", data_sankhya.get('ncm'))
@@ -276,8 +289,8 @@ class Produto:
             new_data['codigoEspecificadorSubstituicaoTributaria'] = str(data_sankhya.get('codespecst'))
             new_data['garantia'] = ''
             new_data['observacoes'] = ''
-            new_data['marca'] = {'id': int(data_sankhya.get('ad_mkp_marca'))}
-            new_data['categoria'] = {'id': int(data_sankhya.get('ad_mkp_categoria'))}
+            new_data['marca'] = {'id': int(self.marca_padrao_id)}
+            new_data['categoria'] = {'id': int(self.categoria_padrao_id)}
             new_data['precos'] = {'preco': 0,
                                     'precoPromocional': 0,
                                     'precoCusto': 0}
@@ -297,7 +310,7 @@ class Produto:
                                 'keywords': ['produto'],
                                 'linkVideo': None,
                                 'slug': None}
-            new_data['descricao'] = data_sankhya.get('ad_mkp_nome')
+            new_data['descricao'] = data_sankhya.get('descrprod')
             new_data['tipo'] = 'S'
             new_data['estoque'] = {'controlar': True,
                                     'sobEncomenda': False,
