@@ -77,6 +77,7 @@ async def integrar_pedidos(codemp:int=None):
             for j, ecom in ecommerces:
                 print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
                 pedido = Pedido(id_loja=ecom.get('id_loja'))
+                await pedido.consultar_cancelamentos()
                 await pedido.integrar_novos()
                 await pedido.integrar_confirmacao()
         retorno = {
