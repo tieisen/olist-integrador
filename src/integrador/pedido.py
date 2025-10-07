@@ -755,14 +755,22 @@ class Pedido:
         
         # Busca pedidos
         print("Buscando pedidos em lote Shopee...")
-        pedidos_lote_shopee = await self.buscar_lote(id_loja=9227)        
+        pedidos_lote_shopee = await self.buscar_lote(id_loja=9227)
+        if not pedidos_lote_shopee:
+            msg = "Erro ao buscar pedidos da shopee"
+            logger.error(msg)
+            print(msg)
         print("Buscando pedidos em lote Blz na web...")
         pedidos_lote_blz = await self.buscar_lote(id_loja=10940)
+        if not pedidos_lote_blz:
+            msg = "Erro ao buscar pedidos da blz na web"
+            logger.error(msg)
+            print(msg)        
 
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_importar_lote')
-        if all([pedidos_lote_shopee,pedidos_lote_blz]):
-            log.atualizar(id=log_id)
-            return True
+        if not pedidos_lote_shopee and not pedidos_lote_blz:
+            log.atualizar(id=log_id,sucesso=False)
+            return False
         
         if pedidos_lote_shopee:
             ack_shopee = await importar(log_id=log_id,pedidos_lote=pedidos_lote_shopee)
