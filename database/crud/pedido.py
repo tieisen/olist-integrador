@@ -144,6 +144,52 @@ async def atualizar(
         await session.commit()
         return True
 
+async def buscar_cancelar(
+        id_pedido:int=None,
+        num_pedido:int=None,
+        cod_pedido:str=None,
+        lista:list[int]=None
+    ) -> list[dict]:
+
+    if not any([id_pedido, num_pedido, cod_pedido, lista]):
+        print("Nenhum parâmetro informado")
+        return False
+    
+    async with AsyncSessionLocal() as session:
+        if id_pedido:
+            result = await session.execute(
+                select(Pedido)
+                .where(Pedido.dh_cancelamento.is_(False),
+                       Pedido.id_pedido == id_pedido)
+            )
+        elif num_pedido:
+            result = await session.execute(
+                select(Pedido)
+                .where(Pedido.dh_cancelamento.is_(False),
+                       Pedido.num_pedido == num_pedido)
+            )
+        elif cod_pedido:
+            result = await session.execute(
+                select(Pedido)
+                .where(Pedido.dh_cancelamento.is_(False),
+                       Pedido.cod_pedido == cod_pedido)
+            )
+        elif lista:
+            result = await session.execute(
+                select(Pedido)
+                .where(Pedido.dh_cancelamento.is_(False),
+                       Pedido.id_pedido.in_(lista))
+            )
+        else:
+            return False
+        
+        pedidos = result.scalars().all()
+        if not pedidos:
+            return []
+        dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=pedidos)
+        return dados_pedidos
+
 async def cancelar(nunota:int):
             
     async with AsyncSessionLocal() as session:
