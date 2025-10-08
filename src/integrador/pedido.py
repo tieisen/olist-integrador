@@ -10,7 +10,7 @@ from database.crud import pedido as crudPedido
 from database.crud import log_pedido as crudLogPed
 from database.crud import log as crudLog
 from src.services.viacep import Viacep
-from src.utils.decorador import contexto, carrega_dados_ecommerce, carrega_dados_empresa, log_execucao, interno, desabilitado
+from src.utils.decorador import contexto, carrega_dados_ecommerce, carrega_dados_empresa, log_execucao, interno
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -23,8 +23,8 @@ class Pedido:
         self.codemp:int=codemp
         self.log_id:int=None
         self.contexto:str='pedido'
-        self.dados_ecommerce:dict=None
-        self.dados_empresa:dict=None
+        self.dados_ecommerce:dict={}
+        self.dados_empresa:dict={}
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
         self.pedido_cancelado:int=int(os.getenv('OLIST_SIT_PEDIDO_CANCELADO'))
         self.pedido_incompleto:int=int(os.getenv('OLIST_SIT_PEDIDO_INCOMPLETO'))
@@ -51,6 +51,13 @@ class Pedido:
         lista_pedidos_existentes = [p.get('id_pedido') for p in pedidos_existentes]
         pedidos_pendentes = [p for p in lista_pedidos if p.get('id') not in lista_pedidos_existentes]
         return pedidos_pendentes
+    
+    @interno
+    def validar_loja(
+            self,
+            lista_pedidos: list
+        ) -> list:        
+        return [p for p in lista_pedidos if p['ecommerce'].get('id') == self.id_loja]
 
     @interno
     async def validar_situacao(
@@ -186,6 +193,7 @@ class Pedido:
             num_pedido:int=None,
             **kwargs
         ) -> bool:
+        
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
                                           para='base',
@@ -203,6 +211,7 @@ class Pedido:
             # Consulta pedidos novos
             print("-> Consultando pedidos novos...")
             pedidos_novos = await self.consultar_pedidos_novos(atual=atual)
+            pedidos_novos = self.validar_loja(lista_pedidos=pedidos_novos)
             if isinstance(pedidos_novos, list):            
                 print(f"{len(pedidos_novos)} pedidos para receber")
                 for i, pedido in enumerate(pedidos_novos):
