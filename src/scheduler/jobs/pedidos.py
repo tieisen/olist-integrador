@@ -23,8 +23,13 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
             for i, emp in enumerate(empresas):
                 print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-                for j, ecom in ecommerces:
-                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                if not ecommerces:
+                    print("Nenhum e-commerce vinculado à empresa")
+                    continue
+                for j, ecom in enumerate(ecommerces):
+                    print("ecom")
+                    print(ecom)
+                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     pedido = Pedido(id_loja=ecom.get('id_loja'))
                     separacao = Separacao(id_loja=ecom.get('id_loja'))
                     ack = await pedido.receber_novos()
@@ -100,8 +105,8 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
             for i, emp in enumerate(empresas):
                 print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-                for j, ecom in ecommerces:
-                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                for j, ecom in enumerate(ecommerces):
+                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     pedido = Pedido(id_loja=ecom.get('id_loja'))
                     await pedido.consultar_cancelamentos()
                     await pedido.integrar_novos()
@@ -154,8 +159,8 @@ async def integrar_separacoes(codemp:int=None) -> dict:
         for i, emp in enumerate(empresas):
             print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-            for j, ecom in ecommerces:
-                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+            for j, ecom in enumerate(ecommerces):
+                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 separacao = Separacao(id_loja=ecom.get('id_loja'))
                 await separacao.receber()
         retorno = {
