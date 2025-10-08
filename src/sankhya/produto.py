@@ -18,7 +18,7 @@ class Produto:
         self.empresa_id = empresa_id
         self.formatter = Formatter()
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
-        self.campos_atualiza_snk = [ "ID", "IDPRODPAI" ]
+        self.campos_atualiza_snk = [ "ID", "IDPRODPAI", "ATIVO" ]
 
     @token_snk
     async def buscar(
@@ -86,7 +86,8 @@ class Produto:
             self,
             codprod:int,
             payload:dict,
-            seq:int=None
+            seq:int=None,
+            codemp:int=None
         ) -> bool:
 
         if not isinstance(payload, dict):
@@ -110,13 +111,17 @@ class Produto:
                         {
                             "pk": {
                                 "CODPROD": codprod,
-                                "SEQ": seq
+                                "SEQ": seq,
+                                "CODEMP": codemp
                             },
                             "values": payload
                         }
                     ]
                 }
             }
+        
+        # print("payload para snk")
+        # print(_payload)
 
         res = requests.post(
             url=url,
