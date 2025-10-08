@@ -5,7 +5,7 @@ import asyncio
 router = APIRouter()
 empresa = Empresa()
 
-@router.get("/")
+@router.get("")
 def default():
     return {"message": "Empresas"}
 

@@ -4,7 +4,7 @@ import asyncio
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 def default():
     return {"message": "Estoque"}
 
