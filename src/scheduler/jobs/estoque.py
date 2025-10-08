@@ -11,7 +11,7 @@ async def integrar_estoque(codemp:int=None):
     empresas = await empresa.buscar(codemp=codemp)
     ack:list[bool]=[]
 
-    print("===================: INTEGRAÇÃO DE ESTOQUE :===================")    
+    print("::::::::::::::::::: INTEGRAÇÃO DE ESTOQUE :::::::::::::::::::")    
 
     for i, emp in enumerate(empresas):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())

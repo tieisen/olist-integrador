@@ -12,7 +12,7 @@ async def integrar_produtos(codemp:int=None) -> bool:
 
     empresas = await empresa.buscar(codemp=codemp)
 
-    print("===================: INTEGRAÇÃO DE PRODUTOS :===================")
+    print("::::::::::::::::::: INTEGRAÇÃO DE PRODUTOS :::::::::::::::::::")
 
     for i, emp in enumerate(empresas):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())

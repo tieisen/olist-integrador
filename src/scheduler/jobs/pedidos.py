@@ -14,7 +14,7 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
     emp:dict={}
     ecom:dict={}
 
-    print("===================: RECEBIMENTO DE PEDIDOS :===================")    
+    print("::::::::::::::::::: RECEBIMENTO DE PEDIDOS :::::::::::::::::::")    
 
     if not id_loja:
         empresas = await empresa.buscar(codemp=codemp)        
@@ -27,8 +27,11 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
                     pedido = Pedido(id_loja=ecom.get('id_loja'))
                     separacao = Separacao(id_loja=ecom.get('id_loja'))
-                    await pedido.receber_novos()
-                    await separacao.receber()
+                    ack = await pedido.receber_novos()
+                    if ack:
+                        await separacao.receber()
+                    else:
+                        print(f"Erro ao receber pedidos")
             retorno = {
                 "status": True,
                 "exception": None
@@ -64,7 +67,7 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
     
 async def receber_pedido_unico(id_loja:int,numero:int) -> dict:
     retorno:dict={}
-    print("===================: RECEBIMENTO DE PEDIDO ÚNICO :===================")    
+    print("::::::::::::::::::: RECEBIMENTO DE PEDIDO ÚNICO :::::::::::::::::::")    
     pedido = Pedido(id_loja=id_loja)
     try:
         ack = await pedido.receber(num_pedido=numero)
@@ -88,7 +91,7 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
     emp:dict={}
     ecom:dict={}
 
-    print("===================: INTEGRAÇÃO DE PEDIDOS :===================")
+    print("::::::::::::::::::: INTEGRAÇÃO DE PEDIDOS :::::::::::::::::::")
 
     if not id_loja:
         empresas = await empresa.buscar(codemp=codemp)
@@ -145,7 +148,7 @@ async def integrar_separacoes(codemp:int=None) -> dict:
 
     empresas = await empresa.buscar(codemp=codemp)
 
-    print("===================: INTEGRAÇÃO DE SEPARAÇÕES :===================")    
+    print("::::::::::::::::::: INTEGRAÇÃO DE SEPARAÇÕES :::::::::::::::::::")    
 
     try:
         for i, emp in enumerate(empresas):

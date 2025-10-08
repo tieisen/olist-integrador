@@ -13,7 +13,7 @@ async def integrar_devolucoes(codemp:int=None):
 
     empresas = await empresa.buscar(codemp=codemp)
 
-    print("===================: INTEGRAÇÃO DE DEVOLUÇÕES :===================")    
+    print("::::::::::::::::::: INTEGRAÇÃO DE DEVOLUÇÕES :::::::::::::::::::")    
 
     for i, emp in enumerate(empresas):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())

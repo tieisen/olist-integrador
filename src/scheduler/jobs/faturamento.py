@@ -11,7 +11,7 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
     emp:dict={}
     ecom:dict={}
 
-    print("===================: FATURAMENTO DE PEDIDOS :===================")    
+    print(":::::::::::::::::::: FATURAMENTO DE PEDIDOS ::::::::::::::::::::")    
 
     if not id_loja:
         empresas = await empresa.buscar(codemp=codemp)
@@ -65,7 +65,7 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
     emp:dict={}
     ecom:dict={}
 
-    print("===================: FATURAMENTO DE PEDIDOS NO OLIST :===================")
+    print(":::::::::::::::::::: FATURAMENTO DE PEDIDOS NO OLIST ::::::::::::::::::::")
 
     if not id_loja:
         empresas = await empresa.buscar(codemp=codemp)
@@ -121,7 +121,7 @@ async def integrar_faturamento_snk(codemp:int=None) -> dict:
 
     empresas = await empresa.buscar(codemp=codemp)
 
-    print("===================: FATURAMENTO DE PEDIDOS NO SANKHYA :===================")    
+    print(":::::::::::::::::::: FATURAMENTO DE PEDIDOS NO SANKHYA ::::::::::::::::::::")    
 
     try:
         for i, emp in enumerate(empresas):
@@ -152,7 +152,7 @@ async def integrar_venda_interna(codemp:int=None) -> dict:
 
     empresas = await empresa.buscar(codemp=codemp)
 
-    print("===================: VENDA INTERNA :===================")    
+    print(":::::::::::::::::::: VENDA INTERNA ::::::::::::::::::::")    
 
     try:
         for i, emp in enumerate(empresas):

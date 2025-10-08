@@ -8,14 +8,14 @@ async def enviar_notificacao(codemp:int=None):
     empresas:list[dict]=[]
     emp:dict={}
     
-    empresas = asyncio.run(empresa.buscar())
+    empresas = await empresa.buscar(codemp=codemp)
     email = Email()
 
-    print("===================: ALERTAS DO INTEGRADOR :===================")    
+    print("::::::::::::::::::: ALERTAS DO INTEGRADOR :::::::::::::::::::")    
 
     for i, emp in enumerate(empresas):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
-        asyncio.run(email.notificar(empresa_id=emp.get('id')))
+        await email.notificar(empresa_id=emp.get('id'))
 
 if __name__=="__main__":
 
