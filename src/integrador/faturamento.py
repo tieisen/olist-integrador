@@ -396,8 +396,8 @@ class Faturamento:
                         logger.error("Erro ao gerar NF do pedido %s",pedido.nunota_pedido)
                         continue
                     venda.atualizar_nf_gerada(cod_pedido=pedido.cod_pedido,
-                                            num_nota=dados_nota_olist.get('numero'),
-                                            id_nota=dados_nota_olist.get('id'))
+                                              num_nota=dados_nota_olist.get('numero'),
+                                              id_nota=dados_nota_olist.get('id'))
                     
                     # Emite NF no Olist
                     print(f"Autorizando NF {dados_nota_olist.get('numero')} pelo Olist...")                
@@ -452,7 +452,7 @@ class Faturamento:
 
                 # Verifica se o pedido foi faturado ou trancou
                 print("Verificando se o pedido foi faturado...")
-                val = 0
+                # val = 0
                 for nunota in pedidos_sankhya:
                     status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
                     if status_faturamento:
@@ -460,9 +460,11 @@ class Faturamento:
                         print(f"Pedido {nunota} já foi faturado.")
                         # Atualiza base de dados
                         venda.atualizar_faturada_lote(nunota_pedido=nunota,
-                                                    nunota_nota=status_faturamento[0].get('nunota'))                    
+                                                      nunota_nota=status_faturamento[0].get('nunota'))                    
                         venda.atualizar_confirmada_nota_lote(nunota_nota=status_faturamento[0].get('nunota'))
-                if val != 0:
+                        pedidos_sankhya.pop(pedidos_sankhya.index(nunota))
+                #if val == len(pedidos_sankhya):
+                if not pedidos_sankhya:
                     print("=====================================================")
                     print("-> PROCESSO CONCLUÍDO!")                
                     return True
@@ -486,7 +488,7 @@ class Faturamento:
                         continue
                     nunotas_nota.append(nunota_nota)
                     venda.atualizar_faturada_lote(nunota_pedido=nunota,
-                                                nunota_nota=nunota_nota)
+                                                  nunota_nota=nunota_nota)
                 if not nunotas_nota:
                     print("Erro ao faturar pedido(s) no Sankhya")
                     logger.error("Erro ao faturar pedido(s) no Sankhya")
@@ -517,7 +519,7 @@ class Faturamento:
         if not pedidos_faturar_blz:
             print("Nenhum pedido para faturamento na blz na web.")
 
-        if not all([pedidos_faturar_shopee,pedidos_faturar_blz]):
+        if not any([pedidos_faturar_shopee,pedidos_faturar_blz]):
             return True
         
         if pedidos_faturar_shopee:
