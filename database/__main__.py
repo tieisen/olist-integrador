@@ -1,11 +1,10 @@
-from database.database import engine, Base
+from database.database import verificar_criar_banco, criar_tabelas
 from database.models import *
 import asyncio
 
-async def criar_tabelas():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+async def main():
+    await verificar_criar_banco()
+    await criar_tabelas()
 
 if __name__ == "__main__":
-    asyncio.run(criar_tabelas())
+    asyncio.run(main())
