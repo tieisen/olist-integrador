@@ -547,7 +547,7 @@ class Pedido:
             return True
         
         print(f"Novos pedidos encontrados: {len(novos_pedidos)}")
-        novos_pedidos = [{'id': pedido.id_pedido, 'numero': pedido.num_pedido, 'loja': pedido.id_loja, 'codigo': pedido.cod_pedido} for pedido in novos_pedidos]        
+        novos_pedidos = [{'id': pedido.id_pedido, 'numero': pedido.num_pedido, 'loja': pedido.id_loja, 'codigo': pedido.cod_pedido, 'dados': pedido.dados_pedido} for pedido in novos_pedidos]        
 
         # Inicia as classes de integração
         olist = PedidoOlist()
@@ -556,9 +556,9 @@ class Pedido:
         obs = None
         for index, pedido in enumerate(novos_pedidos):
 
-            if not first:
-                time.sleep(self.req_time_sleep)  # Evita rate limit
-            first = False
+            # if not first:
+            #     time.sleep(self.req_time_sleep)  # Evita rate limit
+            # first = False
 
             if obs:
                 # Cria um log de erro se houver observação
@@ -575,9 +575,11 @@ class Pedido:
             print(f"Buscando pedido {index + 1}/{len(novos_pedidos)}: {pedido.get('numero')}")
             
             # Busca os dados do pedido no Olist
-            dados_pedido_olist = await olist.buscar(id=pedido.get('id'))
+            dados_pedido_olist = pedido.get('dados')
+            # dados_pedido_olist = await olist.buscar(id=pedido.get('id'))
             if not dados_pedido_olist:
-                obs = "Erro ao buscar dados do pedido no Olist ou dados incompletos"
+                #obs = "Erro ao buscar dados do pedido no Olist ou dados incompletos"
+                obs = "Erro ao buscar dados do pedido"
                 continue
 
             # Valida itens e desmembra kits
@@ -592,6 +594,7 @@ class Pedido:
                     itens_pedido_validado.append(item)
                 else:
                     ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
+                    time.sleep(self.req_time_sleep)  # Evita rate limit
                     if ack:
                         itens_pedido_validado+=kit_desmembrado
                     else:
