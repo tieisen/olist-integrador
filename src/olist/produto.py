@@ -219,9 +219,10 @@ class Produto:
                                        "Accept":"application/json"
                                     })
                 status = res.status_code
-                itens += res.json()["itens"]
-                paginacao = res.json()["paginacao"]
-                time.sleep(self.req_sleep)
+                if status == 200:                    
+                    itens += res.json()["itens"]
+                    paginacao = res.json()["paginacao"]
+                    time.sleep(self.req_sleep)
             else:
                 status=0
       
