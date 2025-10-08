@@ -45,11 +45,8 @@ class Produto:
         for i, alteracao in enumerate(alteracoes_pendentes):
             print(f"-> Produto #{alteracao.get('sku')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
-            # Item de imposto
-            if int(alteracao.get('sku')) == 1:
-                continue
             # Produto tipo simples porém sem SKU no cadastro do Olist
-            if not int(alteracao.get('sku')):                
+            if not alteracao.get('sku'):
                 obs = f"Produto ID {int(alteracao.get('id'))} sem SKU"
                 logger.warning(obs)
                 print(obs)
@@ -58,6 +55,11 @@ class Produto:
                                         sucesso=False,
                                         obs=obs)                      
                 continue
+
+            # Item de imposto
+            if int(alteracao.get('sku')) == 1:
+                continue
+            
             # Valida se o produto tem registro na base
             produto_cadastrado = await crudProduto.buscar(empresa_id=int(self.dados_empresa.get('id')),
                                                           codprod=int(alteracao.get('sku')))
