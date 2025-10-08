@@ -16,7 +16,7 @@ async def integrar_devolucoes(codemp:int=None):
     print("===================: INTEGRAÇÃO DE DEVOLUÇÕES :===================")    
 
     for i, emp in enumerate(empresas):
-        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
         ecommerces = asyncio.run(ecommerce.buscar(empresa_id=emp.get('id')))
         for j, ecom in ecommerces:
             print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
