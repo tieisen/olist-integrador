@@ -21,7 +21,7 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
 
         try:
             for i, emp in enumerate(empresas):
-                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in ecommerces:
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
@@ -95,7 +95,7 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
 
         try:
             for i, emp in enumerate(empresas):
-                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in ecommerces:
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
@@ -149,7 +149,7 @@ async def integrar_separacoes(codemp:int=None) -> dict:
 
     try:
         for i, emp in enumerate(empresas):
-            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
             for j, ecom in ecommerces:
                 print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
