@@ -29,6 +29,13 @@ class Separacao:
         pedidos_pendentes_separacao = [p for p in lista_pedidos if p['venda'].get('id') not in lista_pedidos_com_separacao]
         return pedidos_pendentes_separacao
 
+    @interno
+    def validar_loja(
+            self,
+            lista_pedidos: list[dict]
+        ) -> list:        
+        return [p for p in lista_pedidos if p['ecommerce'].get('id') == self.id_loja]
+
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
@@ -46,6 +53,7 @@ class Separacao:
             await crudLog.atualizar(id=log_id,
                                     sucesso=True)
             return True
+        lista_separacoes = self.validar_loja(lista_pedidos=lista_separacoes)
         lista_separacoes = await self.valida_separacoes_registradas(lista_separacoes)
         if not lista_separacoes:
             print("Nenhuma separação pendente encontrada")
