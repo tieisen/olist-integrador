@@ -41,8 +41,8 @@ class Produto:
         parametero = 'SANKHYA_PATH_SCRIPT_PRODUTO'
         script = buscar_script(parametro=parametero)
         query = script.format_map({"codemp":self.codemp,
-                                   "codprod":codprod or "NULL",
-                                   "idprod":idprod or "NULL"})
+                                   "codprod":codprod or 0,
+                                   "idprod":idprod or 0})
 
         res = requests.get(
             url=url,
@@ -100,7 +100,7 @@ class Produto:
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        payload = {
+        _payload = {
                 "serviceName":"DatasetSP.save",
                 "requestBody":{
                     "entityName":"AD_OLISTPRODUTO",
@@ -121,7 +121,7 @@ class Produto:
         res = requests.post(
             url=url,
             headers={ 'Authorization':f"Bearer {self.token}" },
-            json=payload
+            json=_payload
         )
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
