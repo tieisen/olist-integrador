@@ -321,19 +321,21 @@ class Produto:
             logger.warning(produto['obs'])
             print(produto['obs'])
             return False
-        if log_atualizacoes == 0:
+        if log_atualizacoes == 0 or not dados_atualizados:
             produto['obs'] = f'Sem dados divergentes para atualizar no produto {produto.get('codprod')}/{produto.get('idprod')}'
             produto['sucesso'] = True
             await crudProduto.atualizar(empresa_id=self.dados_empresa.get('id'),
                                         codprod=int(produto.get('codprod')),
                                         pendencia=False)
             return True
+
         # Converte para o formato da API do Sankhya
         print("Convertendo para o formato da API do Sankhya...")      
         dados_formato_snk = self.snk.preparar_dados(payload=dados_atualizados)
         # Envia dados para o Sankhya
         print("Enviando dados para o Sankhya...") 
         ack_atualizacao = await self.snk.atualizar(codprod=int(produto.get('codprod')),
+                                                   codemp=self.codemp,
                                                    seq=dados_produto_sankhya.get('seqemp'),
                                                    payload=dados_formato_snk)
         if not ack_atualizacao:
@@ -399,7 +401,7 @@ class Produto:
                                                 codprod=int(produto.get('codprod',0)),
                                                 idprod=int(produto.get('idprod',0)),
                                                 sucesso=produto.get('sucesso'),
-                                                campo=log_atualizacoes.get('campo'),
+                                                campo=atualizacao.get('campo'),
                                                 valor_old=str(atualizacao.get('valorOld')),
                                                 valor_new=str(atualizacao.get('valorNew')))
                 else:
@@ -443,7 +445,7 @@ class Produto:
                                             codprod=int(produto.get('codprod',0)),
                                             idprod=int(produto.get('idprod',0)),
                                             sucesso=produto.get('sucesso'),
-                                            campo=log_atualizacoes.get('campo'),
+                                            campo=atualizacao.get('campo'),
                                             valor_old=str(atualizacao.get('valorOld')),
                                             valor_new=str(atualizacao.get('valorNew')))
             else:
