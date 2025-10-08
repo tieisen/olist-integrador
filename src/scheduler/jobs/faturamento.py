@@ -17,7 +17,7 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
         empresas = await empresa.buscar(codemp=codemp)
         try:
             for i, emp in enumerate(empresas):
-                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in ecommerces:
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
@@ -71,7 +71,7 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
         empresas = await empresa.buscar(codemp=codemp)
         try:
             for i, emp in enumerate(empresas):
-                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in ecommerces:
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
