@@ -5,10 +5,10 @@ from routers import estoque, pedidos, produtos, notas, devolucoes
 from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
 
 async def startup_event():
-    iniciar_agendador()
+    await iniciar_agendador()
 
 async def shutdown_event():
-    encerrar_agendador()
+    await encerrar_agendador()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
