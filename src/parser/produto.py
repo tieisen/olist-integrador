@@ -15,7 +15,7 @@ class Produto:
     def parse_ncm(self, ncm:str) -> str:
         if not ncm:
             return None
-        ncm = re.sub(r"(\d{4})(\d{2})(\d{2})", r"\1.\2.\3", ncm)
+        ncm = re.sub(r"(\d{4})(\d{2})(\d{2})", r"\1.\2.\3", str(ncm))
         if len(ncm) != 10:
             logger.error(f"NCM inválido: {ncm}")
             print(f"NCM inválido: {ncm}")
@@ -25,7 +25,7 @@ class Produto:
     def parse_cest(self, cest:str) -> str:
         if not cest:
             return None
-        cest = re.sub(r"(\d{2})(\d{3})(\d{2})", r"\1.\2.\3", cest)
+        cest = re.sub(r"(\d{2})(\d{3})(\d{2})", r"\1.\2.\3", str(cest))
         if len(cest) != 9:
             logger.error(f"CEST inválido: {cest}")
             print(f"CEST inválido: {cest}")
@@ -106,7 +106,7 @@ class Produto:
                                 'valorNew':data_sankhya.get('codvol')})                      
                 new_data['unidade'] = data_sankhya.get('codvol')
 
-            if str(re.sub(r"[.]", '', new_data.get('ncm'))) != str(data_sankhya.get('ncm')):
+            if str(new_data.get('ncm')) != self.parse_ncm(data_sankhya.get('ncm')):
                 ncm = self.parse_ncm(data_sankhya.get('ncm'))
                 if ncm:
                     updates.append({'campo':'ncm',
@@ -114,7 +114,7 @@ class Produto:
                                     'valorNew':data_sankhya.get('ncm')})                     
                     new_data['ncm'] = ncm
 
-            if str(re.sub(r"[.]", '', new_data.get('codigoEspecificadorSubstituicaoTributaria'))) != str(data_sankhya.get('codespecst')):
+            if str(new_data.get('codigoEspecificadorSubstituicaoTributaria')) != self.parse_cest(data_sankhya.get('codespecst')):
                 cest = self.parse_cest(data_sankhya.get('codespecst'))
                 if cest:
                     updates.append({'campo':'cest',
