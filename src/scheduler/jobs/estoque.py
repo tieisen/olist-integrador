@@ -14,7 +14,7 @@ async def integrar_estoque(codemp:int=None):
     print("===================: INTEGRAÇÃO DE ESTOQUE :===================")    
 
     for i, emp in enumerate(empresas):
-        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
         estoque = Estoque(codemp=emp.get('snk_codemp'))        
         ack.append(await estoque.atualizar_olist())
     
