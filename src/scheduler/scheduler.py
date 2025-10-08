@@ -14,9 +14,11 @@ logger = set_logger(__name__)
 # ==============================
 # 🔌 CONFIGURAÇÃO DO JOBSTORE
 # ==============================
-db_url = os.getenv('ALEMBIC_URL')
-if not db_url:
-    raise FileNotFoundError("URL do banco de dados não encontada")
+DATABASE_URL = os.getenv("ALEMBIC_URL")
+DB_NAME = os.getenv("DB_NAME")
+if not all([DATABASE_URL,DB_NAME]):
+    raise FileNotFoundError("DATABASE_URL e/ou DB_NAME não encontados no arquivo de ambiente")
+db_url = DATABASE_URL+DB_NAME
 
 job_engine = create_engine(db_url)
 
@@ -30,14 +32,21 @@ scheduler = AsyncIOScheduler(jobstores=jobstores, timezone=timezone("America/Sao
 # ⚙️ DEFINIÇÃO DAS TAREFAS
 # ==============================
 
-async def rotina_produtos_estoque():
-    logger.info("🔄 Iniciando sincronização de produtos e estoque...")
+async def rotina_produtos():
+    logger.info("🔄 Iniciando sincronização de produtos...")
     try:
         await produtos.integrar_produtos()
-        await estoque.integrar_estoque()
-        logger.info("✅ Rotina de produtos e estoque concluída.")
+        logger.info("✅ Rotina de produtos concluída.")
     except Exception as e:
-        logger.exception(f"❌ Erro na rotina produtos/estoque: {e}")
+        logger.exception(f"❌ Erro na rotina produtos: {e}")
+
+async def rotina_estoque():
+    logger.info("🔄 Iniciando sincronização de estoque...")
+    try:
+        await estoque.integrar_estoque()
+        logger.info("✅ Rotina de estoque concluída.")
+    except Exception as e:
+        logger.exception(f"❌ Erro na rotina estoque: {e}")
 
 async def rotina_pedidos():
     logger.info("📦 Iniciando sincronização de pedidos...")
@@ -46,6 +55,11 @@ async def rotina_pedidos():
         logger.info("✅ Rotina de pedidos concluída.")
     except Exception as e:
         logger.exception(f"❌ Erro na rotina de pedidos: {e}")
+        
+async def rotina_completa():
+    await rotina_produtos()
+    await rotina_estoque()
+    await rotina_pedidos()
 
 async def rotina_devolucoes():
     logger.info("↩️ Iniciando sincronização de devoluções...")
@@ -114,8 +128,7 @@ async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
     jobs = [
-        ("sincronizar_produtos_estoque", rotina_produtos_estoque, "interval", {"minutes": 10}),
-        ("sincronizar_pedidos", rotina_pedidos, "interval", {"minutes": 15}),
+        ("sincronizar_tudo", rotina_completa, "interval", {"minutes": 10}),        
         ("sincronizar_devolucoes", rotina_devolucoes, "cron", {"hour": 19}),
         ("notificar_erros", rotina_notificacao, "interval", {"hours": 4}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
