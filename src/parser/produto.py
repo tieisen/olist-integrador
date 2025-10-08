@@ -54,14 +54,14 @@ class Produto:
                 print("Dados insuficientes para atualização.")
                 return [], {}
 
-            if data_sankhya['id'] != str(data_olist.get('id')):
+            if str(data_sankhya['id']).strip() != str(data_olist.get('id')).strip():
                 updates.append({'campo':'id',
                                 'valorOld':data_sankhya.get('id'),
                                 'valorNew':data_olist.get('id')})
                 new_data['id'] = str(data_olist.get('id'))
 
             if data_olist.get('produtoPai'):
-                if data_sankhya['idprodpai'] != str(data_olist['produtoPai'].get('id')):
+                if str(data_sankhya['idprodpai']).strip() != str(data_olist['produtoPai'].get('id')).strip():
                     updates.append({'campo':'idprodpai',
                                     'valorOld':data_sankhya.get('idprodpai'),
                                     'valorNew':data_olist['produtoPai'].get('id')})                    
