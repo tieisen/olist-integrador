@@ -119,9 +119,6 @@ class Produto:
                     ]
                 }
             }
-        
-        # print("payload para snk")
-        # print(_payload)
 
         res = requests.post(
             url=url,
