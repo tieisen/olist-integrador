@@ -123,7 +123,7 @@ async def inicializar_tarefas():
 
     for job_id, func, trigger, params in jobs:
         if job_id not in jobs_existentes:
-            scheduler.add_job(func, trigger, id=job_id, **params)
+            scheduler.add_job(func, trigger, id=job_id, replace_existing=True, **params)
             logger.info(f"📅 Job registrado: {job_id}")
 
 # ==============================
