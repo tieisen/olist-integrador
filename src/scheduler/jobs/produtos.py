@@ -15,7 +15,7 @@ async def integrar_produtos(codemp:int=None) -> bool:
     print("===================: INTEGRAÇÃO DE PRODUTOS :===================")
 
     for i, emp in enumerate(empresas):
-        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
         produto = Produto(codemp=emp.get('snk_codemp'))        
         ack.append(await produto.receber_alteracoes())
         ack.append(await produto.integrar_olist())
