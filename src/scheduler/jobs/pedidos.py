@@ -27,8 +27,6 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
                     print("Nenhum e-commerce vinculado à empresa")
                     continue
                 for j, ecom in enumerate(ecommerces):
-                    print("ecom")
-                    print(ecom)
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     pedido = Pedido(id_loja=ecom.get('id_loja'))
                     separacao = Separacao(id_loja=ecom.get('id_loja'))
