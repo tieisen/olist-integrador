@@ -14,7 +14,7 @@ async def enviar_notificacao(codemp:int=None):
     print("===================: ALERTAS DO INTEGRADOR :===================")    
 
     for i, emp in enumerate(empresas):
-        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+        print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
         asyncio.run(email.notificar(empresa_id=emp.get('id')))
 
 if __name__=="__main__":
