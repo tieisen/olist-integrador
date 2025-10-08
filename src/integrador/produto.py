@@ -43,52 +43,53 @@ class Produto:
             return True
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
         for i, alteracao in enumerate(alteracoes_pendentes):
-            print(f"-> Produto #{i+1}/{len(alteracoes_pendentes)}")
+            print(f"-> Produto #{alteracao.get('sku')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             # Item de imposto
-            if alteracao.get('sku') == 1:
+            if int(alteracao.get('sku')) == 1:
                 continue
             # Produto tipo simples porém sem SKU no cadastro do Olist
-            if not alteracao.get('sku'):                
-                obs = f"Produto ID {alteracao.get('id')} sem SKU"
+            if not int(alteracao.get('sku')):                
+                obs = f"Produto ID {int(alteracao.get('id'))} sem SKU"
                 logger.warning(obs)
                 print(obs)
                 await crudLogProd.criar(log_id=log_id,
-                                        idprod=alteracao.get('id'),
+                                        idprod=int(alteracao.get('id')),
                                         sucesso=False,
                                         obs=obs)                      
                 continue
             # Valida se o produto tem registro na base
-            produto_cadastrado = await crudProduto.buscar(codprod=alteracao.get('sku'))
+            produto_cadastrado = await crudProduto.buscar(empresa_id=int(self.dados_empresa.get('id')),
+                                                          codprod=int(alteracao.get('sku')))
             if not produto_cadastrado:                
-                dados_produto_olist = await self.olist.buscar(id=alteracao.get('id'))
+                dados_produto_olist = await self.olist.buscar(id=int(alteracao.get('id')))
                 if not dados_produto_olist:
-                    obs = f"Produto com ID {alteracao.get('id')} não encontrado no Olist"
+                    obs = f"Produto com ID {int(alteracao.get('id'))} não encontrado no Olist"
                     logger.warning(obs)
                     print(obs)
                     await crudLogProd.criar(log_id=log_id,
-                                            idprod=alteracao.get('id'),
+                                            idprod=int(alteracao.get('id')),
                                             sucesso=False,
                                             obs=obs)
                     continue                
                 # Se o produto estiver ativo mas não cadastrado, adiciona ele na base
                 if dados_produto_olist.get('situacao') in ['A','I']:                    
-                    ack = await crudProduto.criar(codprod=alteracao.get('sku'),
-                                                  idprod=alteracao.get('id'),
+                    ack = await crudProduto.criar(codprod=int(alteracao.get('sku')),
+                                                  idprod=int(alteracao.get('id')),
                                                   empresa_id=self.dados_empresa.get('id'))
                     if not ack:
-                        obs = f"Falha ao cadastrar produtos {alteracao.get('sku')}/{alteracao.get('id')} na base"
+                        obs = f"Falha ao cadastrar produtos {int(alteracao.get('sku'))}/{int(alteracao.get('id'))} na base"
                         logger.error(obs)
                         print(obs)
                         await crudLogProd.criar(log_id=log_id,
-                                                codprod=alteracao.get('sku'),
-                                                idprod=alteracao.get('id'),
+                                                codprod=int(alteracao.get('sku')),
+                                                idprod=int(alteracao.get('id')),
                                                 sucesso=False,
                                                 obs=obs)
                     else:    
                         await crudLogProd.criar(log_id=log_id,
-                                                codprod=alteracao.get('sku'),
-                                                idprod=alteracao.get('id'),
+                                                codprod=int(alteracao.get('sku')),
+                                                idprod=int(alteracao.get('id')),
                                                 sucesso=True)
                     continue
                 else:
@@ -96,8 +97,8 @@ class Produto:
                     logger.warning(obs)
                     print(obs)
                     await crudLogProd.criar(log_id=log_id,
-                                            codprod=alteracao.get('sku'),
-                                            idprod=alteracao.get('id'),
+                                            codprod=int(alteracao.get('sku')),
+                                            idprod=int(alteracao.get('id')),
                                             sucesso=False,
                                             obs=obs)
                     continue                    
@@ -106,7 +107,7 @@ class Produto:
                 # Produto foi cadastrado já com todas as alterações
                 print(f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} foi cadastrado já com todas as alterações")
                 continue
-            if produto_cadastrado.get('dh_atualizacao') >= ultima_alteracao:
+            if produto_cadastrado.get('dh_atualizacao') and (produto_cadastrado.get('dh_atualizacao') >= ultima_alteracao):
                 # Produto já tem todas as alterações
                 print(f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} já tem todas as alterações")
                 continue
@@ -115,21 +116,21 @@ class Produto:
                 print(f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} já está na fila de atualização")
                 continue
             # Marca o produto como pendente de atualização
-            ack = crudProduto.atualizar(codprod=alteracao.get('sku'),
-                                        pendencia=True,
-                                        empresa_id=self.dados_empresa.get('id'))
+            ack = await crudProduto.atualizar(codprod=int(alteracao.get('sku')),
+                                              pendencia=True,
+                                              empresa_id=self.dados_empresa.get('id'))
             if not ack:
-                obs = f"Falha ao adicionar produto {alteracao.get('sku')}/{alteracao.get('id')} na fila de atualização"
+                obs = f"Falha ao adicionar produto {int(alteracao.get('sku'))}/{int(alteracao.get('id'))} na fila de atualização"
                 logger.error(obs)
                 print(obs)
                 await crudLogProd.criar(log_id=log_id,
-                                        codprod=alteracao.get('sku'),
-                                        idprod=alteracao.get('id'),
+                                        codprod=int(alteracao.get('sku')),
+                                        idprod=int(alteracao.get('id')),
                                         sucesso=False,
                                         obs=obs)
             await crudLogProd.criar(log_id=log_id,
-                                    codprod=alteracao.get('sku'),
-                                    idprod=alteracao.get('id'))  
+                                    codprod=int(alteracao.get('sku')),
+                                    idprod=int(alteracao.get('id')))  
             print(f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} adicionado à fila de atualização")
         status_log = False if await crudLogProd.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
@@ -203,7 +204,7 @@ class Produto:
         # Atualiza ID no Sankhya
         print("Atualizando ID no Sankhya...")
         ack_snk = await self.snk.atualizar(codprod=int(produto.get('codprod')),
-                                           seq=produto.get('seqemp'),
+                                           seq=dados_produto_sankhya.get('seqemp'),
                                            payload=dados_formato_snk)
         if not ack_snk:
             produto['obs'] = f"Erro ao inserir o ID {produto.get('idprod')} no produto {produto.get('codprod')} no sankhya"
@@ -233,6 +234,7 @@ class Produto:
             logger.warning(produto['obs'])
             print(produto['obs'])            
             return False
+        dados_produto_sankhya = dados_produto_sankhya[0]
         # Busca dados do produto no Olist
         print("Buscando dados do produto no Olist...")        
         dados_produto_olist = await self.olist.buscar(id=int(produto.get('idprod'))) 
@@ -292,7 +294,8 @@ class Produto:
             produto['sucesso'] = False
             logger.warning(produto['obs'])
             print(produto['obs'])            
-            return False        
+            return False
+        dados_produto_sankhya = dados_produto_sankhya[0]
         # Valida o status do produto no Olist
         print("Validando o status do produto no Olist...")
         match dados_produto_olist.get('situacao'):
@@ -308,7 +311,7 @@ class Produto:
                                             codprod=int(produto.get('codprod')),
                                             pendencia=False)        
         # Comparando dados dos sistemas
-        print("Comparando dados dos sistemas...")        
+        print("Comparando dados dos sistemas...")
         log_atualizacoes, dados_atualizados = self.parse.to_sankhya(data_olist=dados_produto_olist,
                                                                     data_sankhya=dados_produto_sankhya,
                                                                     type=tipo_atualizacao)
@@ -331,7 +334,7 @@ class Produto:
         # Envia dados para o Sankhya
         print("Enviando dados para o Sankhya...") 
         ack_atualizacao = await self.snk.atualizar(codprod=int(produto.get('codprod')),
-                                                   seq=produto.get('seqemp'),
+                                                   seq=dados_produto_sankhya.get('seqemp'),
                                                    payload=dados_formato_snk)
         if not ack_atualizacao:
             produto['obs'] = f'''Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Sankhya.
@@ -365,7 +368,7 @@ class Produto:
             return True
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
         for i, produto in enumerate(alteracoes_pendentes):
-            print(f"\n-> Produto #{i+1}/{len(alteracoes_pendentes)}")
+            print(f"\n-> Produto #{produto.get('codprod')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             if produto.get('evento') == 'I':
                 ack = await self.incluir_olist(produto=produto)
@@ -422,7 +425,7 @@ class Produto:
                                      contexto=kwargs.get('_contexto'))        
         # Busca fila de alterações
         print("-> Buscando produtos na fila de alteração...")        
-        alteracoes_pendentes = crudProduto.buscar_pendencias()        
+        alteracoes_pendentes = await crudProduto.buscar_pendencias(empresa_id=self.dados_empresa.get('id'))        
         if not alteracoes_pendentes:
             print("Sem alterações pendentes")
             await crudLog.atualizar(id=log_id,
@@ -430,7 +433,7 @@ class Produto:
             return True        
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
         for i, produto in enumerate(alteracoes_pendentes):
-            print(f"-> Produto #{i+1}/{len(alteracoes_pendentes)}")
+            print(f"-> Produto #{produto.get('codprod')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             log_atualizacoes = await self.atualizar_sankhya(produto=produto)
             if isinstance(log_atualizacoes,list):
