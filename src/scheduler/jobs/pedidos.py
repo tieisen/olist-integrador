@@ -171,7 +171,13 @@ async def integrar_separacoes(codemp:int=None) -> dict:
             "exception": e
         }
     finally:
-        return retorno           
+        return retorno
+
+async def anular_importacao(codemp:int, nunota:int) -> dict:
+    print(f"::::::::::::::::::: ANULANDO IMPORTAÇÃO DO PEDIDO {nunota} :::::::::::::::::::")    
+    pedido = Pedido(codemp=codemp)
+    ack = await pedido.anular_pedido_importado(nunota=nunota)
+    return ack
 
 if __name__=="__main__":
 
