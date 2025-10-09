@@ -13,5 +13,5 @@ vscode
 *.csv
 *.sql
 *.test.*
-alembic/versions/*
+*/versions/*
 .pytest_cache
