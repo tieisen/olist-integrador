@@ -1053,7 +1053,8 @@ class Pedido:
         print("================================")
         print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")
 
-    async def devolver(self, num_pedido:int, num_nota_dev:int) -> dict:
+    async def devolver(self, # num_pedido:int, 
+                       num_nota_dev:int) -> dict:
         """ Emite devolução no Sankhya. """
         
         res:dict={}
@@ -1061,20 +1062,28 @@ class Pedido:
         status:bool=None
         erro:str=None
 
-        try:
-            # Busca dados do faturamento do pedido lançado no Sankhya
-            print("Buscando dados do faturamento do pedido lançado no Sankhya...")
-            pedido_cancelado = venda.buscar_por_numero(num_pedido=num_pedido)
-            log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_devolver')
-            if not pedido_cancelado:
-                msg = "Pedido não localizado"
-                raise Exception(msg)
+        def extrair_numero_nota_referenciada(dados_nota_devolucao:dict) -> int:
+
+            numero_nota_referenciada:int=None
+            texto:str=None
+            regex:str=r'\d+'
+            match_regex:str=None
+            import re
+
+            texto = dados_nota_devolucao.get('observacoes')
+            if not texto:
+                return numero_nota_referenciada
             
-            nota_snk = NotaSnk()
-            dados_snk = await nota_snk.buscar(nunota=pedido_cancelado.nunota_nota,itens=True)
-            if not dados_snk:
-                msg = "Nota não localizada no Sankhya"
-                raise Exception(msg)
+            match_regex = re.search(regex, texto).group(0)
+            try:
+                numero_nota_referenciada = int(match_regex)
+            except Exception as e:
+                print(f"Erro: {e}")
+            finally:
+                return numero_nota_referenciada
+
+        try:
+            log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_devolver')
 
             nota_olist = NotaOlist()
             # Busca dados da nota de devolução
@@ -1082,13 +1091,29 @@ class Pedido:
             dados_devolucao = await nota_olist.buscar(numero=num_nota_dev)
             if not dados_devolucao:
                 msg = "Nota de devolução não encontrada"
+                raise Exception(msg)            
+            nota_referenciada:int = extrair_numero_nota_referenciada(dados_nota_devolucao=dados_devolucao)
+            if not nota_referenciada:
+                msg = "Não foi possível extrair o número da nota referenciada"
                 raise Exception(msg)
+            
+            # Busca dados do faturamento do pedido lançado no Sankhya
+            print("Buscando dados do faturamento do pedido lançado no Sankhya...")
+            pedido_cancelado = venda.buscar_por_numero_nota(num_nota=nota_referenciada)            
+            if not pedido_cancelado:
+                msg = "Pedido não localizado"
+                raise Exception(msg)
+            nota_snk = NotaSnk()
+            dados_snk = await nota_snk.buscar(nunota=pedido_cancelado.nunota_nota,itens=True)
+            if not dados_snk:
+                msg = "Nota não localizada no Sankhya"
+                raise Exception(msg)            
 
             parser = ParserPedido()
             # Converte para o formato da API do Sankhya
             print("Convertendo dados para o formato da API do Sankhya...")
             dados_formatados = parser.to_sankhya_devolucao(dados_olist=dados_devolucao.get('itens'),
-                                                        dados_sankhya=dados_snk.get('itens'))
+                                                           dados_sankhya=dados_snk.get('itens'))
             if not dados_formatados:
                 msg = "Erro ao converter dados da devolucao do pedido para o formato da API do Sankhya"
                 raise Exception(msg)
@@ -1130,15 +1155,13 @@ class Pedido:
             ack = await nota_snk.confirmar(nunota=nunota_devolucao)
             if not ack:
                 msg = f"Erro ao confirmar devolução {nunota_devolucao}"
-                raise Exception(msg)
-            
-            status = True
-            log.atualizar(id=log_id, sucesso=status)
+                raise Exception(msg)            
+            status = True            
         except Exception as e:
             erro = 'ERRO: '+e
-            status = False
+            status = False            
+        finally:
             log.atualizar(id=log_id, sucesso=status)
-        finally:            
             res = {
                 "sucesso":status,
                 "__exception__":erro
@@ -1151,107 +1174,74 @@ class Pedido:
     async def anular(self, nunota:int):
         """ Exclui pedido que ainda não foi conferido do Sankhya. """
 
+        res:dict={}
+        msg:str=None
+        status:bool=None
+        erro:str=None
         snk = PedidoSnk()
         olist = PedidoOlist()
-
-        # Validando pedido no Sankhya
-        print("Validando pedido no Sankhya...")
-        dados_snk = await snk.buscar_nota_do_pedido(nunota=nunota)
         log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_anular')
-        if not dados_snk:
-            obs = f"Pedido {nunota} não encontrado no Sankhya"
-            print(obs)
-            logger.error(obs)
-            log_pedido.criar(log_id=log_id,
-                             id_loja=0,
-                             id_pedido=0,
-                             pedido_ecommerce=0,
-                             nunota_pedido=nunota,
-                             evento='F',
-                             obs=obs,
-                             status=False)            
-            log.atualizar(id=log_id,sucesso=False)
-            return False
-        
-        if isinstance(dados_snk,dict):
-            obs = f"Pedido já foi faturado e não pode ser excluído"
-            print(obs)
-            logger.error(obs)
-            log_pedido.criar(log_id=log_id,
-                             id_loja=0,
-                             id_pedido=0,
-                             pedido_ecommerce=0,
-                             nunota_pedido=nunota,
-                             evento='F',
-                             obs=obs,
-                             status=False)            
-            log.atualizar(id=log_id,sucesso=False)
-            return False
 
-        # Exclui pedido no Sankhya
-        print(f"Excluindo pedido {nunota} no Sankhya...")
-        ack = await snk.excluir(nunota=nunota)
-        if not ack:
-            obs = f"Erro ao excluir pedido {nunota} no Sankhya"
-            print(obs)
-            logger.error(obs)
-            log_pedido.criar(log_id=log_id,
-                             id_loja=0,
-                             id_pedido=0,
-                             pedido_ecommerce=0,
-                             nunota_pedido=nunota,
-                             evento='F',
-                             obs=obs,
-                             status=False)            
-            log.atualizar(id=log_id,sucesso=False)            
-            return False
-        
-        # Busca pedidos relacionados no Olist
-        lista_pedidos = venda.buscar_nunota_pedido(nunota_pedido=nunota)
-        if not lista_pedidos:
-            obs = f"Erro ao buscar pedidos relacionados à nunota {nunota}"
-            print(obs)
-            logger.error(obs)
-            log_pedido.criar(log_id=log_id,
-                             id_loja=0,
-                             id_pedido=0,
-                             pedido_ecommerce=0,
-                             nunota_pedido=nunota,
-                             evento='F',
-                             obs=obs,
-                             status=False)            
-            log.atualizar(id=log_id,sucesso=False)            
-            return False
+        try:
+            # Validando pedido no Sankhya
+            print("Validando pedido no Sankhya...")
+            dados_snk = await snk.buscar_nota_do_pedido(nunota=nunota)        
+            if not dados_snk:
+                msg = f"Pedido {nunota} não encontrado no Sankhya"
+                raise Exception(msg)
+            
+            if isinstance(dados_snk,dict):
+                msg = f"Pedido já foi faturado e não pode ser excluído"
+                raise Exception(msg)
 
-        print("Atualizando pedidos no Olist...")
-        for i, pedido in enumerate(lista_pedidos):
-            time.sleep(self.req_time_sleep)  # Evita rate limit
-            if obs:
-                print(obs)
-                logger.error(obs)
-                log_pedido.criar(log_id=log_id,
-                                 id_loja=lista_pedidos[i-1].id_loja,
-                                 id_pedido=lista_pedidos[i-1].id_pedido,
-                                 pedido_ecommerce=lista_pedidos[i-1].cod_pedido,
-                                 evento='F',
-                                 obs=obs,
-                                 status=False)
-                obs = None
-
-            ack = await olist.remover_nunota(id=pedido.id_pedido)
+            # Exclui pedido no Sankhya
+            print(f"Excluindo pedido {nunota} no Sankhya...")
+            ack = await snk.excluir(nunota=nunota)
             if not ack:
-                obs = f"Erro ao atualizar pedido {pedido} no Olist"                
-                continue
-            venda.atualizar_anulado(id_pedido=pedido.id_pedido)
+                msg = f"Erro ao excluir pedido {nunota} no Sankhya"
+                raise Exception(msg)
+            
+            # Busca pedidos relacionados no Olist
+            lista_pedidos = venda.buscar_nunota_pedido(nunota_pedido=nunota)
+            if not lista_pedidos:
+                msg = f"Erro ao buscar pedidos relacionados à nunota {nunota}"
+                raise Exception(msg)
 
-            log_pedido.criar(log_id=log_id,
-                             id_loja=pedido.id_loja,
-                             id_pedido=pedido.id_pedido,
-                             pedido_ecommerce=pedido.cod_pedido,
-                             evento='F')
-
-        print("================================")
-        print("PROCESSO DE ANULACAO DE PEDIDO CONCLUIDO!")            
-        status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
-        log.atualizar(id=log_id, sucesso=status_log)
-        return True
+            print("Atualizando pedidos no Olist...")
+            lista_pedidos_com_erro:list[str]=[]
+            for i, pedido in enumerate(lista_pedidos):
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                ack = await olist.remover_nunota(id=pedido.id_pedido)
+                if not ack:
+                    lista_pedidos_com_erro.append(str(pedido.num_pedido))
+                    continue
+                venda.atualizar_anulado(id_pedido=pedido.id_pedido)
+                log_pedido.criar(log_id=log_id,
+                                 id_loja=pedido.id_loja,
+                                 id_pedido=pedido.id_pedido,
+                                 pedido_ecommerce=pedido.cod_pedido,
+                                 evento='F')
+            if len(lista_pedidos_com_erro) == len(lista_pedidos):
+                msg = "Erro ao remover número dos pedidos no Olist"
+                raise Exception(msg)
+            if lista_pedidos_com_erro:
+                msg = f"Não foi possível remover número do(s) pedido(s) {', '.join(lista_pedidos_com_erro)} no Olist"
+                status = True
+                raise Exception(msg)
+            status = True            
+        except Exception as e:
+            if status is True:
+                pass
+            erro = 'ERRO: '+e
+            status = False            
+        finally:
+            log.atualizar(id=log_id, sucesso=status)
+            res = {
+                "sucesso":status,
+                "__exception__":erro
+            }          
+            print("================================")
+            print("PROCESSO DE ANULACAO DE PEDIDO CONCLUIDO!")            
+            status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
+            log.atualizar(id=log_id, sucesso=status_log)
+            return res
