@@ -21,6 +21,7 @@ class Pedido:
         self.codparc = int(os.getenv('SANKHYA_CODPARC'))
         self.codtipoper = int(os.getenv('SANKHYA_CODTIPOPER'))
         self.codtipvenda = int(os.getenv('SANKHYA_CODTIPVENDA'))
+        self.codtipdev = int(os.getenv('SANKHYA_CODTIPOPER_DEVOLUCAO'))
         self.codvend = int(os.getenv('SANKHYA_CODVEND'))
         self.codlocalorig = int(os.getenv('SANKHYA_CODLOCAL'))
         
@@ -118,28 +119,74 @@ class Pedido:
 
         return dados_cabecalho, dados_itens, origem
     
-    def to_sankhya_devolucao(self, dados_olist:list, dados_sankhya:list) -> list:
-        dados_itens = []
-
+    def to_sankhya_devolucao(self, dados_olist:list[dict], dados_sankhya:list[dict]) -> list[dict]:
+        
+        dados_itens:list[dict] = []
         try:
             for item_olist in dados_olist:
                 # Procura o item devolvido na lista de itens da nota do Sankhya
-                for item_snk in dados_sankhya:                
-                    if int(item_olist.get('sku'))==int(item_snk.get('codprod')):
+                for i, item_snk in enumerate(dados_sankhya):                
+                    if (int(item_olist.get('codigo'))==int(item_snk.get('codprod'))) and (float(item_olist.get('valorUnitario'))==float(item_snk.get('vlrunit'))):
                         break
+                if i+1 == len(dados_sankhya) and (int(item_olist.get('codigo'))!=int(item_snk.get('codprod'))):
+                    dados_itens=[]
+                    raise Exception("Produto não encontrado")
 
                 # Verifica se o item já está na lista de retorno e soma a quantidade                    
                 for item in dados_itens:
                     if item.get('$') == item_snk.get('sequencia'):
                         item['QTDFAT'] = item['QTDFAT']+item_olist.get('quantidade')
-                        continue            
 
                 # Adiciona o novo item na lista de retorno
                 dados_itens.append({
                     "$": item_snk.get('sequencia'),
-                    "QTDFAT": item_olist.get('quantidade'),
+                    "QTDFAT": item_olist.get('quantidade')
                 })
+
+        except Exception as e:
+            msg = f"Erro ao converter dados de devolução do item {item_olist}. {e}"
+            logger.error(msg)
+            print(msg)
+        finally:
+            return dados_itens
+    
+    def to_sankhya_devolucao_avulsa(self, dados_olist:list[dict], dados_sankhya:list[dict], observacao:str) -> tuple[dict,list[dict]]:
+        
+        dados_cab:dict = {}
+        lista_itens:list[dict] = []
+
+        try:
+            data_negociacao = datetime.now().strftime('%d/%m/%Y')
+            dados_cab['CIF_FOB'] = {"$":'C'}
+            dados_cab['CODCENCUS'] = {"$":'0'}
+            dados_cab['CODEMP'] = {"$":self.codemp}
+            dados_cab['CODNAT'] = {"$":self.codnat}
+            dados_cab['CODPARC'] = {"$":self.codparc}
+            dados_cab['CODTIPOPER'] = {"$":self.codtipdev}
+            dados_cab['CODTIPVENDA'] = {"$":self.codtipvenda}
+            dados_cab['CODVEND'] = {"$":self.codvend}            
+            dados_cab['DTNEG'] = {"$":data_negociacao}
+            dados_cab['NUNOTA'] = {},
+            dados_cab['TIPMOV'] = {"$":"D"}
+            dados_cab['OBSERVACAO'] = {"$":observacao}
+
+            for item_olist in dados_olist:            
+                dados_item = {}
+                dados_item['NUNOTA'] = {},
+                dados_item['CODPROD'] = {"$":item_olist.get('codigo')}
+                dados_item['QTDNEG'] = {"$":item_olist.get('quantidade')}
+                dados_item['VLRUNIT'] = {"$":item_olist.get('valorUnitario') if item_olist.get('valorUnitario') > 0 else 0.01}
+                dados_item['PERCDESC'] = {"$":'0'}
+                dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
+                dados_item['CODVOL'] = {"$":item_olist.get('unidade')}
+                dados_item['CODLOCALORIG'] = {"$":self.codlocalorig}
+                # Procura o item devolvido na lista de itens da nota do Sankhya
+                for item_snk in dados_sankhya:                
+                    if (int(item_olist.get('codigo'))==int(item_snk.get('codprod'))) and (float(item_olist.get('valorUnitario'))==float(item_snk.get('vlrunit'))):
+                        break
+                dados_item['CONTROLE'] = {"$":item_snk.get('controle')}
+                lista_itens.append(dados_item)                
         except Exception as e:
             logger.error("Erro ao converter dados de devolução do item %s. %s",item_olist,e)
         finally:
-            return dados_itens
+            return dados_cab, lista_itens
