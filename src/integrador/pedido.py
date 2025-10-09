@@ -776,15 +776,15 @@ class Pedido:
             log.atualizar(id=log_id,sucesso=False)
             return False
         
-        if pedidos_lote_shopee:
+        if isinstance(pedidos_lote_shopee,list):
             ack_shopee = await importar(log_id=log_id,pedidos_lote=pedidos_lote_shopee)
         else:
-            ack_shopee = True
+            ack_shopee = pedidos_lote_shopee
         
-        if pedidos_lote_blz:
+        if isinstance(pedidos_lote_blz,list):
             ack_blz = await importar(log_id=log_id,pedidos_lote=pedidos_lote_blz)
         else:
-            ack_blz = True
+            ack_blz = pedidos_lote_blz
 
         log.atualizar(id=log_id, sucesso=all([ack_shopee,ack_blz]))
         print("")
