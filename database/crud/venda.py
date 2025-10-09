@@ -22,6 +22,12 @@ def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int, dados_pedi
     session.close()
     return True
 
+def buscar_por_numero(num_pedido:int):
+    session = SessionLocal()
+    venda = session.query(Venda).filter(Venda.num_pedido==num_pedido).first()
+    session.close()
+    return venda
+
 def buscar_importar_por_loja(id_loja:int):
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.nunota_pedido.is_(None),
