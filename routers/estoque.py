@@ -1,18 +1,18 @@
 from fastapi import APIRouter, HTTPException, status
 from src.scheduler.jobs.estoque import integrar_estoque
 import asyncio
+from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.get("")
-def default():
-    return {"message": "Estoque"}
+class EstoqueModel(BaseModel):
+    codemp:int
 
-@router.get("/{codemp}/integrar")
-def integrar(codemp:int):
+@router.post("/integrar")
+def integrar(estoque:EstoqueModel):
     """
     Atualiza o saldo de estoque no Olist dos produtos que tiveram alteração no saldo de estoque do Sankhya.
     """
-    if not asyncio.run(integrar_estoque(codemp=codemp)):
+    if not asyncio.run(integrar_estoque(codemp=estoque.codemp)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar estoque")
     return True
