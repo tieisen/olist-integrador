@@ -1053,96 +1053,100 @@ class Pedido:
         print("================================")
         print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")
 
-    async def devolver(self, num_pedido:int, num_nota_dev:int):
+    async def devolver(self, num_pedido:int, num_nota_dev:int) -> dict:
         """ Emite devolução no Sankhya. """
-
-        # Busca dados do faturamento do pedido lançado no Sankhya
-        print("Buscando dados do faturamento do pedido lançado no Sankhya...")
-        pedido_cancelado = venda.buscar_por_numero(num_pedido=num_pedido)
-        log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_devolver')
-        if not pedido_cancelado:
-            print("Pedido não localizado")
-            log.atualizar(id=log_id, sucesso=False)
-            return False
         
-        nota_snk = NotaSnk()
-        dados_snk = await nota_snk.buscar(nunota=pedido_cancelado.nunota_nota,itens=True)
-        if not dados_snk:
-            print("Nota não localizada no Sankhya")
-            log.atualizar(id=log_id, sucesso=False)
-            return False
+        res:dict={}
+        msg:str=None
+        status:bool=None
+        erro:str=None
 
-        nota_olist = NotaOlist()
-        # Busca dados da nota de devolução
-        print("Buscando nota de devolução...")
-        dados_devolucao = await nota_olist.buscar(numero=num_nota_dev)
-        if not dados_devolucao:
-            print("Nota de devolução não encontrada!")
-            log.atualizar(id=log_id, sucesso=False)
-            return False 
+        try:
+            # Busca dados do faturamento do pedido lançado no Sankhya
+            print("Buscando dados do faturamento do pedido lançado no Sankhya...")
+            pedido_cancelado = venda.buscar_por_numero(num_pedido=num_pedido)
+            log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_devolver')
+            if not pedido_cancelado:
+                msg = "Pedido não localizado"
+                raise Exception(msg)
+            
+            nota_snk = NotaSnk()
+            dados_snk = await nota_snk.buscar(nunota=pedido_cancelado.nunota_nota,itens=True)
+            if not dados_snk:
+                msg = "Nota não localizada no Sankhya"
+                raise Exception(msg)
 
-        parser = ParserPedido()
-        # Converte para o formato da API do Sankhya
-        print("Convertendo dados para o formato da API do Sankhya...")
-        dados_formatados = parser.to_sankhya_devolucao(dados_olist=dados_devolucao.get('itens'),
-                                                       dados_sankhya=dados_snk.get('itens'))
-        if not dados_formatados:
-            obs = f"Erro ao converter dados da devolucao do pedido para o formato da API do Sankhya"
-            print(obs)
-            log.atualizar(id=log_id, sucesso=False)
-            return False
-                
-        nunota_devolucao:int=None
-        observacao = f"Devolução de ecommerce referente ao pedido {pedido_cancelado.num_pedido}/{pedido_cancelado.cod_pedido}\nNFD {dados_devolucao.get('numero')} de {datetime.strptime(dados_devolucao.get('dataEmissao'),'%Y-%m-%d').strftime("%d/%m/%Y")}"
-        # Lança devolução
-        print(f"Lançando nota de devolução do pedido...")
-        ack, nunota_devolucao = await nota_snk.devolver(nunota=dados_snk.get('nunota'),
-                                                        itens=dados_formatados)
-        if ack:
-            # Informa observação
-            print(f"Atualizando campo da observação...")
-            ack = await nota_snk.alterar_observacao(nunota=nunota_devolucao,
-                                                    observacao=observacao)
-            if not ack:
-                obs_olist = f"Erro ao atualizar observação da nota {nunota_devolucao}"
-                print(obs_olist)
-                log.atualizar(id=log_id, sucesso=False)
-                return False  
-        else:            
-            print("Erro ao lançar nota de devolução\nLançando devolução avulsa...")
+            nota_olist = NotaOlist()
+            # Busca dados da nota de devolução
+            print("Buscando nota de devolução...")
+            dados_devolucao = await nota_olist.buscar(numero=num_nota_dev)
+            if not dados_devolucao:
+                msg = "Nota de devolução não encontrada"
+                raise Exception(msg)
+
+            parser = ParserPedido()
             # Converte para o formato da API do Sankhya
             print("Convertendo dados para o formato da API do Sankhya...")
-            cabecalho, itens = parser.to_sankhya_devolucao_avulsa(dados_olist=dados_devolucao.get('itens'),
-                                                                  dados_sankhya=dados_snk.get('itens'),
-                                                                  observacao=observacao)
-            if not all([cabecalho, itens]):
-                obs = f"Erro ao converter dados da devolucao do pedido para o formato da API do Sankhya"
-                print(obs)
-                log.atualizar(id=log_id, sucesso=False)
-                return False 
+            dados_formatados = parser.to_sankhya_devolucao(dados_olist=dados_devolucao.get('itens'),
+                                                        dados_sankhya=dados_snk.get('itens'))
+            if not dados_formatados:
+                msg = "Erro ao converter dados da devolucao do pedido para o formato da API do Sankhya"
+                raise Exception(msg)
+                    
+            nunota_devolucao:int=None
+            observacao = f"Devolução de ecommerce referente ao pedido {pedido_cancelado.num_pedido}/{pedido_cancelado.cod_pedido}\nNFD {dados_devolucao.get('numero')} de {datetime.strptime(dados_devolucao.get('dataEmissao'),'%Y-%m-%d').strftime("%d/%m/%Y")}"
+            # Lança devolução
+            print(f"Lançando nota de devolução do pedido...")
+            ack, nunota_devolucao = await nota_snk.devolver(nunota=dados_snk.get('nunota'),
+                                                            itens=dados_formatados)
+            if ack:
+                # Informa observação
+                print(f"Atualizando campo da observação...")
+                ack = await nota_snk.alterar_observacao(nunota=nunota_devolucao,
+                                                        observacao=observacao)
+                if not ack:
+                    msg = f"Erro ao atualizar observação da nota {nunota_devolucao}"
+                    raise Exception(msg)
+            else:            
+                print("Erro ao lançar nota de devolução\nLançando devolução avulsa...")
+                # Converte para o formato da API do Sankhya
+                print("Convertendo dados para o formato da API do Sankhya...")
+                cabecalho, itens = parser.to_sankhya_devolucao_avulsa(dados_olist=dados_devolucao.get('itens'),
+                                                                    dados_sankhya=dados_snk.get('itens'),
+                                                                    observacao=observacao)
+                if not all([cabecalho, itens]):
+                    msg = "Erro ao converter dados da devolucao do pedido para o formato da API do Sankhya"
+                    raise Exception(msg)
 
-            pedido_snk = PedidoSnk()           
-            nunota_devolucao = await pedido_snk.lancar(dados_cabecalho=cabecalho,dados_itens=itens)
-            if not nunota_devolucao:
-                obs = f"Erro ao lançar devolução avulsa"
-                print(obs)
-                log.atualizar(id=log_id, sucesso=False)
-                return False                    
-        
-        print(f"Lançada devolução na nota {nunota_devolucao}!")
-        # Confirma a devolução
-        print("Confirmando devolução...")
-        ack = await nota_snk.confirmar(nunota=nunota_devolucao)
-        if not ack:
-            obs_olist = f"Erro ao confirmar devolução {nunota_devolucao}"
-            print(obs_olist)
-            log.atualizar(id=log_id, sucesso=False)
-            return False
+                pedido_snk = PedidoSnk()           
+                nunota_devolucao = await pedido_snk.lancar(dados_cabecalho=cabecalho,dados_itens=itens)
+                if not nunota_devolucao:
+                    msg = "Erro ao lançar devolução avulsa"
+                    raise Exception(msg)         
+            
+            print(f"Lançada devolução na nota {nunota_devolucao}!")
+            # Confirma a devolução
+            print("Confirmando devolução...")
+            ack = await nota_snk.confirmar(nunota=nunota_devolucao)
+            if not ack:
+                msg = f"Erro ao confirmar devolução {nunota_devolucao}"
+                raise Exception(msg)
+            
+            status = True
+            log.atualizar(id=log_id, sucesso=status)
+        except Exception as e:
+            erro = 'ERRO: '+e
+            status = False
+            log.atualizar(id=log_id, sucesso=status)
+        finally:            
+            res = {
+                "sucesso":status,
+                "__exception__":erro
+            }
+            print("================================")
+            print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")
 
-        status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
-        log.atualizar(id=log_id, sucesso=status_log)
-        print("================================")
-        print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")
+            return res
 
     async def anular(self, nunota:int):
         """ Exclui pedido que ainda não foi conferido do Sankhya. """
