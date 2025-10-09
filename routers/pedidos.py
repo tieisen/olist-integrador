@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from src.integrador.pedido import Pedido
 from src.integrador.faturamento import Faturamento
 from src.integrador.separacao import Separacao
+from pydantic import BaseModel
 import asyncio
 
 router = APIRouter()
@@ -16,16 +17,13 @@ def default():
 @router.get("/integrar")
 def integrar_pedidos():
     """
-    Valida devoluções.
-    Busca os pedidos novos do Olist que estão com status Preparando Envio.
     Valida pedidos cancelados.
+    Busca os pedidos novos do Olist que estão com status Preparando Envio.
     Importa os pedidos pendentes do Olist em um único pedido no Sankhya.
     Confirma o pedido no Sankhya.
     """
     if not asyncio.run(pedido.validar_cancelamentos()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
-    # if not asyncio.run(pedido.devolver_lote()):
-    #     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
     if not asyncio.run(pedido.receber()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")
     if not asyncio.run(separacao.receber()):
@@ -84,18 +82,19 @@ def buscar_separacao():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar separação dos pedidos")
     return True
 
-@router.get("/devolver")
-def devolver_pedidos():
+class Devolucao(BaseModel):
+    numeroPedido:int
+    numeroNota:int
+
+@router.post("/devolver")
+def devolver_pedido(devolucao:Devolucao):
     """
-    Valida devoluções e cancelamentos
+    Lança devolução de um pedido
     """
-    if not asyncio.run(pedido.validar_cancelamentos()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar cancelamentos")
-    if not asyncio.run(pedido.devolver_lote()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao validar devoluções")
-    if not asyncio.run(pedido.receber()):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao receber pedidos")    
-    return True
+    res = asyncio.run(pedido.devolver(num_pedido=devolucao.numeroPedido,num_nota_dev=devolucao.numeroNota))
+    if not res.get('sucesso'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('__exception__'))
+    return res.get('sucesso')
 
 @router.get("/anular/{nunota}")
 def anular_pedidos(nunota: int):
