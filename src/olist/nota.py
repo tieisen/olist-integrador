@@ -20,9 +20,9 @@ class Nota:
         self.con = Connect()
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
 
-    async def buscar(self, id:int=None, id_ecommerce:str=None) -> bool:
+    async def buscar(self, id:int=None, id_ecommerce:str=None, numero:int=None) -> bool:
 
-        if not any([id, id_ecommerce]):
+        if not any([id, id_ecommerce, numero]):
             logger.error("Nota não informada.")
             print("Nota não informada.")
             return False
@@ -35,11 +35,12 @@ class Nota:
 
         if id:
             url_ = self.endpoint+f"/{id}"
-            id_ecommerce = None
         
         if id_ecommerce:
             url_ = self.endpoint+f"/?numeroPedidoEcommerce={id_ecommerce}"
-            id = None             
+        
+        if numero:
+            url_ = self.endpoint+f"/?numero={numero}"
 
         res = requests.get(
             url = url_,
@@ -50,16 +51,16 @@ class Nota:
             }
         )
 
-        nota = None
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
             print(f"Erro {res.status_code}: {res.text}")
             return False
         
-        if res.status_code == 200 and id and res.json().get('itens'):
-            nota = res.json()
+        if res.status_code == 200 and id:
+            return res.json()
         
-        if res.status_code == 200 and id_ecommerce and res.json().get('itens'):
+        nota = None
+        if res.status_code == 200 and any([id_ecommerce,numero]) and res.json().get('itens'):
             url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
             res = requests.get(
                 url = url_id,
