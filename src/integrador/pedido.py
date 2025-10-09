@@ -761,3 +761,92 @@ class Pedido:
         ack = await crudLog.atualizar(id=self.log_id)
 
         return True
+
+    @contexto
+    @log_execucao
+    @carrega_dados_empresa
+    async def anular_pedido_importado(
+            self,
+            nunota:int,
+            **kwargs
+        ) -> dict:
+        """ Exclui pedido que ainda não foi conferido do Sankhya. """
+
+        res:dict={}
+        msg:str=None
+        status:bool=None
+        erro:str=None
+        snk = PedidoSnk(codemp=self.codemp)
+        olist = PedidoOlist(codemp=self.codemp)
+        self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
+                                          de='sankhya',
+                                          para='sankhya',
+                                          contexto=kwargs.get('_contexto'))
+
+        try:
+            # Validando pedido no Sankhya
+            print("-> Validando pedido no Sankhya...")
+            dados_snk = await snk.buscar_nota_do_pedido(nunota=nunota)        
+            if not dados_snk:
+                msg = f"Pedido {nunota} não encontrado no Sankhya"
+                raise Exception(msg)
+            
+            if isinstance(dados_snk,dict):
+                msg = f"Pedido já foi faturado e não pode ser excluído"
+                raise Exception(msg)
+
+            # Exclui pedido no Sankhya
+            print(f"-> Excluindo pedido {nunota} no Sankhya...")
+            ack = await snk.excluir(nunota=nunota)
+            if not ack:
+                msg = f"Erro ao excluir pedido {nunota} no Sankhya"
+                raise Exception(msg)
+
+            if not await crudPedido.cancelar(nunota=nunota):
+                msg = f"Não foi possível limpar os pedidos na base"                
+                raise Exception(msg)
+
+            # Busca pedidos relacionados no Olist
+            lista_pedidos = await crudPedido.buscar(nunota=nunota)
+            if not lista_pedidos:
+                msg = f"Erro ao buscar pedidos relacionados à nunota {nunota}"
+                raise Exception(msg)
+
+            print("Atualizando pedidos no Olist...")
+            lista_pedidos_com_erro:list[str]=[]
+            for i, pedido in enumerate(lista_pedidos):
+                time.sleep(self.req_time_sleep)  # Evita rate limit
+                ack = await olist.remover_nunota(id=pedido.get('id_pedido'))
+                if not ack:
+                    await crudLogPed.criar(log_id=self.log_id,
+                                           pedido_id=pedido.get('pedido_id'),
+                                           evento='N',
+                                           sucesso=False,
+                                           obs="Não foi possível remover nunota")
+                    lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
+                else:
+                    await crudLogPed.criar(log_id=self.log_id,
+                                           pedido_id=pedido.get('pedido_id'),
+                                           evento='N')
+            if len(lista_pedidos_com_erro) == len(lista_pedidos):
+                msg = "Erro ao remover número dos pedidos no Olist"
+                raise Exception(msg)
+            if lista_pedidos_com_erro:
+                msg = f"Não foi possível remover número do(s) pedido(s) {', '.join(lista_pedidos_com_erro)} no Olist"
+                status = True
+                raise Exception(msg)
+            status = True            
+        except Exception as e:
+            if status is True:
+                pass
+            erro = 'ERRO: '+e
+            status = False            
+        finally:        
+            # Atualiza log
+            status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
+            await crudLog.atualizar(id=self.log_id,sucesso=status_log)
+            res = {
+                "sucesso":status_log,
+                "__exception__":erro
+            }
+            return res
