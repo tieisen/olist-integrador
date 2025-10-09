@@ -300,8 +300,8 @@ class Nota:
         if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
             return True, int(res.json().get('responseBody').get('notas').get('nota').get('$'))
         else:
-            print(f"Erro ao devolver pedidos. Nunota {nunota}. {res.text}")
-            logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
+            print(f"Erro ao devolver pedidos. Nunota {nunota}. {res.json().get('statusMessage')}")
+            logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.json().get('statusMessage'))
             return False, 0
 
     async def alterar_observacao(self, nunota:int, observacao:str) -> bool:
