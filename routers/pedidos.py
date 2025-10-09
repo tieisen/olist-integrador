@@ -83,7 +83,6 @@ def buscar_separacao():
     return True
 
 class Devolucao(BaseModel):
-    numeroPedido:int
     numeroNota:int
 
 @router.post("/devolver")
@@ -91,16 +90,20 @@ def devolver_pedido(devolucao:Devolucao):
     """
     Lança devolução de um pedido
     """
-    res = asyncio.run(pedido.devolver(num_pedido=devolucao.numeroPedido,num_nota_dev=devolucao.numeroNota))
+    res = asyncio.run(pedido.devolver(num_nota_dev=devolucao.numeroNota))
     if not res.get('sucesso'):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('__exception__'))
     return res.get('sucesso')
 
-@router.get("/anular/{nunota}")
-def anular_pedidos(nunota: int):
+class Anular(BaseModel):
+    nunota:int
+
+@router.post("/anular")
+def anular_pedidos(anular:Anular):
     """
     Exclui pedido não faturado do Sankhya
     """
-    if not asyncio.run(pedido.anular(nunota=nunota)):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao anular pedido")
-    return True
+    res = asyncio.run(pedido.anular(nunota=anular.nunota))
+    if not res.get('sucesso'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('__exception__'))
+    return res.get('sucesso')
