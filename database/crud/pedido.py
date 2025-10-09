@@ -59,7 +59,7 @@ async def buscar(
         id_pedido:int=None,
         num_pedido:int=None,
         cod_pedido:str=None,
-        nunota:str=None,
+        nunota:int=None,
         lista:list[int]=None
     ) -> list[dict]:
 
