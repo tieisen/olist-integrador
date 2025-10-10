@@ -11,7 +11,7 @@ logger = set_logger(__name__)
 COLUNAS_CRIPTOGRAFADAS = None
 
 async def criar(
-        chave_referenciada:int,
+        chave_referenciada:str,
         id_nota:int,
         numero:int,
         serie:str,
@@ -27,25 +27,31 @@ async def criar(
             return False
     devolucao = await buscar(id_nota=id_nota)
     if devolucao:
-        print(f"Nota de devolução {id_nota} já existe")
+        # print(f"Nota de devolução {numero} já existe")
         return False
     async with AsyncSessionLocal() as session:        
-        nota_referenciada = await session.execute(
+        result = await session.execute(
             select(Nota)
             .where(Nota.chave_acesso == chave_referenciada)
         )
-        if not nota_referenciada:
-            print(f"Nota referenciada não encontrada para a devolução {id_nota}")
-            return False
-        id_nota_referenciada = nota_referenciada.scalar_one_or_none().id
-        nova_devolucao = Devolucao(nota_id=id_nota_referenciada,
-                                   id_nota=id_nota,
-                                   numero=numero,
-                                   serie=serie,
-                                   dh_emissao=datetime.strptime(dh_emissao,'%Y-%m-%d %H:%M:%S') if dh_emissao else datetime.now(),
-                                   **kwargs)
-        session.add(nova_devolucao)
-        await session.commit()
+        nota_referenciada = result.scalar_one_or_none()
+
+    if not nota_referenciada:
+        # print(f"Nota referenciada não encontrada para a devolução {numero}")
+        return False
+    
+    try:
+        async with AsyncSessionLocal() as session:
+            nova_devolucao = Devolucao(nota_id=nota_referenciada.id,
+                                       id_nota=id_nota,
+                                       numero=numero,
+                                       serie=serie,
+                                       dh_emissao=datetime.strptime(dh_emissao,'%Y-%m-%d') if dh_emissao else datetime.now(),
+                                       **kwargs)
+            session.add(nova_devolucao)
+            await session.commit()
+    except Exception as e:
+        print(e)
     return True
 
 async def buscar_lancar(ecommerce_id:int) -> list[dict]:
@@ -117,8 +123,8 @@ async def buscar(
             return False
         devolucao = result.scalar_one_or_none()
     if not devolucao:
-        print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or chave or numero_ecommerce or lista_chave}")
-        return False
+        #print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or chave or numero_ecommerce or lista_chave}")
+        return {}
     dados_devolucao = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                        retorno=devolucao)        
     return dados_devolucao    
