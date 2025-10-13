@@ -18,6 +18,7 @@ class Produto:
         self.empresa_id = empresa_id
         self.formatter = Formatter()
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
+        self.tabela = os.getenv('SANKHYA_TABELA_PRODUTO')
         self.campos_atualiza_snk = [ "ID", "IDPRODPAI", "ATIVO" ]
 
     @token_snk
@@ -68,6 +69,7 @@ class Produto:
                 print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
             return False
 
+    @interno
     def preparar_dados(
             self,
             payload:dict
@@ -85,9 +87,7 @@ class Produto:
     async def atualizar(
             self,
             codprod:int,
-            payload:dict,
-            seq:int=None,
-            codemp:int=None
+            payload:dict
         ) -> bool:
 
         if not isinstance(payload, dict):
@@ -104,15 +104,14 @@ class Produto:
         _payload = {
                 "serviceName":"DatasetSP.save",
                 "requestBody":{
-                    "entityName":"AD_OLISTPRODUTO",
+                    "entityName":self.tabela,
                     "standAlone":False,
                     "fields":self.campos_atualiza_snk,
                     "records":[
                         {
                             "pk": {
                                 "CODPROD": codprod,
-                                "SEQ": seq,
-                                "CODEMP": codemp
+                                "CODEMP": self.codemp
                             },
                             "values": payload
                         }
