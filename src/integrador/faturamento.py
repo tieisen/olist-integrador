@@ -520,7 +520,8 @@ class Faturamento:
             print("Nenhum pedido para faturamento na blz na web.")
 
         if not any([pedidos_faturar_shopee,pedidos_faturar_blz]):
-            return True
+            ack_snk = await self.faturar_sankhya()
+            return ack_snk
         
         if pedidos_faturar_shopee:
             print("-> FATURANDO SHOPEE NO OLIST...")
