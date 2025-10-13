@@ -67,7 +67,7 @@ class Estoque:
                     })                    
                     continue
 
-                variacao = int(produto_snk.get('disponivel')) - produto_olist.get('disponivel')
+                variacao = int(produto_snk.get('disponivel')) - produto_olist.get('saldo')
                 ajuste_estoque = {
                         "id": int(produto_olist.get('id')),
                         "codprod": int(produto_snk.get('codprod')),
