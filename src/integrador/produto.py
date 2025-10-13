@@ -206,7 +206,6 @@ class Produto:
         # Atualiza ID no Sankhya
         print("Atualizando ID no Sankhya...")
         ack_snk = await self.snk.atualizar(codprod=int(produto.get('codprod')),
-                                           seq=dados_produto_sankhya.get('seqemp'),
                                            payload=dados_formato_snk)
         if not ack_snk:
             produto['obs'] = f"Erro ao inserir o ID {produto.get('idprod')} no produto {produto.get('codprod')} no sankhya"
@@ -337,8 +336,6 @@ class Produto:
         # Envia dados para o Sankhya
         print("Enviando dados para o Sankhya...") 
         ack_atualizacao = await self.snk.atualizar(codprod=int(produto.get('codprod')),
-                                                   codemp=self.codemp,
-                                                   seq=dados_produto_sankhya.get('seqemp'),
                                                    payload=dados_formato_snk)
         if not ack_atualizacao:
             produto['obs'] = f'''Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Sankhya.
