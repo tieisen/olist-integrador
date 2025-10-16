@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from routers import empresas, estoque, pedidos, produtos, notas, devolucoes
@@ -41,3 +42,7 @@ app.include_router(devolucoes.router, prefix="/devolucoes", tags=["Devoluções"
 @app.get("/",include_in_schema=False)
 def read_root():
     return {"message": "Integrador Olist x Sankhya"}
+
+print(f"\n====================================")
+print(f"===> START AT: {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}")
+print(f"====================================\n")
