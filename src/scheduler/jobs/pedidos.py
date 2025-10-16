@@ -17,28 +17,33 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
     print("::::::::::::::::::: RECEBIMENTO DE PEDIDOS :::::::::::::::::::")    
 
     if not id_loja:
-        empresas = await empresa.buscar(codemp=codemp)        
-
+        empresas = await empresa.buscar(codemp=codemp)
         try:
-            for i, emp in enumerate(empresas):
-                print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
-                ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-                if not ecommerces:
-                    print("Nenhum e-commerce vinculado à empresa")
-                    continue
-                for j, ecom in enumerate(ecommerces):
-                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
-                    pedido = Pedido(id_loja=ecom.get('id_loja'))
-                    separacao = Separacao(id_loja=ecom.get('id_loja'))
-                    ack = await pedido.receber_novos()
-                    if ack:
-                        await separacao.receber()
-                    else:
-                        print(f"Erro ao receber pedidos")
-            retorno = {
-                "status": True,
-                "exception": None
-            }
+            if not empresas:
+                retorno = {
+                    "status": True,
+                    "exception": None
+                }
+            else:
+                for i, emp in enumerate(empresas):
+                    print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
+                    ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+                    if not ecommerces:
+                        print("Nenhum e-commerce vinculado à empresa")
+                        continue
+                    for j, ecom in enumerate(ecommerces):
+                        print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
+                        pedido = Pedido(id_loja=ecom.get('id_loja'))
+                        separacao = Separacao(id_loja=ecom.get('id_loja'))
+                        ack = await pedido.receber_novos()
+                        if ack:
+                            await separacao.receber()
+                        else:
+                            print(f"Erro ao receber pedidos")
+                retorno = {
+                    "status": True,
+                    "exception": None
+                }
         except Exception as e:
             retorno = {
                 "status": False,
