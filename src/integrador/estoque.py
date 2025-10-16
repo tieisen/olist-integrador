@@ -1,5 +1,6 @@
 import os
 import time
+from tqdm import tqdm
 from database.crud import log as crudLog
 from database.crud import log_estoque as crudLogEst
 from src.sankhya.estoque import Estoque as EstoqueSnk
@@ -45,6 +46,9 @@ class Estoque:
             }
             return resultado
         
+        if isinstance(estoque_olist,list):
+            estoque_olist = estoque_olist[0]
+
         # Se o produto é Kit ou qualquer tipo que não pode ser diretamente movimentado
         # o Olist não informa código de depósito
         if not estoque_olist.get('depositos'):
@@ -53,7 +57,7 @@ class Estoque:
             return False
 
         # Verifica se existe diferença entre o estoque disponível do Sankhya e do Olist
-        if int(estoque_olist.get('disponivel')) == int(estoque_snk.get('disponivel')):
+        if int(estoque_olist.get('saldo')) == int(estoque_snk.get('disponivel')):
             resultado = {
                 "variacao": 0,
                 "ajuste_estoque": {
@@ -72,7 +76,7 @@ class Estoque:
             id_deposito = self.dados_empresa.get('olist_id_deposito_padrao')
 
         # Calcula a variação do saldo do estoque
-        variacao = int(estoque_snk.get('disponivel')) - estoque_olist.get('disponivel')
+        variacao = int(estoque_snk.get('disponivel')) - estoque_olist.get('saldo')
         ajuste_estoque = {
                 "id": int(estoque_olist.get('id')),
                 "codprod": int(estoque_snk.get('codprod')),
@@ -117,6 +121,14 @@ class Estoque:
     @carrega_dados_empresa
     async def atualizar_olist(self, **kwargs):
 
+        def buscar_produto(codprod:int,lista_produtos:list[dict]) -> dict:
+            dict_res:dict={}
+            for produto in lista_produtos:
+                if produto.get('codprod') == int(codprod):
+                    dict_res = produto
+                    break
+            return dict_res
+
         estoque_snk = EstoqueSnk(codemp=self.codemp)
         estoque_olist = EstoqueOlist(codemp=self.codemp)
         parser = Parser()
@@ -124,7 +136,8 @@ class Estoque:
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='sankhya',
                                      para='olist',
-                                     contexto=kwargs.get('_contexto'))        
+                                     contexto=kwargs.get('_contexto'))
+        
         # Busca lista de produtos com alterações de estoque no Sankhya
         print("-> Buscando de produtos com alterações de estoque no Sankhya...")        
         alteracoes_pendentes = await estoque_snk.buscar_alteracoes()
@@ -138,60 +151,87 @@ class Estoque:
         # Extrai lista dos produtos
         print("-> Extraindo lista dos produtos...")
         lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
-        lista_id = [int(produto.get('idprod')) for produto in alteracoes_pendentes]     
 
         try:
             # Busca estoque dos produtos no Sankhya e no Olist
             print("-> Buscando estoque dos produtos no Sankhya...")
-            dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
-            if not dados_estoque_snk:
+            lista_dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
+            if not lista_dados_estoque_snk:
                 msg = f"Erro ao buscar estoque no Sankhya. Parametro: {lista_codprod}"
                 raise Exception(msg)
 
-            # Busca estoque dos produtos no Olist        
-            print("-> Buscando estoque dos produtos no Olist...")            
-            dados_estoque_olist = await estoque_olist.buscar(lista_produtos=lista_id)
-            if not dados_estoque_olist:
-                msg = f"Erro ao buscar estoque no Olist. Parametro: {lista_id}"
-                raise Exception(msg)
-
             # Compara os estoques e calcula as variações
-            for i, produto in enumerate(alteracoes_pendentes):
+            for i, produto in enumerate(tqdm(alteracoes_pendentes,desc="Processando...")):
                 dados_update:dict = {}
                 res_estoque:dict = {}
                 time.sleep(self.req_time_sleep)
-                print(f"-> Produto {i + 1}/{len(alteracoes_pendentes)}: {produto.get('codprod')}")
+                print(f"\nProduto {i + 1}/{len(alteracoes_pendentes)}: {produto.get('codprod')}")
                 
+                # Busca estoque dos produtos no Olist        
+                print("Buscando estoque dos produtos no Olist...")
+                dados_estoque_olist = await estoque_olist.buscar(id=produto.get('idprod'))
+                if not dados_estoque_olist:
+                    msg = f"Erro ao buscar estoque no Olist. Parametro: {produto.get('idprod')}"
+                    raise Exception(msg)
+                if isinstance(dados_estoque_olist,list):
+                    dados_estoque_olist = dados_estoque_olist[0]
+
                 # Calcula variação do produto
                 print("Calculando variação do produto...")
-                dados_update = self.calcular_variacao(estoque_olist=dados_estoque_olist[i],
-                                                      estoque_snk=dados_estoque_snk[i])
+                dados_estoque_snk:dict = {}
+                dados_estoque_snk = buscar_produto(codprod=produto.get('codprod'),lista_produtos=lista_dados_estoque_snk)
+                if not dados_estoque_snk:
+                    msg = f"Não foi possível encontrar o produto. \nProduto procurado: {produto.get('codprod')}"
+                    raise Exception(msg)
+                if int(dados_estoque_olist.get('id')) != int(dados_estoque_snk.get('idprod')):
+                    msg = f"Erro ao buscar produto correto no Sankhya\ndados_estoque_olist:{dados_estoque_olist}\ndados_estoque_snk:{dados_estoque_snk}"
+                    raise Exception(msg)
+                
+                dados_update = self.calcular_variacao(estoque_olist=dados_estoque_olist,
+                                                      estoque_snk=dados_estoque_snk)
                 if not dados_update:
                     msg = f"Erro ao calcular variação do produto {produto.get('codprod')}"
-                    raise Exception(msg)                
-                dados_update = parser.to_olist(dados_estoque=dados_update.get('ajuste_estoque'))
+                    raise Exception(msg)
+                if dados_update.get('variacao') == 0:
+                    print("Produto sem alteração de estoque")
+                    # Limpa tabela de alterações pendentes
+                    print("Limpando tabela de alterações pendentes...")
+                    ack = await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))
+                    if not ack:
+                        msg = f"Erro ao remover alterações pendentes. Produto {produto.get('codprod')}"
+                        raise Exception(msg)                    
+                    continue
+
+                # Converte para o formato da API
+                print("Convertendo para o formato da API...")
+                id_produto:int=None
+                dicionario_mvto_estoque:dict={}
+                id_produto, dicionario_mvto_estoque = parser.to_olist(dados_estoque=dados_update.get('ajuste_estoque'))
+                if not all([id_produto,dicionario_mvto_estoque]):
+                    msg = f"Erro ao converter para o formato da API.\nid_produto: {id_produto}\ndicionario_mvto_estoque:{dicionario_mvto_estoque}"
+                    raise Exception(msg)
 
                 # Envia modificações para Olist
                 print("Enviando modificações para Olist...")
-                res_estoque = await estoque_olist.enviar_saldo(id=dados_update[0],
-                                                               data=dados_update[1])
+                res_estoque = await estoque_olist.enviar_saldo(id=id_produto,
+                                                               data=dicionario_mvto_estoque)
                 if not res_estoque:
                     msg = f"Erro ao enviar modificações de estoque para o Olist. Produto {produto.get('codprod')}"
                     raise Exception(msg)
 
                 # Limpa tabela de alterações pendentes
-                print("Limpando tabela de alterações...")
+                print("Limpando tabela de alterações pendentes...")
                 ack = await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))
                 if not ack:
                     msg = f"Erro ao remover alterações pendentes. Produto {produto.get('codprod')}"
                     raise Exception(msg)
 
                 # Atualiza o log de eventos
-                print("Atualizando logs...")
+                print("Atualizando o log de eventos...")
                 ack = await crudLogEst.criar(log_id=log_id,
                                              codprod=int(produto.get('codprod')),
                                              idprod=int(produto.get('idprod')),
-                                             qtdmov=int(produto.get('variacao')),
+                                             qtdmov=int(dados_update.get('variacao')),
                                              sucesso=bool(produto.get('sucesso')))
                 if not ack:
                     msg = f"Erro ao atualizar log. Produto {produto.get('codprod')}"
