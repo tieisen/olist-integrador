@@ -29,7 +29,6 @@ olist-integrador/
 ├── keys/            # Variáveis de ambiente e credenciais
 ├── logs/            # Logs da aplicação
 ├── routers/         # Rotas da API (execução das rotinas de integração)
-├── run/             # Arquivos .bat para agendamento
 ├── src/
 │   ├── integrador/  # Rotinas de integração
 │   ├── json/        # Estruturas de dados para chamadas da API Olist
