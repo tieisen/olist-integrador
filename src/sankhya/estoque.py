@@ -25,7 +25,7 @@ class Estoque:
     async def buscar(
             self,
             codprod:int=None,
-            lista_produtos:list=None
+            lista_produtos:list[int]=None
         ) -> dict:
 
         if not any([codprod, lista_produtos]):
@@ -181,8 +181,6 @@ class Estoque:
                 "pks": filter
             }
         }
-
-        print(payload)
 
         res = requests.get(
             url=url,
