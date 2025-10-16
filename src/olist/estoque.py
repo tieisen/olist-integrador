@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+from tqdm import tqdm
 from src.utils.autenticador import token_olist
 from src.parser.estoque import Estoque as ParserEstoque
 from src.utils.log import set_logger
@@ -50,7 +51,7 @@ class Estoque:
                 return result            
 
         if lista_produtos:
-            for produto in lista_produtos:
+            for produto in tqdm(lista_produtos):
                 url = self.endpoint+f"/{produto}"
                 time.sleep(self.req_time_sleep)
                 res = requests.get(
