@@ -8,6 +8,7 @@ load_env()
 def buscar_path() -> str:
     mes_atual = datetime.now().strftime('%Y%m')
     if not os.path.exists(f"./logs/{mes_atual}.log"):
+        os.makedirs("./logs/", exist_ok=True)
         with open(f"./logs/{mes_atual}.log", "w") as f:
             pass
     return f"./logs/{mes_atual}.log"
