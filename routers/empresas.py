@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from src.sankhya.empresa import Empresa
-from database.schemas import EmpresaCreate, EmpresaDB
+from database.schemas import EmpresaCreate
 from database.crud import empresa as crud
 import asyncio
 
@@ -26,7 +26,7 @@ def buscar_codemp(codemp:int):
     return True
 
 @router.post("")
-async def criar(empresa: EmpresaCreate) -> EmpresaDB:
+async def criar(empresa: EmpresaCreate):
     """
     Cadastra empresa
     """
@@ -37,7 +37,7 @@ async def criar(empresa: EmpresaCreate) -> EmpresaDB:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Erro ao criar empresa"
             )
-        return True
+        return sucesso
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
