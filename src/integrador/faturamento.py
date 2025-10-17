@@ -446,7 +446,12 @@ class Faturamento:
                 print("=====================================================")
                 print("-> FINALIZANDO PROCESSO NO SANKHYA...") 
 
-                pedidos_sankhya = list(set([p.nunota_pedido for p in pedidos_faturar]))
+                try:
+                    pedidos_sankhya = list(set([p.nunota_pedido for p in pedidos_faturar]))
+                except Exception as e:
+                    print(f"Erro ao extrair lista de pedidos para faturar no sankhya. {e}")
+                    return False
+                
                 pedido_snk = PedidoSnk()
                 nota_snk = NotaSnk()
 
@@ -454,15 +459,20 @@ class Faturamento:
                 print("Verificando se o pedido foi faturado...")
                 # val = 0
                 for nunota in pedidos_sankhya:
-                    status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
-                    if status_faturamento:
-                        val+=1
-                        print(f"Pedido {nunota} já foi faturado.")
-                        # Atualiza base de dados
-                        venda.atualizar_faturada_lote(nunota_pedido=nunota,
-                                                      nunota_nota=status_faturamento[0].get('nunota'))                    
-                        venda.atualizar_confirmada_nota_lote(nunota_nota=status_faturamento[0].get('nunota'))
-                        pedidos_sankhya.pop(pedidos_sankhya.index(nunota))
+                    try:
+                        status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)                    
+                        if status_faturamento:
+                            val+=1
+                            print(f"Pedido {nunota} já foi faturado.")
+                            # Atualiza base de dados
+                            venda.atualizar_faturada_lote(nunota_pedido=nunota,
+                                                        nunota_nota=status_faturamento[0].get('nunota'))                    
+                            venda.atualizar_confirmada_nota_lote(nunota_nota=status_faturamento[0].get('nunota'))
+                            pedidos_sankhya.pop(pedidos_sankhya.index(nunota))
+                    except Exception as e:
+                        print(f"Erro ao verificar se o pedido {nunota} foi faturado. {e}")
+                        return False
+
                 #if val == len(pedidos_sankhya):
                 if not pedidos_sankhya:
                     print("=====================================================")
