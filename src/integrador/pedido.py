@@ -887,7 +887,8 @@ class Pedido:
                 logger.error("Erro: %s",e)
                 print(f"Erro: {e}")
             finally:
-                return itens
+                pass
+            return itens
         
         def filtrar_pedidos_devolver(nunota:int,lista_pedidos_cancelados:list) -> list:
             pedidos_filtrados = []
@@ -1080,7 +1081,8 @@ class Pedido:
             except Exception as e:
                 print(f"Erro: {e}")
             finally:
-                return numero_nota_referenciada
+                pass
+            return numero_nota_referenciada
 
         try:
             log_id = log.criar(de='olist', para='sankhya', contexto=CONTEXTO+'_devolver')
@@ -1107,7 +1109,8 @@ class Pedido:
             dados_snk = await nota_snk.buscar(nunota=pedido_cancelado.nunota_nota,itens=True)
             if not dados_snk:
                 msg = "Nota não localizada no Sankhya"
-                raise Exception(msg)            
+                raise Exception(msg)
+            print(f"Pedido localizado: {pedido_cancelado.num_pedido}/{pedido_cancelado.cod_pedido} - Nota {dados_snk.get('nunota')}")
 
             parser = ParserPedido()
             # Converte para o formato da API do Sankhya
@@ -1140,7 +1143,7 @@ class Pedido:
                                                                     dados_sankhya=dados_snk.get('itens'),
                                                                     observacao=observacao)
                 if not all([cabecalho, itens]):
-                    msg = "Erro ao converter dados da devolucao do pedido para o formato da API do Sankhya"
+                    msg = "Erro ao converter dados da devolucao avulsa do pedido para o formato da API do Sankhya"
                     raise Exception(msg)
 
                 pedido_snk = PedidoSnk()           
@@ -1158,7 +1161,7 @@ class Pedido:
                 raise Exception(msg)            
             status = True            
         except Exception as e:
-            erro = 'ERRO: '+e
+            erro = f'ERRO: {e}'
             status = False            
         finally:
             log.atualizar(id=log_id, sucesso=status)
@@ -1168,8 +1171,7 @@ class Pedido:
             }
             print("================================")
             print("PROCESSO DE DEVOLUÇÃO CONCLUÍDO!")
-
-            return res
+        return res
 
     async def anular(self, nunota:int):
         """ Exclui pedido que ainda não foi conferido do Sankhya. """
@@ -1232,7 +1234,7 @@ class Pedido:
         except Exception as e:
             if status is True:
                 pass
-            erro = 'ERRO: '+e
+            erro = f'ERRO: {e}'
             status = False            
         finally:
             log.atualizar(id=log_id, sucesso=status)
@@ -1244,4 +1246,4 @@ class Pedido:
             print("PROCESSO DE ANULACAO DE PEDIDO CONCLUIDO!")            
             status_log = False if log_pedido.buscar_status_false(log_id=log_id) else True
             log.atualizar(id=log_id, sucesso=status_log)
-            return res
+        return res
