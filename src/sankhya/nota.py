@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import requests
 from dotenv import load_dotenv
@@ -19,6 +20,7 @@ class Nota:
     def __init__(self):   
         self.con = Connect()  
         self.formatter = Formatter()
+        self.req_time_sleep = int(os.getenv('REQ_TIME_SLEEP', 1))        
         self.campos_cabecalho = [
                 "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
                 "AD_MKP_IDNFE", "AD_MKP_NUMPED", "AD_MKP_ORIGEM", "AD_TAXASHOPEE", "APROVADO",
@@ -35,7 +37,15 @@ class Nota:
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    async def buscar(self, nunota:int=None, id_olist:int=None, codpedido:str=None, pendentes:bool=False, offset:int=0, itens:bool=False) -> dict:
+    async def buscar(
+            self,
+            nunota:int=None,
+            id_olist:int=None,
+            codpedido:str=None,
+            pendentes:bool=False,
+            offset:int=0,
+            itens:bool=False
+        ) -> dict:
 
         if not any([nunota, id_olist, codpedido, pendentes]):
             print("Nenhum critério de busca informado. Nenhum dado será retornado.")
@@ -361,7 +371,10 @@ class Itens(Nota):
             "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    async def buscar(self, nunota:int=None) -> dict:
+    async def buscar(
+            self,
+            nunota:int=None
+        ) -> dict:
 
         if not nunota:
             print("Número único da nota não informado")
@@ -380,6 +393,9 @@ class Itens(Nota):
             logger.error("Erro relacionado ao token de acesso. %s",e)
             return False        
 
+        offset = 0
+        limite_alcancado = False
+        todos_resultados = []
         criteria = {
             "expression": {
                 "$": "this.NUNOTA = ? AND SEQUENCIA > 0"
@@ -390,18 +406,17 @@ class Itens(Nota):
                     "type": "I"
                 }
             ]
-        }
+        }        
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization': token },
-            json={
+        while not limite_alcancado:
+            time.sleep(self.req_time_sleep)
+            payload = {
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
                         "rootEntity": "ItemNota",
                         "includePresentationFields": "N",
-                        "offsetPage": "0",
+                        "offsetPage": offset,
                         "criteria": criteria,
                         "entity": {
                             "fieldset": {
@@ -410,11 +425,20 @@ class Itens(Nota):
                         }
                     }
                 }
-            })
-        
-        if res.status_code in (200,201) and res.json().get('status')=='1':            
-            return self.formatter.return_format(res.json())
-        else:
-            print(f"Erro ao buscar itens do pedido. Nunota {nunota}. {res.json()}")
-            logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
-            return False
+            }
+            res = requests.get(
+                url=url,
+                headers={ 'Authorization': token },
+                json=payload)
+            if res.status_code != 200:
+                msg = f"Erro ao buscar itens do pedido. Nunota {nunota}. {res.json()}"
+                print(msg)
+                logger.error(msg)
+                return False            
+            if res.json().get('status') == '1':
+                todos_resultados.extend(self.formatter.return_format(res.json()))
+                if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
+                    offset += 1
+                else:   
+                    limite_alcancado = True
+        return todos_resultados
