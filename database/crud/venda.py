@@ -22,6 +22,17 @@ def criar(id_loja:int, id_pedido:int, cod_pedido:str, num_pedido:int, dados_pedi
     session.close()
     return True
 
+def buscar_tudo(data:str=None):
+    session = SessionLocal()
+    if data:
+        data = datetime.strptime(data,'%Y-%m-%d')
+        inicio = datetime.combine(data.date(), datetime.min.time())        
+        venda = session.query(Venda).filter(Venda.dh_pedido >= inicio).order_by(Venda.num_pedido).all()
+    else:
+        venda = session.query(Venda).order_by(Venda.num_pedido).all()
+    session.close()
+    return venda
+
 def buscar_por_numero_pedido(num_pedido:int):
     session = SessionLocal()
     venda = session.query(Venda).filter(Venda.num_pedido==num_pedido).first()
