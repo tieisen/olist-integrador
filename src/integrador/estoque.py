@@ -146,8 +146,11 @@ class Estoque:
                 print("Buscando estoque dos produtos no Olist...")
                 dados_estoque_olist = await estoque_olist.buscar(lista_produtos=lista_id)
 
-                if not all([dados_estoque_snk,dados_estoque_olist]):
-                    raise Exception("Sem dados do estoque")
+                if not dados_estoque_snk:
+                    raise Exception("Sem dados do estoque no Sankhya")
+
+                if not dados_estoque_olist:
+                    raise Exception("Sem dados do estoque no Olist")
 
                 # Calcula variação dos produtos
                 print("Calculando variação dos produtos...")
