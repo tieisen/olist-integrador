@@ -86,48 +86,62 @@ async def buscar(
         nunota:int=None,
         chave:str=None,
         numero_ecommerce:dict=None,
-        lista_chave:list[str]=None
+        lista_chave:list[str]=None,
+        tudo:bool=False
     ) -> dict:
-    if not any([id_nota,nunota,lista_chave]):
-        return False
-    async with AsyncSessionLocal() as session:
-        if nunota:
-            result = await session.execute(
-                select(Devolucao)
-                .where(Devolucao.nunota == nunota)
-            )
-        elif id_nota:
-            result = await session.execute(
-                select(Devolucao)
-                .where(Devolucao.id_nota == id_nota)
-            )
-        elif chave:
-            result = await session.execute(
-                select(Devolucao)
-                .where(Devolucao.chave_acesso == chave)
-            )
-        elif numero_ecommerce:
-            result = await session.execute(
-                select(Devolucao)
-                .where(Devolucao.numero == numero_ecommerce.get('numero'),
-                       Devolucao.nota_.has(
-                            Nota.pedido_.has(
-                          Pedido.ecommerce_id==numero_ecommerce.get('ecommerce'))))
-            )
-        elif lista_chave:
-            result = await session.execute(
-                select(Devolucao)
-                .where(Devolucao.chave_acesso.in_(lista_chave))
-            )
-        else:
-            return False
-        devolucao = result.scalar_one_or_none()
-    if not devolucao:
-        #print(f"Devolução não encontrada. Parâmetro: {nunota or id_nota or chave or numero_ecommerce or lista_chave}")
-        return {}
-    dados_devolucao = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
-                                       retorno=devolucao)        
-    return dados_devolucao    
+    res:dict={}
+
+    try:
+        if not any([id_nota,nunota,lista_chave]) and not tudo:
+            raise ValueError("Parâmetro não informado")
+        
+        async with AsyncSessionLocal() as session:
+            if nunota:
+                result = await session.execute(
+                    select(Devolucao)
+                    .where(Devolucao.nunota == nunota)
+                )
+            elif id_nota:
+                result = await session.execute(
+                    select(Devolucao)
+                    .where(Devolucao.id_nota == id_nota)
+                )
+            elif chave:
+                result = await session.execute(
+                    select(Devolucao)
+                    .where(Devolucao.chave_acesso == chave)
+                )
+            elif numero_ecommerce:
+                result = await session.execute(
+                    select(Devolucao)
+                    .where(Devolucao.numero == numero_ecommerce.get('numero'),
+                        Devolucao.nota_.has(
+                                Nota.pedido_.has(
+                            Pedido.ecommerce_id==numero_ecommerce.get('ecommerce'))))
+                )
+            elif lista_chave:
+                result = await session.execute(
+                    select(Devolucao)
+                    .where(Devolucao.chave_acesso.in_(lista_chave))
+                )
+            elif tudo:
+                result = await session.execute(
+                    select(Devolucao)
+                )
+            else:
+                raise ValueError("Parâmetro não informado") 
+            devolucao = result.scalars().all()
+
+        if not devolucao:
+            raise ValueError("Nenhum resultado encontrado")
+        
+        res = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                        retorno=devolucao)        
+    except:
+        pass
+    finally:
+        pass
+    return res 
 
 async def atualizar(
         id_nota:int=None,
