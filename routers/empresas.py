@@ -12,18 +12,20 @@ def buscar_todas():
     """
     Busca todas as empresas
     """
-    if not asyncio.run(empresa.buscar()):
+    dados = asyncio.run(empresa.buscar())
+    if not dados:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar lista de empresas")
-    return True
+    return dados
 
 @router.get("/buscar/{codemp}")
 def buscar_codemp(codemp:int):
     """
     Busca empresa
     """
-    if not asyncio.run(empresa.buscar(codemp=codemp)):
+    dados = asyncio.run(empresa.buscar(codemp=codemp))
+    if not dados:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao buscar dados da empresa {codemp}")
-    return True
+    return dados
 
 @router.post("")
 async def criar(empresa: EmpresaCreate):
