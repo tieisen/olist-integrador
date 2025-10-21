@@ -47,7 +47,8 @@ async def criar(snk_codemp:int,
 
         session.add(nova_empresa)
         await session.commit()
-        return True
+        await session.refresh(nova_empresa)
+        return nova_empresa.id
 
 async def atualizar(
         id:int=None,

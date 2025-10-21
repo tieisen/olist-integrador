@@ -62,26 +62,31 @@ Antes de começar, certifique-se de ter os seguintes pré-requisitos instalados 
     cd olist-integrador
     ```
 
-2.  Instale as dependências:
+2.  Crie um ambiente:
+    ```bash
+    python -m venv venv
+    ```
+
+4.  Instale as dependências:
     ```bash
     pip install -r requirements.txt
     ```
 
-3.  Crie um arquivo `keys/.env` com base no arquivo `example.env`
+5.  Crie um arquivo `keys/.env` com base no arquivo `example.env`
 
-4.  No diretório do projeto, execute a criação do banco de dados:
+6.  No diretório do projeto, execute a criação do banco de dados:
     ```bash
     cd olist-integrador
     python -m database
     ```
 
-5.  Inicialize a aplicação:
+7.  Inicialize a aplicação:
     ```bash
     cd c:/repos/olist-integrador
     call venv\Scripts\activate
     python .
     ```
-6.  Teste acessando o endereço `http://[IP]:[PORTA]/docs`. Você deve visualizar a documentação da API com a funcão de cada rota.
+8.  Teste acessando o endereço `http://[IP]:[PORTA]/docs`. Você deve visualizar a documentação da API com a funcão de cada rota.
     ```
     ✨Dica: Inicie cadastrando uma empresa
     ```
