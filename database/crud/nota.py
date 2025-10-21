@@ -27,7 +27,7 @@ async def criar(
     # Verifica se a nota já existe
     nota = await buscar(id_nota=id_nota)
     if nota:
-        print(f"Nota {id_nota} já existe no ID {nota.get('id')}")
+        print(f"Nota {id_nota} já existe")
         return False
     
     # Verifica se o pedido existe
@@ -59,42 +59,53 @@ async def buscar(
         chave_acesso:str=None,
         tudo:bool=False,
     ) -> dict:
-    if not any([id_nota,nunota,chave_acesso]) and not tudo:
-        return False
-    async with AsyncSessionLocal() as session:
-        if nunota:
-            result = await session.execute(
-                select(Nota)
-                .where(Nota.nunota == nunota)
-            )
-        elif id_nota:
-            result = await session.execute(
-                select(Nota)
-                .where(Nota.id_nota == id_nota)
-            )
-        elif chave_acesso:
-            result = await session.execute(
-                select(Nota)
-                .where(Nota.chave_acesso == chave_acesso)
-            )
-        elif numero_ecommerce:
-            result = await session.execute(
-                select(Nota)
-                .where(Nota.numero == numero_ecommerce.get('numero'),
-                       Nota.pedido_
-                           .has(Pedido.ecommerce_id==numero_ecommerce.get('ecommerce')))
-            )
-        elif tudo:
-            result = await session.execute(
-                select(Nota)
-            )
-        nota = result.scalars().all()
-    if not nota:
-        print(f"Nota não encontrada. Parâmetro: {nunota or id_nota or chave_acesso or numero_ecommerce}")
-        return False
-    dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
-                                  retorno=nota)
-    return dados_nota
+    res:dict={}
+
+    try:
+        if not any([id_nota,nunota,chave_acesso]) and not tudo:
+            raise ValueError("Parâmetro não informado")
+                
+        async with AsyncSessionLocal() as session:
+            if nunota:
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.nunota == nunota)
+                )
+            elif id_nota:
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.id_nota == id_nota)
+                )
+            elif chave_acesso:
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.chave_acesso == chave_acesso)
+                )
+            elif numero_ecommerce:
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.numero == numero_ecommerce.get('numero'),
+                        Nota.pedido_
+                            .has(Pedido.ecommerce_id==numero_ecommerce.get('ecommerce')))
+                )
+            elif tudo:
+                result = await session.execute(
+                    select(Nota)
+                )
+            else:
+                raise ValueError("Parâmetro não informado")            
+            nota = result.scalars().all()
+
+        if not nota:
+            raise ValueError("Nenhum resultado encontrado")
+        
+        res = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                               retorno=nota)
+    except:
+        pass
+    finally:
+        pass
+    return res
 
 async def atualizar(
         id_nota:int=None,
