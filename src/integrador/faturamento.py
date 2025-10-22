@@ -462,7 +462,7 @@ class Faturamento:
                     try:
                         status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)                    
                         if status_faturamento:
-                            val+=1
+                            # val+=1
                             print(f"Pedido {nunota} já foi faturado.")
                             # Atualiza base de dados
                             venda.atualizar_faturada_lote(nunota_pedido=nunota,
