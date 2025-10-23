@@ -76,7 +76,7 @@ class Estoque:
             return False
     
     @token_snk
-    async def buscar_alteracoes(self) -> dict:
+    async def buscar_alteracoes(self, codemp:int) -> dict:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
@@ -104,6 +104,17 @@ class Estoque:
                         "rootEntity": tabela,
                         "includePresentationFields": "N",
                         "offsetPage": offset,
+                        "criteria": {
+                            "expression": {
+                                "$": "this.CODEMP = ?"
+                            },
+                            "parameter": [
+                                {
+                                    "$": f"{codemp}",
+                                    "type": "I"
+                                }
+                            ]
+                        },                        
                         "entity": {
                             "fieldset": {
                                 "list": '*'
@@ -217,12 +228,14 @@ class Estoque:
                 produtos = [produto.get('codprod') for produto in lista_produtos]
                 query = script.format_map({
                                     "codemp":self.codemp,
+                                    "codemp_matriz":self.dados_empresa.get('snk_codemp_fornecedor'),
                                     "codlocais":self.dados_empresa.get('snk_codlocal_estoque'),
                                     "lista_produtos":','.join(map(str,produtos))
                                 })
             else:
                 query = script.format_map({
                                     "codemp":self.codemp,
+                                    "codemp_matriz":self.dados_empresa.get('snk_codemp_fornecedor'),
                                     "codlocais":self.dados_empresa.get('snk_codlocal_estoque'),
                                     "codprod":codprod,
                                     "controle":controle
