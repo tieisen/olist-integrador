@@ -35,11 +35,8 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
                         print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                         pedido = Pedido(id_loja=ecom.get('id_loja'))
                         separacao = Separacao(id_loja=ecom.get('id_loja'))
-                        ack = await pedido.receber_novos()
-                        if ack:
-                            await separacao.receber()
-                        else:
-                            print(f"Erro ao receber pedidos")
+                        await pedido.receber_novos()
+                        await separacao.receber()
                 retorno = {
                     "status": True,
                     "exception": None
@@ -111,7 +108,6 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     pedido = Pedido(id_loja=ecom.get('id_loja'))
-                    await pedido.consultar_cancelamentos()
                     await pedido.integrar_novos()
                     await pedido.integrar_confirmacao()
             retorno = {
@@ -121,10 +117,10 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
         except Exception as e:
             retorno = {
                 "status": False,
-                "exception": e
+                "exception": f"{e}"
             }
         finally:
-            return retorno
+            pass
     else:
         try:
             ecommerces = await ecommerce.buscar(id_loja=id_loja)
@@ -141,10 +137,12 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
         except Exception as e:
             retorno = {
                 "status": False,
-                "exception": e
+                "exception": f"{e}"
             }
         finally:
-            return retorno                              
+            pass
+    
+    return retorno                              
 
 async def integrar_separacoes(codemp:int=None) -> dict:
 
