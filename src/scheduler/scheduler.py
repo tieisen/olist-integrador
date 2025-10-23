@@ -113,6 +113,8 @@ def job_listener(event):
             id=retry_id,
             replace_existing=True,
             misfire_grace_time=60,
+            max_instances=1,
+            coalesce=True
         )
         logger.info(f"⏳ Reagendado retry de '{job.id}' para {run_time:%H:%M:%S}")
     else:
@@ -136,7 +138,7 @@ async def inicializar_tarefas():
 
     for job_id, func, trigger, params in jobs:
         if job_id not in jobs_existentes:
-            scheduler.add_job(func, trigger, id=job_id, replace_existing=True, **params)
+            scheduler.add_job(func, trigger, id=job_id, replace_existing=True, max_instances=1, coalesce=True, **params)
             logger.info(f"📅 Job registrado: {job_id}")
 
 # ==============================
