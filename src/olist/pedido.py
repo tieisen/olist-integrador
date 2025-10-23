@@ -79,10 +79,7 @@ class Pedido:
                 logger.warning("Pedido %s dados incompletos", res.json().get('numeroPedido'))
                 return False
             if cancelados:
-                if res.json().get('itens'):
-                    return [i.get('id') for i in res.json().get('itens')]
-                else:
-                    return []            
+                return res.json().get('itens')
         else:
             if id:
                 print(f"Erro {res.status_code}: {res.text} pedido {id}")
@@ -211,7 +208,7 @@ class Pedido:
             }
         )
 
-        if res.status_code != 200:
+        if res.status_code not in [200,409]:
             print(f"Erro {res.status_code}: {res.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)            
             return False
