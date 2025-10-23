@@ -6,13 +6,15 @@ from pydantic import BaseModel
 router = APIRouter()
 
 class NotaModel(BaseModel):
-    codemp:int
     id_loja:int
-    id:int
     numero:int
 
+class ContaModel(BaseModel):
+    id_loja:int
+    id:int
+
 @router.post("/baixar-contas")
-def baixar_contas(nota:NotaModel):
+async def baixar_contas(nota:ContaModel):
     """
     Baixa contas a receber que estão pendentes.
     """
@@ -22,7 +24,7 @@ def baixar_contas(nota:NotaModel):
     return True
 
 @router.post("/cancelar")
-def cancelar_nota(nota:NotaModel):
+async def cancelar_nota(nota:NotaModel):
     """
     Cancela nota de devolução
     """
