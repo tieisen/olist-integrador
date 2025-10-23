@@ -1,5 +1,6 @@
 import os
 import time
+from tqdm import tqdm
 from database.crud import pedido as crudPedido
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPedido
@@ -48,12 +49,12 @@ class Separacao:
         print("-> Buscando lista de pedidos em separação...")
         separacao = SeparacaoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         lista_separacoes = await separacao.listar()
+        lista_separacoes = self.validar_loja(lista_pedidos=lista_separacoes)
         if not lista_separacoes:
             print("Nenhum pedido em separação encontrado")
             await crudLog.atualizar(id=log_id,
                                     sucesso=True)
             return True
-        lista_separacoes = self.validar_loja(lista_pedidos=lista_separacoes)
         lista_separacoes = await self.valida_separacoes_registradas(lista_separacoes)
         if not lista_separacoes:
             print("Nenhuma separação pendente encontrada")
@@ -61,13 +62,13 @@ class Separacao:
                                     sucesso=True)
             return True
         print(f"{len(lista_separacoes)} pedidos em separação encontrados.")
-        for i, item in enumerate(lista_separacoes):
+        for i, item in tqdm(enumerate(lista_separacoes),desc="Processando..."):
             pedido:dict={}
             try:
                 time.sleep(self.req_time_sleep)  # Evita rate limit
-                print(f"-> Pedido {i + 1}/{len(lista_separacoes)}: {item['venda'].get('numero')}")            
+                # print(f"-> Pedido {i + 1}/{len(lista_separacoes)}: {item['venda'].get('numero')}")            
                 # Valida existencia do pedido
-                print(f"Validando existencia do pedido...")
+                # print(f"Validando existencia do pedido...")
                 res_pedido = await crudPedido.buscar(id_pedido=item['venda'].get('id'))
                 # Pedido não encontrado
                 if not res_pedido:
@@ -78,7 +79,7 @@ class Separacao:
                 if pedido.get('id_separacao') == item.get('id'):
                     continue
                 # Vincula separação
-                print("Vinculando separação ao pedido...")
+                # print("Vinculando separação ao pedido...")
                 ack = await crudPedido.atualizar(id_pedido=item['venda'].get('id'),
                                                  id_separacao=item.get('id'))
                 if not ack:
@@ -88,7 +89,7 @@ class Separacao:
                 await crudLogPedido.criar(log_id=log_id,
                                           pedido_id=pedido.get('id'),
                                           evento='R')
-                print("Pedido atualizado com sucesso!")
+                # print("Pedido atualizado com sucesso!")
             except Exception as e:
                 logger.error(str(e))
                 print(str(e))
