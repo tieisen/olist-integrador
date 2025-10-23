@@ -22,7 +22,6 @@ class Nota:
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     @contexto
-    @interno
     @carrega_dados_ecommerce
     async def gerar(
             self,
@@ -36,7 +35,7 @@ class Nota:
                                               para='olist',
                                               contexto=kwargs.get('_contexto'))  
 
-        pedido_olist = PedidoOlist(id_loja=self.id_loja)
+        pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         try:
             # Gera NF no Olist
             print("Gerando NF no Olist...")
@@ -45,21 +44,27 @@ class Nota:
                 msg = f"Erro ao gerar NF"
                 raise Exception(msg)
             
+            if dados_nota_olist.get('mensagem'):
+                print(dados_nota_olist.get('mensagem'))
+                nota_olist = NotaOlist(id_loja=self.id_loja)
+                dados_nota_olist = await nota_olist.buscar(cod_pedido=dados_pedido.get('cod_pedido'))
+                print(f"#{int(dados_nota_olist.get('numero'))}")                
+            
             # Atualiza nota
             print("Atualizando status da nota...")
             ack = await crudNota.criar(id_pedido=dados_pedido.get('id_pedido'),
                                        id_nota=dados_nota_olist.get('id'),
-                                       numero=dados_nota_olist.get('numero'),
-                                       serie=dados_nota_olist.get('serie'))
+                                       numero=int(dados_nota_olist.get('numero')),
+                                       serie=str(dados_nota_olist.get('serie')))
             if not ack:
                 msg = f"Erro ao atualizar status da nota"
+                print(msg)
                 raise Exception(msg)            
             return {"success": True, "dados_nota":dados_nota_olist}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
 
     @contexto
-    @interno
     @carrega_dados_ecommerce
     async def emitir(
             self,
@@ -96,7 +101,6 @@ class Nota:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}        
 
-    @interno
     @carrega_dados_ecommerce
     async def receber_conta(
             self,
@@ -114,8 +118,8 @@ class Nota:
             # Busca contas a receber no Olist
             print("Buscando contas a receber no Olist...")
             nota_olist = NotaOlist(id_loja=self.id_loja)
-            dados_financeiro = await nota_olist.buscar_financeiro(serie=dados_nota.get('serie'),
-                                                                  numero=dados_nota.get('numero'))
+            dados_financeiro = await nota_olist.buscar_financeiro(serie=str(dados_nota.get('serie')),                                                                  
+                                                                  numero=str(dados_nota.get('numero')).zfill(6))
             if not dados_financeiro:
                 msg = f"Erro ao buscar contas a receber da nota"
                 raise Exception(msg)
@@ -136,7 +140,6 @@ class Nota:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
 
-    @interno
     @carrega_dados_ecommerce
     async def baixar_conta(
             self,
@@ -159,8 +162,8 @@ class Nota:
                     msg = f"Erro ao buscar dados da nota"
                     raise Exception(msg)
                 nota_olist = NotaOlist(id_loja=self.id_loja)
-                dados_financeiro = await nota_olist.buscar_financeiro(numero=dados_nota.get('numero'),
-                                                                            serie=dados_nota.get('serie'))
+                dados_financeiro = await nota_olist.buscar_financeiro(numero=str(dados_nota.get('numero')).zfill(6),
+                                                                      serie=str(dados_nota.get('serie')))
                 if not dados_financeiro:
                     msg = f"Erro ao buscar contas a receber da nota"
                     raise Exception(msg)
@@ -184,7 +187,6 @@ class Nota:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
     
-    @interno
     async def registrar_cancelamento(self,dados_nota:dict) -> dict:
         try:
             # Atualiza a nota no banco de dados
