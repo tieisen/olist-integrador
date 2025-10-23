@@ -2,27 +2,26 @@ from fastapi import APIRouter, HTTPException, status
 from src.sankhya.empresa import Empresa
 from database.schemas import EmpresaCreate
 from database.crud import empresa as crud
-import asyncio
 
 router = APIRouter()
 empresa = Empresa()
 
 @router.get("/buscar")
-def buscar_todas():
+async def buscar_todas():
     """
     Busca todas as empresas
     """
-    dados = asyncio.run(empresa.buscar())
+    dados = await empresa.buscar()
     if not dados:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao buscar lista de empresas")
     return dados
 
 @router.get("/buscar/{codemp}")
-def buscar_codemp(codemp:int):
+async def buscar_codemp(codemp:int):
     """
     Busca empresa
     """
-    dados = asyncio.run(empresa.buscar(codemp=codemp))
+    dados = await empresa.buscar(codemp=codemp)
     if not dados:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao buscar dados da empresa {codemp}")
     return dados
