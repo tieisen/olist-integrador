@@ -1,6 +1,7 @@
 import os
 import re
 import time
+from tqdm import tqdm
 from datetime import datetime
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
@@ -21,6 +22,7 @@ class Pedido:
     def __init__(self, id_loja:int=None, codemp:int=None):
         self.id_loja:int=id_loja
         self.codemp:int=codemp
+        self.empresa_id:int=None
         self.log_id:int=None
         self.contexto:str='pedido'
         self.dados_ecommerce:dict={}
@@ -32,9 +34,9 @@ class Pedido:
     @interno
     async def validar_cancelados(
             self,
-            lista_pedidos: list
+            lista_pedidos: list[dict]
         ) -> list:
-            
+
         lista_ids = [p.get('id') for p in lista_pedidos]
         pedidos_nao_cancelados = await crudPedido.buscar_cancelar(lista=lista_ids)
         lista_pedidos_pendentes_cancelar = [p.get('id_pedido') for p in pedidos_nao_cancelados]
@@ -156,15 +158,17 @@ class Pedido:
         pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         # Busca pedidos cancelados
         print("Buscando pedidos cancelados...")
-        ack, lista = await pedido_olist.buscar(cancelados=True)            
-        if not ack:
-            # Erro na busca
-            print("Erro ao buscar pedidos cancelados")
-            return False
-        if not lista:
-            # Nenhum pedido cancelado encontrado
-            print("Nenhum pedido cancelado encontrado")
-            return True
+        lista = await pedido_olist.buscar(cancelados=True)            
+        if isinstance(lista,bool):
+            if not lista:
+                # Erro na busca
+                print("Erro ao buscar pedidos cancelados")
+                return False            
+        if isinstance(lista,list):
+            if not lista:
+                # Nenhum pedido cancelado encontrado
+                print("Nenhum pedido cancelado encontrado")
+                return True
         # Valida pedidos cancelados
         print("Validando pedidos cancelados...")
         lista_pedidos = await self.validar_cancelados(lista)
@@ -177,7 +181,6 @@ class Pedido:
         ack:list=[]
         for i in lista_pedidos:
             ack.append(await self.registrar_cancelamento(id_pedido=i))
-
         return all(ack)
 
     @interno
@@ -211,12 +214,12 @@ class Pedido:
             # Consulta pedidos novos
             print("-> Consultando pedidos novos...")
             pedidos_novos = await self.consultar_pedidos_novos(atual=atual)
-            pedidos_novos = self.validar_loja(lista_pedidos=pedidos_novos)
-            if isinstance(pedidos_novos, list):            
+            if isinstance(pedidos_novos, list):
+                pedidos_novos = self.validar_loja(lista_pedidos=pedidos_novos)                
                 print(f"{len(pedidos_novos)} pedidos para receber")
-                for i, pedido in enumerate(pedidos_novos):
+                for i, pedido in tqdm(enumerate(pedidos_novos),desc="Processando..."):
                     time.sleep(self.req_time_sleep)
-                    print(f"-> Pedido {i + 1}/{len(pedidos_novos)}: {pedido.get("numeroPedido")}")            
+                    # print(f"-> Pedido {i + 1}/{len(pedidos_novos)}: {pedido.get("numeroPedido")}")            
                     ack = await self.receber(dados_pedido=pedido)
                     # Registra sucesso no log
                     await crudLogPed.criar(log_id=self.log_id,
@@ -428,7 +431,7 @@ class Pedido:
                 time.sleep(self.req_time_sleep)
                 print(f"-> Pedido {i + 1}/{len(aux_lista_pedidos)}: {pedido.get('num_pedido')}")
                 
-                # Busca dados do pedido no Olist
+                # # Busca dados do pedido no Olist
                 print("Buscando dados do pedido no Olist...")
                 dados_pedido_olist = await pedido_olist.buscar(id=pedido.get('id_pedido'))
                 if not dados_pedido_olist:
@@ -556,6 +559,12 @@ class Pedido:
                                           de='base',
                                           para='sankhya',
                                           contexto=kwargs.get('_contexto'))
+        
+        # Valida cancelamentos
+        print("-> Validando cancelamentos...")        
+        if not await self.consultar_cancelamentos():
+            print("Erro ao validar cancelamentos")
+
         # Busca pedidos para importar
         print("-> Buscando pedidos para importar...")
         pedidos_importar = await crudPedido.buscar_importar(ecommerce_id=self.dados_ecommerce.get('id'))
@@ -787,7 +796,7 @@ class Pedido:
             # Validando pedido no Sankhya
             print("-> Validando pedido no Sankhya...")
             dados_snk = await snk.buscar_nota_do_pedido(nunota=nunota)        
-            if not dados_snk:
+            if isinstance(dados_snk,bool):
                 msg = f"Pedido {nunota} não encontrado no Sankhya"
                 raise Exception(msg)
             
@@ -800,10 +809,6 @@ class Pedido:
             ack = await snk.excluir(nunota=nunota)
             if not ack:
                 msg = f"Erro ao excluir pedido {nunota} no Sankhya"
-                raise Exception(msg)
-
-            if not await crudPedido.cancelar(nunota=nunota):
-                msg = f"Não foi possível limpar os pedidos na base"                
                 raise Exception(msg)
 
             # Busca pedidos relacionados no Olist
@@ -835,11 +840,17 @@ class Pedido:
                 msg = f"Não foi possível remover número do(s) pedido(s) {', '.join(lista_pedidos_com_erro)} no Olist"
                 status = True
                 raise Exception(msg)
+
+            if not await crudPedido.cancelar(nunota=nunota):
+                msg = f"Não foi possível limpar os pedidos na base"                
+                raise Exception(msg) 
+                       
             status = True            
         except Exception as e:
             if status is True:
                 pass
-            erro = 'ERRO: '+e
+            erro = f'ERRO: {e}'
+            print(erro)
             status = False            
         finally:        
             # Atualiza log
