@@ -109,7 +109,7 @@ class Pedido:
                 print("Validando situação do pedido...")         
                 if not self.validar_situacao(dados_pedido):
                     msg = f"Pedido {num_pedido or id_pedido} cancelado ou com dados incompletos"
-                    raise Exception(msg)            
+                    raise Exception(msg)
             # Adiciona pedido na base
             print("Adicionando pedido na base...")
             id = await crudPedido.criar(id_loja=dados_pedido['ecommerce'].get('id'),
@@ -220,13 +220,14 @@ class Pedido:
                 for i, pedido in tqdm(enumerate(pedidos_novos),desc="Processando..."):
                     time.sleep(self.req_time_sleep)
                     # print(f"-> Pedido {i + 1}/{len(pedidos_novos)}: {pedido.get("numeroPedido")}")            
-                    ack = await self.receber(dados_pedido=pedido)
+                    #ack = await self.receber(dados_pedido=pedido)
+                    ack = await self.receber(id_pedido=pedido.get('id'))
                     # Registra sucesso no log
                     await crudLogPed.criar(log_id=self.log_id,
                                            pedido_id=ack.get('id'),
                                            evento='R',
                                            sucesso=ack.get('success'),
-                                           obs=ack.get('__exception__',None))                    
+                                           obs=ack.get('__exception__',None))
             elif isinstance(pedidos_novos,bool):
                 # Retornou True ou False
                 pass
