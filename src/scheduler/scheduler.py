@@ -11,9 +11,7 @@ import os
 load_env()
 logger = set_logger(__name__)
 
-# ==============================
-# 🔌 CONFIGURAÇÃO DO JOBSTORE
-# ==============================
+# CONFIGURAÇÃO DO JOBSTORE
 DATABASE_URL = os.getenv("ALEMBIC_URL")
 DB_NAME = os.getenv("DB_NAME")
 if not all([DATABASE_URL,DB_NAME]):
@@ -28,33 +26,30 @@ jobstores = {
 
 scheduler = AsyncIOScheduler(jobstores=jobstores, timezone=timezone("America/Sao_Paulo"))
 
-# ==============================
-# ⚙️ DEFINIÇÃO DAS TAREFAS
-# ==============================
-
+# DEFINIÇÃO DAS TAREFAS
 async def rotina_produtos():
-    logger.info("🔄 Iniciando sincronização de produtos...")
+    logger.info("Iniciando sincronização de produtos...")
     try:
         await produtos.integrar_produtos()
-        logger.info("✅ Rotina de produtos concluída.")
+        logger.info("Rotina de produtos concluída.")
     except Exception as e:
-        logger.exception(f"❌ Erro na rotina produtos: {e}")
+        logger.exception(f"Erro na rotina produtos: {e}")
 
 async def rotina_estoque():
-    logger.info("🔄 Iniciando sincronização de estoque...")
+    logger.info("Iniciando sincronização de estoque...")
     try:
         await estoque.integrar_estoque()
-        logger.info("✅ Rotina de estoque concluída.")
+        logger.info("Rotina de estoque concluída.")
     except Exception as e:
-        logger.exception(f"❌ Erro na rotina estoque: {e}")
+        logger.exception(f"Erro na rotina estoque: {e}")
 
 async def rotina_pedidos():
-    logger.info("📦 Iniciando sincronização de pedidos...")
+    logger.info("Iniciando sincronização de pedidos...")
     try:
         await pedidos.receber_pedido_lote()
-        logger.info("✅ Rotina de pedidos concluída.")
+        logger.info("Rotina de pedidos concluída.")
     except Exception as e:
-        logger.exception(f"❌ Erro na rotina de pedidos: {e}")
+        logger.exception(f"Erro na rotina de pedidos: {e}")
         
 async def rotina_completa():
     await rotina_produtos()
@@ -62,33 +57,31 @@ async def rotina_completa():
     await rotina_pedidos()
 
 async def rotina_devolucoes():
-    logger.info("↩️ Iniciando sincronização de devoluções...")
+    logger.info("Iniciando sincronização de devoluções...")
     try:
         await devolucoes.integrar_devolucoes()
-        logger.info("✅ Rotina de devoluções concluída.")
+        logger.info("Rotina de devoluções concluída.")
     except Exception as e:
-        logger.exception(f"❌ Erro na rotina de devoluções: {e}")
+        logger.exception(f"Erro na rotina de devoluções: {e}")
 
 async def rotina_notificacao():
-    logger.info("📧 Enviando notificações de erro...")
+    logger.info("Enviando notificações de erro...")
     try:
         await notificar.enviar_notificacao()
-        logger.info("✅ Notificação enviada.")
+        logger.info("Notificação enviada.")
     except Exception as e:
-        logger.exception(f"❌ Erro ao enviar notificação: {e}")
+        logger.exception(f"Erro ao enviar notificação: {e}")
 
 async def rotina_cache():
     logger.info("🧹 Limpando cache antigo...")
     try:
         await limpar_cache.excluir_cache()
-        logger.info("✅ Cache limpo com sucesso.")
+        logger.info("Cache limpo com sucesso.")
     except Exception as e:
-        logger.exception(f"❌ Erro ao limpar cache: {e}")
+        logger.exception(f"Erro ao limpar cache: {e}")
 
-# ==============================
-# 🧠 LISTENER DE EVENTOS
-# ==============================
-RETRY_MINUTES = 5  # ⏱ tempo de espera antes de tentar novamente
+# LISTENER DE EVENTOS
+RETRY_MINUTES = 5
 
 def job_listener(event):
     job = scheduler.get_job(event.job_id)
@@ -96,12 +89,12 @@ def job_listener(event):
         return
 
     if event.exception:
-        logger.error(f"⚠️ Job '{job.id}' falhou às {datetime.now():%H:%M:%S}: {event.exception}")
+        logger.error(f"Job '{job.id}' falhou às {datetime.now():%H:%M:%S}: {event.exception}")
 
         retry_id = f"{job.id}_retry"
         # Evita múltiplos retries acumulados
         if scheduler.get_job(retry_id):
-            logger.warning(f"🔁 Retry já agendado para job '{job.id}', ignorando novo retry.")
+            logger.warning(f"Retry já agendado para job '{job.id}', ignorando novo retry.")
             return
 
         # agenda nova tentativa
@@ -116,16 +109,13 @@ def job_listener(event):
             max_instances=1,
             coalesce=True
         )
-        logger.info(f"⏳ Reagendado retry de '{job.id}' para {run_time:%H:%M:%S}")
+        logger.info(f"Reagendado retry de '{job.id}' para {run_time:%H:%M:%S}")
     else:
-        logger.info(f"✅ Job '{job.id}' executado com sucesso às {datetime.now():%H:%M:%S}")
+        logger.info(f"Job '{job.id}' executado com sucesso às {datetime.now():%H:%M:%S}")
 
 scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
-# ==============================
-# 🚀 INICIALIZAÇÃO DE TAREFAS
-# ==============================
-
+# INICIALIZAÇÃO DE TAREFAS
 async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
@@ -139,19 +129,16 @@ async def inicializar_tarefas():
     for job_id, func, trigger, params in jobs:
         if job_id not in jobs_existentes:
             scheduler.add_job(func, trigger, id=job_id, replace_existing=True, max_instances=1, coalesce=True, **params)
-            logger.info(f"📅 Job registrado: {job_id}")
+            logger.info(f"Job registrado: {job_id}")
 
-# ==============================
-# ▶️ CONTROLE DO AGENDADOR
-# ==============================
-
+# CONTROLE DO AGENDADOR
 async def iniciar_agendador():
     await inicializar_tarefas()
     scheduler.start()
-    logger.info("🟢 APScheduler iniciado e monitorando tarefas.")
-    print("🟢 APScheduler iniciado e monitorando tarefas.")
+    logger.info("APScheduler iniciado e monitorando tarefas.")
+    print("APScheduler iniciado e monitorando tarefas.")
 
 async def encerrar_agendador():
     scheduler.shutdown(wait=False)
-    logger.info("🔴 APScheduler encerrado.")    
-    print("🔴 APScheduler encerrado.")
+    logger.info("APScheduler encerrado.")    
+    print("APScheduler encerrado.")
