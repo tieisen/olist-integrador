@@ -19,20 +19,20 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
             for i, emp in enumerate(empresas):
                 print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-                for j, ecom in ecommerces:
-                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                for j, ecom in enumerate(ecommerces):
+                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     faturamento = Faturamento(id_loja=ecom.get('id_loja'))
                     await faturamento.integrar_olist()
                     await faturamento.integrar_snk()
-            
             retorno = {
                 "status": True,
                 "exception": None
             }
         except Exception as e:
+            print(f"{e}")
             retorno = {
                 "status": False,
-                "exception": e
+                "exception": f"{e}"
             }
         finally:
             return retorno
@@ -52,7 +52,7 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
         except Exception as e:
             retorno = {
                 "status": False,
-                "exception": e
+                "exception": f"{e}"
             }
         finally:
             return retorno
@@ -73,8 +73,8 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
             for i, emp in enumerate(empresas):
                 print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-                for j, ecom in ecommerces:
-                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+                for j, ecom in enumerate(ecommerces):
+                    print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     faturamento = Faturamento(id_loja=ecom.get('id_loja'))
                     await faturamento.integrar_olist()
             
@@ -85,7 +85,7 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
         except Exception as e:
             retorno = {
                 "status": False,
-                "exception": e
+                "exception": f"{e}"
             }
         finally:
             return retorno
@@ -105,7 +105,7 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
         except Exception as e:
             retorno = {
                 "status": False,
-                "exception": e
+                "exception": f"{e}"
             }
         finally:
             return retorno
@@ -127,8 +127,8 @@ async def integrar_faturamento_snk(codemp:int=None) -> dict:
         for i, emp in enumerate(empresas):
             print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
             ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-            for j, ecom in ecommerces:
-                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
+            for j, ecom in enumerate(ecommerces):
+                print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 faturamento = Faturamento(id_loja=ecom.get('id_loja'))                
                 await faturamento.integrar_snk()
         
@@ -139,7 +139,7 @@ async def integrar_faturamento_snk(codemp:int=None) -> dict:
     except Exception as e:
         retorno = {
             "status": False,
-            "exception": e
+            "exception": f"{e}"
         }
     finally:
         return retorno
@@ -156,7 +156,7 @@ async def integrar_venda_interna(codemp:int=None) -> dict:
 
     try:
         for i, emp in enumerate(empresas):
-            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(emp)})".upper())
+            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             faturamento = Faturamento(codemp=emp.get('snk_codemp'))                
             await faturamento.realizar_venda_interna()        
         retorno = {
@@ -166,7 +166,7 @@ async def integrar_venda_interna(codemp:int=None) -> dict:
     except Exception as e:
         retorno = {
             "status": False,
-            "exception": e
+            "exception": f"{e}"
         }
     finally:
         return retorno
