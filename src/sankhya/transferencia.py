@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime
 from src.utils.formatter import Formatter
-from src.utils.decorador import interno
+from src.utils.decorador import interno, carrega_dados_empresa
 from src.utils.autenticador import token_snk
 from src.utils.buscar_script import buscar_script
 from src.utils.log import set_logger
@@ -15,6 +15,8 @@ class Transferencia:
     def __init__(self, codemp:int):
         self.token = None
         self.codemp = codemp
+        self.empresa_id = None
+        self.dados_empresa = None
         self.formatter = Formatter()
         self.campos_cabecalho_transferencia = ["NUNOTA","DTNEG","STATUSNOTA"]
         self.criterios_nota_transferencia = os.getenv('SANKHYA_CRITERIOS_NOTA_TRANSFERENCIA')
@@ -211,8 +213,10 @@ class Itens(Transferencia):
 
     def __init__(self, transferencia_instance: 'Transferencia'=None, codemp:int=None):
         self.token = transferencia_instance.token if transferencia_instance else None
-        self.codemp = codemp or transferencia_instance.codemp
-        self.codtab_transferencia = int(os.getenv('SANKHYA_CODTAB_TRANSFERENCIA'))
+        self.codemp = transferencia_instance.codemp if transferencia_instance else codemp
+        self.empresa_id = transferencia_instance.empresa_id if transferencia_instance else None
+        self.dados_empresa = None
+        # self.codtab_transferencia = int(os.getenv('SANKHYA_CODTAB_TRANSFERENCIA'))
         self.formatter = Formatter()
         self.campos_item = [
             "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG", "CODPROD",
@@ -317,6 +321,7 @@ class Itens(Transferencia):
             return False
 
     @token_snk
+    @carrega_dados_empresa
     async def busca_valor_transferencia(
             self,
             codprod:int=None,
@@ -340,12 +345,12 @@ class Itens(Transferencia):
         try:
             if lista_itens:                
                 query = script.format_map({
-                                    "codtab":self.codtab_transferencia,
+                                    "codtab":self.dados_empresa.get('snk_codtab_transf'),
                                     "lista_itens":','.join([str(i) for i in lista_itens])
                                 })
             else:
                 query = script.format_map({
-                                    "codtab":self.codtab_transferencia,
+                                    "codtab":self.dados_empresa.get('snk_codtab_transf'),
                                     "codprod":codprod
                                 })
         except Exception as e:
