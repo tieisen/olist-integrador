@@ -159,25 +159,25 @@ async def buscar_cancelar(
         if id_pedido:
             result = await session.execute(
                 select(Pedido)
-                .where(Pedido.dh_cancelamento.is_(False),
+                .where(Pedido.dh_cancelamento.is_(None),
                        Pedido.id_pedido == id_pedido)
             )
         elif num_pedido:
             result = await session.execute(
                 select(Pedido)
-                .where(Pedido.dh_cancelamento.is_(False),
+                .where(Pedido.dh_cancelamento.is_(None),
                        Pedido.num_pedido == num_pedido)
             )
         elif cod_pedido:
             result = await session.execute(
                 select(Pedido)
-                .where(Pedido.dh_cancelamento.is_(False),
+                .where(Pedido.dh_cancelamento.is_(None),
                        Pedido.cod_pedido == cod_pedido)
             )
         elif lista:
             result = await session.execute(
                 select(Pedido)
-                .where(Pedido.dh_cancelamento.is_(False),
+                .where(Pedido.dh_cancelamento.is_(None),
                        Pedido.id_pedido.in_(lista))
             )
         else:
