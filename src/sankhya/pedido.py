@@ -2,7 +2,7 @@ import os
 import requests
 from datetime import datetime
 from src.sankhya.nota import Nota
-from src.utils.decorador import interno
+from src.utils.decorador import interno, carrega_dados_empresa
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.buscar_script import buscar_script
@@ -17,6 +17,7 @@ class Pedido:
         self.token = None
         self.codemp = codemp
         self.empresa_id = empresa_id
+        self.dados_empresa = None
         self.formatter = Formatter()
         self.campos_cabecalho = [
             "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
@@ -181,8 +182,7 @@ class Pedido:
         ) -> dict:
         
         nunota_nota = await self.buscar_nunota_nota(nunota=nunota)
-        if not nunota_nota:
-            #print(f"Pedido {nunota_nota} sem Nota vinculada")
+        if not nunota_nota:            
             logger.warning("Pedido %s sem Nota vinculada",nunota_nota)
             return 0
         nunota_nota = nunota_nota[0].get('nunota')
@@ -327,6 +327,7 @@ class Pedido:
         return False
 
     @token_snk
+    @carrega_dados_empresa
     async def faturar(
             self,
             nunota:int,
@@ -339,8 +340,8 @@ class Pedido:
             logger.error("Erro relacionado à url. %s",url)
             return False, None
         
-        top_faturamento = os.getenv('SANKHYA_CODTIPOPER_NOTA')
-        serie_nf = os.getenv('SANKHYA_SERIE_NF')
+        top_faturamento = self.dados_empresa.get('snk_top_venda')
+        serie_nf = self.dados_empresa.get('serie_nfe')
         if not all([top_faturamento,serie_nf]):
             erro = f"Parâmetros da TOP de faturamento ou série da NF não encontados"
             logger.error(erro)
