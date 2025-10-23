@@ -14,7 +14,9 @@ class Transferencia:
 
     @interno
     def cabecalho(self):
-        return {
+        cabecalho:dict={}
+        try:
+            cabecalho = {
                 "NUNOTA":  {"$": ""},
                 "SERIENOTA":  {"$": "1"},
                 "CODEMP":  {"$": self.dados_empresa.get('snk_codemp_fornecedor')},
@@ -31,6 +33,11 @@ class Transferencia:
                 "TIPFRETE":  {"$": "N"},
                 "OBSERVACAO":  {"$": self.dados_empresa.get('snk_texto_transferencia')}
             }
+        except Exception as e:
+            print(str(e))
+        finally:
+            pass
+        return cabecalho
     
     @interno
     def itens(
@@ -42,7 +49,7 @@ class Transferencia:
 
         dados_item = {}
         res = []
-
+        
         # Se a nota de transferência está vazia, lança todos os itens recebidos no parâmetro
         if not itens_transferidos:
             for item in itens_transferencia:
@@ -114,18 +121,18 @@ class Transferencia:
         ) -> tuple[dict,list[dict]]:
 
         dados_cabecalho = {}
-        dados_itens = []
-        retorno = (dados_cabecalho,dados_itens)
+        dados_itens = []        
+
+        if objeto == 'item' and not nunota:
+            # Se for lançar somente os itens, API exige que o cabeçalho já exista
+            return False            
 
         if objeto in ['cabecalho','nota']:
-            dados_cabecalho = self.cabecalho()            
-        
+            dados_cabecalho = self.cabecalho()
+
         if objeto in ['item','nota']:
-            if not nunota:
-                # Se for lançar somente os itens, API exige que o cabeçalho já exista
-                return False
             dados_itens = self.itens(nunota=nunota,
                                      itens_transferencia=itens_transferencia,
                                      itens_transferidos=itens_transferidos)
         
-        return retorno
+        return dados_cabecalho,dados_itens
