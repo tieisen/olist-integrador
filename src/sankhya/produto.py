@@ -69,14 +69,12 @@ class Produto:
                 print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
             return False
 
-    @interno
     def preparar_dados(
             self,
             payload:dict
-        ):        
+        ):
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
-            print("O payload deve ser um dicionário.")
             return False
         dados = {}
         for i in payload:
@@ -162,6 +160,17 @@ class Produto:
                             "rootEntity": tabela,
                             "includePresentationFields": "N",
                             "offsetPage": offset,
+                            "criteria": {
+                                "expression": {
+                                    "$": "this.CODEMP = ?"
+                                },
+                                "parameter": [
+                                    {
+                                        "$": f"{self.codemp}",
+                                        "type": "I"
+                                    }
+                                ]
+                            },                              
                             "entity": {
                                 "fieldset": {
                                     "list": "*"
