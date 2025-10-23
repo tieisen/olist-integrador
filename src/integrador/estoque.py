@@ -140,21 +140,22 @@ class Estoque:
         
         # Busca lista de produtos com alterações de estoque no Sankhya
         print("-> Buscando de produtos com alterações de estoque no Sankhya...")        
-        alteracoes_pendentes = await estoque_snk.buscar_alteracoes()
+        alteracoes_pendentes = await estoque_snk.buscar_alteracoes(codemp=self.codemp)
         if not alteracoes_pendentes:
             print("Sem alterações pendentes")
             await crudLog.atualizar(id=log_id,
                                     sucesso=True)
             return True
-        print(f"{len(alteracoes_pendentes)} produtos com alteracoes de estoque")
-
+        
         # Extrai lista dos produtos
         print("-> Extraindo lista dos produtos...")
         lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
 
+        print(f"{len(lista_codprod)} produtos com alteracoes de estoque")
+
         try:
             # Busca estoque dos produtos no Sankhya e no Olist
-            print("-> Buscando estoque dos produtos no Sankhya...")
+            # print("-> Buscando estoque dos produtos no Sankhya...")
             lista_dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
             if not lista_dados_estoque_snk:
                 msg = f"Erro ao buscar estoque no Sankhya. Parametro: {lista_codprod}"
@@ -165,10 +166,10 @@ class Estoque:
                 dados_update:dict = {}
                 res_estoque:dict = {}
                 time.sleep(self.req_time_sleep)
-                print(f"\nProduto {i + 1}/{len(alteracoes_pendentes)}: {produto.get('codprod')}")
+                # print(f"\nProduto {i + 1}/{len(alteracoes_pendentes)}: {produto.get('codprod')}")
                 
                 # Busca estoque dos produtos no Olist        
-                print("Buscando estoque dos produtos no Olist...")
+                # print("Buscando estoque dos produtos no Olist...")
                 dados_estoque_olist = await estoque_olist.buscar(id=produto.get('idprod'))
                 if not dados_estoque_olist:
                     msg = f"Erro ao buscar estoque no Olist. Parametro: {produto.get('idprod')}"
@@ -177,7 +178,7 @@ class Estoque:
                     dados_estoque_olist = dados_estoque_olist[0]
 
                 # Calcula variação do produto
-                print("Calculando variação do produto...")
+                # print("Calculando variação do produto...")
                 dados_estoque_snk:dict = {}
                 dados_estoque_snk = buscar_produto(codprod=produto.get('codprod'),lista_produtos=lista_dados_estoque_snk)
                 if not dados_estoque_snk:
@@ -193,17 +194,18 @@ class Estoque:
                     msg = f"Erro ao calcular variação do produto {produto.get('codprod')}"
                     raise Exception(msg)
                 if dados_update.get('variacao') == 0:
-                    print("Produto sem alteração de estoque")
+                    # print("Produto sem alteração de estoque")
                     # Limpa tabela de alterações pendentes
-                    print("Limpando tabela de alterações pendentes...")
+                    # print("Limpando tabela de alterações pendentes...")
                     ack = await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))
                     if not ack:
                         msg = f"Erro ao remover alterações pendentes. Produto {produto.get('codprod')}"
-                        raise Exception(msg)                    
+                        print(msg)
+                        # raise Exception(msg)                    
                     continue
 
                 # Converte para o formato da API
-                print("Convertendo para o formato da API...")
+                # print("Convertendo para o formato da API...")
                 id_produto:int=None
                 dicionario_mvto_estoque:dict={}
                 id_produto, dicionario_mvto_estoque = parser.to_olist(dados_estoque=dados_update.get('ajuste_estoque'))
@@ -212,7 +214,7 @@ class Estoque:
                     raise Exception(msg)
 
                 # Envia modificações para Olist
-                print("Enviando modificações para Olist...")
+                # print("Enviando modificações para Olist...")
                 res_estoque = await estoque_olist.enviar_saldo(id=id_produto,
                                                                data=dicionario_mvto_estoque)
                 if not res_estoque:
@@ -220,14 +222,16 @@ class Estoque:
                     raise Exception(msg)
 
                 # Limpa tabela de alterações pendentes
-                print("Limpando tabela de alterações pendentes...")
+                # print("Limpando tabela de alterações pendentes...")
                 ack = await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))
                 if not ack:
                     msg = f"Erro ao remover alterações pendentes. Produto {produto.get('codprod')}"
-                    raise Exception(msg)
+                    print(msg)
+                    # raise Exception(msg)
+                    continue
 
                 # Atualiza o log de eventos
-                print("Atualizando o log de eventos...")
+                # print("Atualizando o log de eventos...")
                 ack = await crudLogEst.criar(log_id=log_id,
                                              codprod=int(produto.get('codprod')),
                                              idprod=int(produto.get('idprod')),
