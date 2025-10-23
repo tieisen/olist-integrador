@@ -33,7 +33,6 @@ class Faturamento:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     @contexto
-    @interno
     @carrega_dados_empresa
     async def venda_entre_empresas_em_lote(
             self,
@@ -47,34 +46,38 @@ class Faturamento:
         
         faturamento = FaturamentoSnk(codemp=self.dados_empresa.get('snk_codemp'))
         estoque = EstoqueSnk(codemp=self.dados_empresa.get('snk_codemp'))
+        transferencia = TransferenciaSnk(codemp=self.dados_empresa.get('snk_codemp'))
         item_transf = ItemTransfSnk(codemp=self.dados_empresa.get('snk_codemp'))
         parser = ParserTransferencia(codemp=self.dados_empresa.get('snk_codemp'))
-        transferencia = TransferenciaSnk(codemp=self.dados_empresa.get('snk_codemp'))
-
-        try:
-            # Busca itens conferidos no dia        
-            print("-> Buscando itens conferidos no dia...")
+        
+        try:            
+            # Busca itens conferidos no dia
+            # print("-> Buscando itens conferidos no dia...")
             saldo_pedidos = await faturamento.buscar_itens()
-            if not saldo_pedidos:
+            if isinstance(saldo_pedidos,bool):
                 msg = "Erro ao buscar itens conferidos no dia."
-                raise Exception(msg)            
+                raise Exception(msg)
+            elif not saldo_pedidos:
+                # Sem itens conferidos
+                return {"success": True}
             
             # Busca saldo de estoque
-            print("-> Buscando saldo de estoque...")
+            # print("-> Buscando saldo de estoque...")
             saldo_estoque = await estoque.buscar_saldo_por_lote(lista_produtos=saldo_pedidos)
             if not saldo_estoque:
                 msg = "Erro ao buscar saldo de estoque."
                 raise Exception(msg)
 
             # Compara quantidade conferida com estoque disponível
-            print("Comparando quantidade conferida com estoque disponível...")
+            # print("Comparando quantidade conferida com estoque disponível...")
             itens_venda_interna = await faturamento.compara_saldos(saldo_estoque=saldo_estoque,
                                                                    saldo_pedidos=saldo_pedidos)
             if not itens_venda_interna:
+                print("Sem necessidade de venda interna")
                 return {"success": True}
 
             # Busca valor de tranferência dos itens
-            print("Buscando valores de transferência...")
+            # print("Buscando valores de transferência...")
             codigos_produtos = [item.get('codprod') for item in itens_venda_interna]
             valores_produtos = await item_transf.busca_valor_transferencia(lista_itens=codigos_produtos)
             if not valores_produtos:
@@ -82,7 +85,7 @@ class Faturamento:
                 raise Exception(msg)
 
             # Vincula o valor de transferência o respectivo produto
-            print("Vinculando valores aos produtos...")
+            # print("Vinculando valores aos produtos...")
             for item in itens_venda_interna:
                 for valor in valores_produtos:
                     if item.get('codprod') == valor.get('codprod'):
@@ -90,16 +93,16 @@ class Faturamento:
                         break
 
             # Converte para o formato da API Sankhya
-            print("Convertendo para o formato da API Sankhya...")
-            cabecalho, itens = parser.to_sankhya(objeto='nota',
-                                                 itens_transferencia=itens_venda_interna,
-                                                 itens_transferidos=[])
+            # print("Convertendo para o formato da API Sankhya...")
+            cabecalho, itens = await parser.to_sankhya(objeto='nota',
+                                                       itens_transferencia=itens_venda_interna,
+                                                       itens_transferidos=[])
             if not all([cabecalho, itens]):
                 msg = "Erro ao preparar dados da nota de transferência."
                 raise Exception(msg)
 
             # Lança nota de transferência
-            print("Lançando nota de transferência...")
+            # print("Lançando nota de transferência...")
             ack, nunota = await transferencia.criar(cabecalho=cabecalho,
                                                     itens=itens)        
             if not ack:
@@ -107,13 +110,14 @@ class Faturamento:
                 raise Exception(msg)
             
             # Confirma nota de transferência
-            print(f"Confirmando nota de transferência {nunota}...")
+            # print(f"Confirmando nota de transferência {nunota}...")
             ack = await transferencia.confirmar(nunota=nunota)
             if not ack:
                 msg = "Erro ao confirmar nota de transferência."
                 raise Exception(msg)
             return {"success": True}
         except Exception as e:
+            print(str(e))
             return {"success": False, "__exception__": str(e)}
 
     @contexto
@@ -222,7 +226,7 @@ class Faturamento:
             **kwargs
         ) -> bool:
 
-        integra_nota = IntegradorNota(id_loja=self.id_loja)
+        integra_nota = IntegradorNota(id_loja=self.dados_ecommerce.get('id_loja'))
         separacao = SeparacaoOlist(codemp=self.codemp)
 
         if not self.log_id:
@@ -234,29 +238,41 @@ class Faturamento:
             # Cria NF no Olist
             ack_criacao = await integra_nota.gerar(dados_pedido=pedido)
             if not ack_criacao.get('success'):
+                # pass
+                # print(ack_criacao.get('__exception__'))
                 raise Exception(ack_criacao.get('__exception__'))
                             
             # Emite NF
             ack_emissao = await integra_nota.emitir(ack_criacao.get('dados_nota'))
             if not ack_emissao.get('success'):
+                # pass
+                # print(ack_emissao.get('__exception__'))
                 raise Exception(ack_emissao.get('__exception__'))
             
-            # Recebe contas a receber do Olist
-            ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
-            if not ack_conta.get('success'):
-                raise Exception(ack_conta.get('__exception__'))
-
             # Envia pedido pra separação no Olist
             print("Enviando pedido para separação no Olist...")
             ack_separacao = await separacao.separar(id=pedido.get('id_separacao'))
             if not ack_separacao:
-                raise Exception(f"Erro ao separar pedido")
+                # pass
+                # print(ack_separacao.get('__exception__'))
+                raise Exception(ack_separacao.get('__exception__'))
+
+            # Recebe contas a receber do Olist
+            print("Recebe contas a receber do Olist")
+            ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
+            if not ack_conta.get('success'):
+                # pass
+                print(ack_conta.get('__exception__'))                
+                # raise Exception(ack_conta.get('__exception__'))
             
             # Baixa contas a receber do Olist
+            print("Baixa contas a receber do Olist")
             ack_baixa = await integra_nota.baixar_conta(id_nota=ack_criacao['dados_nota'].get('id'),                                                       
                                                         dados_financeiro=ack_conta.get('dados_financeiro'))
             if not ack_baixa.get('success'):
-                raise Exception(ack_baixa.get('__exception__'))
+                # pass
+                print(ack_baixa.get('__exception__'))                   
+                # raise Exception(ack_baixa.get('__exception__'))
             
             print(f"Faturamento do pedido concluído!")    
             return {"success": True}
@@ -336,14 +352,14 @@ class Faturamento:
     @log_execucao
     @carrega_dados_ecommerce
     async def integrar_olist(self,**kwargs):
-        self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
+        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='sankhya',
                                           para='olist',
                                           contexto=kwargs.get('_contexto')) 
 
         # Busca os pedidos pendentes de faturamento
         print("-> Buscando os pedidos pendentes de faturamento...")
-        pedidos_faturar = crudPedido.buscar_faturar(ecommerce_id=self.dados_ecommerce.get('id'))
+        pedidos_faturar = await crudPedido.buscar_faturar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not pedidos_faturar:
             print("Nenhum pedido para faturamento.")
             await crudLog.atualizar(id=self.log_id)
@@ -356,10 +372,11 @@ class Faturamento:
             print(f"-> Pedido {i + 1}/{len(pedidos_faturar)}: {pedido.get("num_pedido")}")
             # Fatura pedido no Olist
             ack_pedido = await self.faturar_olist(pedido=pedido)
+            # print(ack_pedido)
             await crudLogPed.criar(log_id=self.log_id,
                                    pedido_id=pedido.get('id'),
                                    evento='F',
-                                   status=ack_pedido.get('success'),
+                                   sucesso=ack_pedido.get('success'),
                                    obs=ack_pedido.get('__exception__',None))           
         
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
@@ -378,7 +395,7 @@ class Faturamento:
 
         # Busca os pedidos pendentes de faturamento
         print("-> Buscando os pedidos pendentes de faturamento...")
-        pedidos_faturar = crudPedido.buscar_faturar(ecommerce_id=self.dados_ecommerce.get('id'))
+        pedidos_faturar = await crudPedido.buscar_faturar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not pedidos_faturar:
             print("Nenhum pedido para faturamento.")
             await crudLog.atualizar(id=self.log_id)
@@ -395,7 +412,7 @@ class Faturamento:
             await crudLogPed.criar(log_id=self.log_id,
                                    pedido_id=pedido.get('id'),
                                    evento='F',
-                                   status=ack_pedido.get('success'),
+                                   sucesso=ack_pedido.get('success'),
                                    obs=ack_pedido.get('__exception__',None))               
         
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
@@ -415,7 +432,7 @@ class Faturamento:
         await crudLogPed.criar(log_id=self.log_id,
                                pedido_id=None,
                                evento='F',
-                               status=ack_venda.get('success'),
+                               sucesso=ack_venda.get('success'),
                                obs=ack_venda.get('__exception__',None))        
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
