@@ -1,42 +1,49 @@
 from fastapi import APIRouter, HTTPException, status
 from src.integrador.devolucao import Devolucao
 from src.scheduler.jobs.devolucoes import integrar_devolucoes
-import asyncio
 from pydantic import BaseModel
 
 router = APIRouter()
 
-class DevolucaoModel(BaseModel):
+class DevolucaoEmpresa(BaseModel):
     codemp:int
-    id_loja:int
+
+class DevolucaoNota(BaseModel):
+    codemp:int
     numero:int
 
 @router.get("/integrar")
-def integrar(devolucao:DevolucaoModel):
+async def integrar(devolucao:DevolucaoEmpresa):
     """
     Busca as notas de devolução no Olist e lança no Sankhya
     """
-    if not asyncio.run(integrar_devolucoes(codemp=devolucao.codemp)):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar devoluções")
+    res:dict={}
+    res = await integrar_devolucoes(codemp=devolucao.codemp)
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     return True
 
 @router.get("/devolver")
-def devolver_nota(devolucao:DevolucaoModel):
+async def devolver_nota(devolucao:DevolucaoNota):
     """
     Lança de devolução de uma nota específica
     """
-    _devolucao = Devolucao(id_loja=devolucao.id_loja)
-    if not asyncio.run(_devolucao.devolver_unico(numero_nota=devolucao.numero)):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao lançar devolução no Sankhya")
+    _devolucao = Devolucao(codemp=devolucao.codemp)
+    res:dict={}
+    res = await _devolucao.devolver_unico(numero=devolucao.numero)    
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     return True
 
 @router.get("/cancelar")
-def cancelar_devolucao(devolucao:DevolucaoModel):
+async def cancelar_devolucao(devolucao:DevolucaoNota):
     """
     Cancela nota de devolução
     """
-    _devolucao = Devolucao(id_loja=devolucao.id_loja)
-    if not asyncio.run(_devolucao.integrar_cancelamento(numero=devolucao.numero)):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao cancelar nota de devolução")
+    _devolucao = Devolucao(codemp=devolucao.codemp)
+    res:dict={}
+    res = await _devolucao.integrar_cancelamento(numero=devolucao.numero)
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     return True
 
