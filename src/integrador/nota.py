@@ -154,14 +154,14 @@ class Nota:
                                               para='olist',
                                               contexto=kwargs.get('_contexto'))
         try:
+            nota_olist = NotaOlist(id_loja=self.id_loja)
             if not dados_financeiro:
                 # Busca dados do contas a receber no Olist
                 print("Buscando dados do contas a receber no Olist...")
                 dados_nota = await crudNota.buscar(id_nota=id_nota)
                 if not dados_nota:
                     msg = f"Erro ao buscar dados da nota"
-                    raise Exception(msg)
-                nota_olist = NotaOlist(id_loja=self.id_loja)
+                    raise Exception(msg)                
                 dados_financeiro = await nota_olist.buscar_financeiro(numero=str(dados_nota.get('numero')).zfill(6),
                                                                       serie=str(dados_nota.get('serie')))
                 if not dados_financeiro:
