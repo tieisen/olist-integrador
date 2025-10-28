@@ -226,7 +226,7 @@ class Pedido:
             id:int,
             item_no_pedido
         ) -> tuple[bool,dict]:
-        
+
         if isinstance(item_no_pedido, list):
             item_no_pedido = item_no_pedido[0]
         
@@ -256,16 +256,25 @@ class Pedido:
                 vlt_kit = item_no_pedido["valorUnitario"]
                 res_item = []
                 for k in res.json().get('kit'):
+
+                    dados_produto = self.buscar(id=k['produto'].get('id'))
+                    if not dados_produto:
+                        logger.error("Produto %s ID %s não encontrado.", res.json().get('descricao'), id)
+                        print(f"Produto {res.json().get('descricao')} ID {id} não encontrado.")
+                        return False, {}
+
                     kit_item = {
                         "produto": {
                             "id": k['produto'].get('id'),
                             "sku": k['produto'].get('sku'),
                             "descricao": k['produto'].get('descricao')
                         },
+                        "unidade": dados_produto.get('unidade'),
                         "quantidade": k.get('quantidade') * qtd_kit,
                         "valorUnitario": round(vlt_kit / len(res.json().get('kit')),4),
                         "infoAdicional": ""                                    
                     }
+
                     res_item.append(kit_item)                            
                 return True, res_item
             elif res.json().get('tipo') == 'V':
