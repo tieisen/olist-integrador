@@ -65,7 +65,7 @@ class Pedido:
             dados_item['VLRUNIT'] = {"$":item.get('valorUnitario') if item.get('valorUnitario') > 0 else 0.01}
             dados_item['PERCDESC'] = {"$":'0'}
             dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
-            dados_item['CODVOL'] = {"$":"UN"}
+            dados_item['CODVOL'] = {"$":item.get('unidade')}
             dados_item['CODLOCALORIG'] = {"$":self.dados_empresa.get('snk_codlocal_venda')}
             lista_itens.append(dados_item)
             
@@ -113,7 +113,7 @@ class Pedido:
                 dados_item['VLRUNIT'] = {"$":item.get('vlrunit') if item.get('vlrunit') > 0 else 0.01}
                 dados_item['PERCDESC'] = {"$":'0'}
                 dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
-                dados_item['CODVOL'] = {"$":"PR" if int(item.get('codprod')) in [73030041,73030096] else "UN"}
+                dados_item['CODVOL'] = {"$":item.get('unidade')}
                 dados_item['CODLOCALORIG'] = {"$":self.dados_empresa.get('snk_codlocal_venda')}
                 dados_itens.append(dados_item)
             except Exception as e:
