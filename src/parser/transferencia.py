@@ -62,7 +62,7 @@ class Transferencia:
                 dados_item['VLRTOT'] = {"$":vlrtot}
                 dados_item['PERCDESC'] = {"$": "0"}
                 dados_item['VLRDESC'] = {"$": "0"}
-                dados_item['CODVOL'] = {"$": 'UN'}
+                dados_item['CODVOL'] = {"$":"PR" if int(item.get('codprod')) in [73030041,73030096] else "UN"}
                 dados_item['CODLOCALORIG'] = {"$": self.dados_empresa.get('snk_codlocal_venda')}
                 dados_item['CODLOCALDEST'] = {"$": self.dados_empresa.get('snk_codlocal_venda')}
                 dados_item['CONTROLE'] = {"$": item.get('controle')}
