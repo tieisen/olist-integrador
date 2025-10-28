@@ -51,6 +51,9 @@ class Devolucao:
             if not dados_nota_devolucao:
                 msg = f"Nota de devolução não encontrada"
                 raise Exception(msg)
+            if dados_nota_devolucao.get('tipo') != 'E':
+                msg = f"Número informado não é de uma nota de devolução"
+                raise Exception(msg)                
             
             # Valida nota de venda referenciada
             print("Validando nota de venda referenciada...")
@@ -340,7 +343,7 @@ class Devolucao:
     @log_execucao
     @carrega_dados_ecommerce
     async def devolver_unico(self,numero_nota:int,**kwargs):
-
+        retorno:dict={}
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
                                           para='sankhya',
@@ -350,17 +353,30 @@ class Devolucao:
         try:
             ack = await self.receber(numero=numero_nota)
             if not ack.get('success'):
-                raise Exception
+                msg = f"Erro ao receber nota de devolução {numero_nota}: {ack.get('__exception__',None)}"                
+                raise Exception(msg)
             
             dados_nota_devolucao = ack.get('dados_nota')
             if not dados_nota_devolucao:
-                raise Exception                
+                msg = f"Erro ao receber nota de devolução {numero_nota}: dados da nota não encontrados"
+                raise Exception(msg)
             
             ack = await self.lancar(dados_devolucao=dados_nota_devolucao)
             if not ack.get('success'):
-                raise Exception          
-        except:
-            pass
+                msg = f"Erro ao lançar nota de devolução {numero_nota}: {ack.get('__exception__',None)}"
+                raise Exception(msg)
+            
+            retorno = {
+                "status": True,
+                "exception": None
+            }
+        except Exception as e:
+            print(f"{e}")
+            logger.error(f"{e}")
+            retorno = {
+                "status": False,
+                "exception": f"{e}"
+            }
         finally:
             await crudLogPed.criar(log_id=self.log_id,
                                    pedido_id=ack.get('pedido_id'),
@@ -371,4 +387,4 @@ class Devolucao:
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        return status_log
+        return retorno
