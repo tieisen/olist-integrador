@@ -347,7 +347,7 @@ class Nota:
             },
             "data": None,
             "categoria": {
-                "id": self.dados_ecommerce.get('id_categoria_destino')
+                "id": self.dados_ecommerce.get('id_categoria_financeiro')
             },
             "historico": None,
             "taxa": None,
