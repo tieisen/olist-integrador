@@ -30,7 +30,7 @@ async def devolver_nota(devolucao:DevolucaoNota):
     """
     _devolucao = Devolucao(codemp=devolucao.codemp)
     res:dict={}
-    res = await _devolucao.devolver_unico(numero=devolucao.numero)    
+    res = await _devolucao.devolver_unico(numero_nota=devolucao.numero)    
     if not res.get('status'):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     return True
