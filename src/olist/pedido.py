@@ -132,7 +132,8 @@ class Pedido:
     @token_olist
     async def remover_nunota(
             self,
-            id:int
+            id:int,
+            nunota:int=None
         ):
 
         import re
@@ -155,9 +156,13 @@ class Pedido:
             print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
             return False
-        observacao = res_get.json().get('observacoes')
-        regex = r"[|].+"
-        nova_observacao = re.sub(regex, '', observacao)
+        observacao:str = res_get.json().get('observacoes')
+        nova_observacao:str = ''
+        if nunota:
+            nova_observacao = str.replace(observacao,f' | Pedido ERP: {nunota}', '')
+        else:
+            regex = r"[|].+"
+            nova_observacao = re.sub(regex, '', observacao)
 
         payload = {
             "dataPrevista": None,
