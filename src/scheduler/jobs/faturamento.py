@@ -43,7 +43,7 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
             print(f"E-commerce {ecom.get('nome')}".upper())
             faturamento = Faturamento(id_loja=id_loja)
             await faturamento.integrar_olist()
-            await faturamento.integrar_snk()
+            await faturamento.integrar_snk(loja_unica=True)
             
             retorno = {
                 "status": True,
