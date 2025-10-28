@@ -38,7 +38,7 @@ class Nota:
         pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
         try:
             # Gera NF no Olist
-            print("Gerando NF no Olist...")
+            # print("Gerando NF no Olist...")
             dados_nota_olist = await pedido_olist.gerar_nf(id=dados_pedido.get('id_pedido'))
             if not dados_nota_olist:
                 msg = f"Erro ao gerar NF"
@@ -51,7 +51,7 @@ class Nota:
                 print(f"#{int(dados_nota_olist.get('numero'))}")                
             
             # Atualiza nota
-            print("Atualizando status da nota...")
+            # print("Atualizando status da nota...")
             ack = await crudNota.criar(id_pedido=dados_pedido.get('id_pedido'),
                                        id_nota=dados_nota_olist.get('id'),
                                        numero=int(dados_nota_olist.get('numero')),
@@ -81,14 +81,14 @@ class Nota:
         nota_olist = NotaOlist(id_loja=self.id_loja)
         try:
             # Emite a nota
-            print("Emitindo nota...")
+            # print("Emitindo nota...")
             dados_emissao = await nota_olist.emitir(id=dados_nota.get('id'))
             if not dados_emissao:
                 msg = f"Erro ao emitir nota"
                 raise Exception(msg)
             
             # Atualiza a nota no banco de dados
-            print("Atualizando status da nota...")
+            # print("Atualizando status da nota...")
             ack = await crudNota.atualizar(id_nota=dados_nota.get('id'),
                                            chave_acesso=dados_emissao.get('chaveAcesso'),
                                            dh_emissao=datetime.now())
@@ -96,7 +96,7 @@ class Nota:
                 msg = f"Erro ao atualizar status da nota"
                 raise Exception(msg)
                         
-            print(f"Nota emitida com sucesso!")
+            # print(f"Nota emitida com sucesso!")
             return {"success": True, "chave_acesso":dados_emissao.get('chaveAcesso')}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}        
@@ -116,7 +116,7 @@ class Nota:
 
         try:            
             # Busca contas a receber no Olist
-            print("Buscando contas a receber no Olist...")
+            # print("Buscando contas a receber no Olist...")
             nota_olist = NotaOlist(id_loja=self.id_loja)
             dados_financeiro = await nota_olist.buscar_financeiro(serie=str(dados_nota.get('serie')),                                                                  
                                                                   numero=str(dados_nota.get('numero')).zfill(6))
@@ -128,7 +128,7 @@ class Nota:
                 print(f"Contas a receber da nota já está liquidado")
             
             # Atualiza a nota no banco de dados
-            print("Atualizando status da nota...")
+            # print("Atualizando status da nota...")
             ack = await crudNota.atualizar(id_nota=dados_nota.get('id'),
                                            id_financeiro=dados_financeiro.get('id'),
                                            dh_baixa_financeiro=dados_financeiro.get('dataLiquidacao',None))
@@ -157,7 +157,7 @@ class Nota:
             nota_olist = NotaOlist(id_loja=self.id_loja)
             if not dados_financeiro:
                 # Busca dados do contas a receber no Olist
-                print("Buscando dados do contas a receber no Olist...")
+                # print("Buscando dados do contas a receber no Olist...")
                 dados_nota = await crudNota.buscar(id_nota=id_nota)
                 if not dados_nota:
                     msg = f"Erro ao buscar dados da nota"
@@ -169,7 +169,7 @@ class Nota:
                     raise Exception(msg)
             
             # Lança recebimento do contas a receber
-            print("Lançando baixa do contas a receber...")
+            # print("Lançando baixa do contas a receber...")
             ack = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),
                                                      valor=dados_financeiro.get('valor'))
             if not ack:
