@@ -6,6 +6,7 @@ from datetime import datetime
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
 from src.parser.pedido import Pedido as ParserPedido
+from src.olist.produto import Produto as ProdutoOlist
 # from src.sankhya.conferencia import Conferencia as ConferenciaSnk
 from database.crud import pedido as crudPedido
 from database.crud import log_pedido as crudLogPed
@@ -256,11 +257,19 @@ class Pedido:
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         return status_log
 
+    @carrega_dados_empresa    
+    async def validar_unidade(self, dados_item:dict):        
+        produto_olist = ProdutoOlist(codemp=self.codemp)
+        dados_produto:dict = await produto_olist.buscar(id=dados_item['produto'].get('id'))
+        dados_item['unidade'] = dados_produto.get('unidade')
+        return dados_item        
+
     async def validar_item_desmembrar_kit(self, itens:list[dict], olist:PedidoOlist):
         itens_validados:list=[]        
         for item in itens:
             # Kits não tem vínculo por SKU, ou estão marcados com #K no final do código
             if item['produto'].get('sku') and '#K' not in item['produto'].get('sku'):
+                item = await self.validar_unidade(dados_item=item)
                 itens_validados.append(item)
             else:
                 try:
@@ -399,6 +408,7 @@ class Pedido:
                 dados_item = {
                     'codprod': item_pedido['produto'].get('sku'),
                     'qtdneg': item_pedido.get('quantidade'),
+                    'unidade': item_pedido.get('unidade'),
                     'vlrunit': item_pedido.get('valorUnitario')
                 }
 
