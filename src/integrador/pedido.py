@@ -66,6 +66,13 @@ class Pedido:
             self,
             dados_pedido:dict
         ) -> bool:
+
+        if not isinstance(dados_pedido,dict):
+            try:
+                dados_pedido = dados_pedido[0]
+            except Exception as e:
+                return False
+        
         if dados_pedido.get('situacao') == self.pedido_cancelado:
             # Cancelado
             await crudPedido.atualizar(id_pedido=dados_pedido.get('id'),
@@ -97,7 +104,7 @@ class Pedido:
             if not dados_pedido:
                 pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
                 # Busca dados do pedido no Olist
-                print(f"Buscando dados do pedido {num_pedido or id_pedido}...")
+                # print(f"Buscando dados do pedido {num_pedido or id_pedido}...")
                 if num_pedido:
                     dados_pedido = await pedido_olist.buscar(numero=num_pedido)
                 if id_pedido:
@@ -106,10 +113,21 @@ class Pedido:
                     msg = f"Erro ao buscar dados do pedido {num_pedido or id_pedido} no Olist"
                     raise Exception(msg)
                 # Valida situação
-                print("Validando situação do pedido...")         
-                if not self.validar_situacao(dados_pedido):
+                # print("Validando situação do pedido...")         
+                if not await self.validar_situacao(dados_pedido):
                     msg = f"Pedido {num_pedido or id_pedido} cancelado ou com dados incompletos"
                     raise Exception(msg)
+
+            # Valida itens e desmembra kits
+            print("Validando itens e desmembrando kits...")
+            itens_validados = await self.validar_item_desmembrar_kit(itens=dados_pedido.get('itens'),
+                                                                     olist=pedido_olist)
+            if not itens_validados:
+                msg = "Erro ao validar itens/desmembrar kits"                    
+                print(msg)
+            
+            dados_pedido['itens'] = itens_validados
+
             # Adiciona pedido na base
             print("Adicionando pedido na base...")
             id = await crudPedido.criar(id_loja=dados_pedido['ecommerce'].get('id'),
@@ -434,9 +452,18 @@ class Pedido:
                 
                 # # Busca dados do pedido no Olist
                 print("Buscando dados do pedido no Olist...")
-                dados_pedido_olist = await pedido_olist.buscar(id=pedido.get('id_pedido'))
+                # dados_pedido_olist = await pedido_olist.buscar(id=pedido.get('id_pedido'))
+                dados_pedido_olist = await crudPedido.buscar(id_pedido=pedido.get('id_pedido'))
                 if not dados_pedido_olist:
-                    msg = "Erro ao buscar dados do pedido no Olist"
+                    msg = "Erro ao buscar dados do pedido"
+                    print(msg)
+                    lista_pedidos.pop(lista_pedidos.index(pedido))
+                    continue
+            
+                try:
+                    dados_pedido_olist = dados_pedido_olist[0].get('dados_pedido')
+                except Exception as e:
+                    msg = "Erro ao buscar dados do pedido"
                     print(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
@@ -449,17 +476,6 @@ class Pedido:
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
                 
-                # Valida itens e desmembra kits
-                print("Validando itens e desmembrando kits...")
-                itens_validados = await self.validar_item_desmembrar_kit(itens=dados_pedido_olist.get('itens'),
-                                                                         olist=pedido_olist)
-                if not itens_validados:
-                    msg = "Erro ao validar itens/desmembrar kits"                    
-                    print(msg)
-                    lista_pedidos.pop(lista_pedidos.index(pedido))
-                    continue
-                
-                dados_pedido_olist['itens'] = itens_validados
                 dados_pedidos_olist.append(dados_pedido_olist)
 
             if not dados_pedidos_olist:
@@ -762,7 +778,7 @@ class Pedido:
         # Remove observação
         print("-> Removendo observação no Olist...")
         for pedido in pedidos_cancelar:
-            ack = await pedido_olist.remover_nunota(id=pedido.get('id_pedido'))
+            ack = await pedido_olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota)
             if not ack:
                 print(f"--> Erro ao remover observação do pedido {pedido.get('num_pedido')} no Olist.")
         
@@ -822,7 +838,7 @@ class Pedido:
             lista_pedidos_com_erro:list[str]=[]
             for i, pedido in enumerate(lista_pedidos):
                 time.sleep(self.req_time_sleep)  # Evita rate limit
-                ack = await olist.remover_nunota(id=pedido.get('id_pedido'))
+                ack = await olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota)
                 if not ack:
                     await crudLogPed.criar(log_id=self.log_id,
                                            pedido_id=pedido.get('pedido_id'),
