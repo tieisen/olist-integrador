@@ -12,7 +12,7 @@ class DevolucaoNota(BaseModel):
     codemp:int
     numero:int
 
-@router.get("/integrar")
+@router.post("/integrar")
 async def integrar(devolucao:DevolucaoEmpresa):
     """
     Busca as notas de devolução no Olist e lança no Sankhya
@@ -23,7 +23,7 @@ async def integrar(devolucao:DevolucaoEmpresa):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     return True
 
-@router.get("/devolver")
+@router.post("/devolver")
 async def devolver_nota(devolucao:DevolucaoNota):
     """
     Lança de devolução de uma nota específica
@@ -35,7 +35,7 @@ async def devolver_nota(devolucao:DevolucaoNota):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     return True
 
-@router.get("/cancelar")
+@router.post("/cancelar")
 async def cancelar_devolucao(devolucao:DevolucaoNota):
     """
     Cancela nota de devolução
