@@ -38,6 +38,9 @@ class Faturamento:
             self,
             **kwargs
         ) -> dict:
+
+        nunota:int = kwargs.get('nunota',None) 
+        loja_unica:bool=kwargs.get('loja_unica',False)
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                               de='sankhya',
@@ -53,7 +56,11 @@ class Faturamento:
         try:            
             # Busca itens conferidos no dia
             # print("-> Buscando itens conferidos no dia...")
-            saldo_pedidos = await faturamento.buscar_itens()
+            if loja_unica:
+                saldo_pedidos = await faturamento.buscar_itens(nunota=nunota)
+            else:
+                saldo_pedidos = await faturamento.buscar_itens()
+                
             if isinstance(saldo_pedidos,bool):
                 msg = "Erro ao buscar itens conferidos no dia."
                 raise Exception(msg)
@@ -250,7 +257,7 @@ class Faturamento:
                 raise Exception(ack_emissao.get('__exception__'))
             
             # Envia pedido pra separação no Olist
-            print("Enviando pedido para separação no Olist...")
+            # print("Enviando pedido para separação no Olist...")
             ack_separacao = await separacao.separar(id=pedido.get('id_separacao'))
             if not ack_separacao:
                 # pass
@@ -258,7 +265,7 @@ class Faturamento:
                 raise Exception(ack_separacao.get('__exception__'))
 
             # Recebe contas a receber do Olist
-            print("Recebe contas a receber do Olist")
+            # print("Recebe contas a receber do Olist")
             ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
             if not ack_conta.get('success'):
                 # pass
@@ -266,7 +273,7 @@ class Faturamento:
                 # raise Exception(ack_conta.get('__exception__'))
             
             # Baixa contas a receber do Olist
-            print("Baixa contas a receber do Olist")
+            # print("Baixa contas a receber do Olist")
             ack_baixa = await integra_nota.baixar_conta(id_nota=ack_criacao['dados_nota'].get('id'),                                                       
                                                         dados_financeiro=ack_conta.get('dados_financeiro'))
             if not ack_baixa.get('success'):
@@ -288,6 +295,7 @@ class Faturamento:
             **kwargs
         ) -> bool:
             
+        loja_unica:bool=kwargs.get('loja_unica',False)
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         if not self.log_id:
@@ -312,7 +320,7 @@ class Faturamento:
                 # Se o pedido não foi faturado...
                 # Faz a nota de transferência
                 print("Gerando a nota de transferência...")
-                ack = await self.venda_entre_empresas_em_lote()
+                ack = await self.venda_entre_empresas_em_lote(loja_unica=loja_unica, nunota=nunota)
                 if not ack:
                     msg = "Erro ao gerar a nota de transferência."
                     raise Exception(msg)
@@ -388,6 +396,8 @@ class Faturamento:
     @log_execucao
     @carrega_dados_ecommerce
     async def integrar_snk(self,**kwargs):
+
+        loja_unica:bool=kwargs.get('loja_unica',False)
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
                                           para='sankhya',
@@ -408,9 +418,9 @@ class Faturamento:
             time.sleep(self.req_time_sleep)
             print(f"-> Pedido {i + 1}/{len(pedidos_faturar)}: {pedido}")
             # Fatura pedido no Olist
-            ack_pedido = await self.faturar_sankhya(pedido=pedido)
+            ack_pedido = await self.faturar_sankhya(pedido=pedido,loja_unica=loja_unica)
             await crudLogPed.criar(log_id=self.log_id,
-                                   pedido_id=pedido.get('id'),
+                                   nunota=pedido,
                                    evento='F',
                                    sucesso=ack_pedido.get('success'),
                                    obs=ack_pedido.get('__exception__',None))               
