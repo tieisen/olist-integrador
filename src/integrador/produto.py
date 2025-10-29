@@ -43,7 +43,9 @@ class Produto:
                                     sucesso=True)
             return True
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
-        for i, alteracao in tqdm(enumerate(alteracoes_pendentes),desc="Processando..."):
+        print("Processando...")
+        #for i, alteracao in tqdm(enumerate(alteracoes_pendentes),desc="Processando..."):
+        for i, alteracao in enumerate(alteracoes_pendentes):
             #print(f"-> Produto #{alteracao.get('sku')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             # Produto tipo simples porém sem SKU no cadastro do Olist
@@ -137,12 +139,12 @@ class Produto:
             # print(f"Produto {alteracao.get('sku',0)}/{alteracao.get('id',0)} adicionado à fila de atualização")
         status_log = False if await crudLogProd.buscar_falhas(log_id) else True
         await crudLog.atualizar(id=log_id,sucesso=status_log)
-        print("--> RECEBIMENTO DE ALTERAÇÕES NOS PRODUTOS DO OLIST CONCLUÍDA!")         
+        # print("--> RECEBIMENTO DE ALTERAÇÕES NOS PRODUTOS DO OLIST CONCLUÍDA!")         
         return True
     
     @carrega_dados_empresa
     async def incluir_olist(self, produto:dict):  
-        print("Inclusão:")
+        # print("Inclusão:")
         # Valida existencia do produto no Olist
         print(f"Validando existência do produto {produto.get('codprod')} no Olist...")
         produto_cadastrado = await self.olist.buscar(sku=int(produto.get('codprod')))
@@ -372,7 +374,9 @@ class Produto:
                                     sucesso=True)
             return True
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
-        for i, produto in tqdm(enumerate(alteracoes_pendentes),desc="Processando..."):
+        print("Processando...")
+        # for i, produto in tqdm(enumerate(alteracoes_pendentes),desc="Processando..."):
+        for i, produto in enumerate(alteracoes_pendentes):
             #print(f"\n-> Produto #{produto.get('codprod')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             if produto.get('evento') == 'I':
@@ -437,7 +441,9 @@ class Produto:
                                     sucesso=True)
             return True        
         print(f"{len(alteracoes_pendentes)} produtos com alteracoes pendentes")
-        for i, produto in tqdm(enumerate(alteracoes_pendentes),desc="Processando..."):
+        print("Processando...")
+        # for i, produto in tqdm(enumerate(alteracoes_pendentes),desc="Processando..."):
+        for i, produto in enumerate(alteracoes_pendentes):
             # print(f"-> Produto #{produto.get('codprod')}: {i+1}/{len(alteracoes_pendentes)}")
             time.sleep(self.req_time_sleep)
             log_atualizacoes = await self.atualizar_sankhya(produto=produto)
