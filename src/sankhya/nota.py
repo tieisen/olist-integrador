@@ -379,6 +379,7 @@ class Itens(Nota):
     def __init__(self, nota_instance: 'Nota'=None, codemp:int=None):
         self.token = nota_instance.token if nota_instance else None
         self.codemp = codemp or nota_instance.codemp
+        self.empresa_id = nota_instance.empresa_id if nota_instance else None
         self.formatter = Formatter()
         self.campos_item = [
             "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG",
