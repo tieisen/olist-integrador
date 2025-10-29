@@ -19,9 +19,10 @@ class Devolucao:
             try:
                 for item_snk in itens_snk:
                     # Procura o item devolvido na lista de itens da nota do Sankhya
-                    if (int(item_olist.get('codigo')) == int(item_snk.get('codprod'))):
+                    if (int(item_olist.get('codigo')) == int(item_snk.get('codprod'))):                        
                         break
-                    qtd_disponivel_devolucao = item_snk.get('qtdneg')-item_snk.get('qtdentregue')
+
+                qtd_disponivel_devolucao = int(item_snk.get('qtdneg'))-int(item_snk.get('qtdentregue'))
                 
                 # Verifica se existe quantidade disponível para devolver
                 if int(item_olist.get('quantidade')) > qtd_disponivel_devolucao:
