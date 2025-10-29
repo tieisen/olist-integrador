@@ -69,21 +69,22 @@ class Devolucao:
             
             # Registra no banco de dados
             print("Registrando nota de devolução...")
-            ack = crudDev.criar(chave_referenciada=chave_referenciada,
-                                id_nota=dados_nota_devolucao.get('id'),
-                                numero=int(dados_nota_devolucao.get('numero')),
-                                serie=dados_nota_devolucao.get('serie'),
-                                dh_emissao=dados_nota_devolucao.get('dataInclusao'))
+            ack = await crudDev.criar(chave_referenciada=chave_referenciada,
+                                        id_nota=dados_nota_devolucao.get('id'),
+                                        numero=int(dados_nota_devolucao.get('numero')),
+                                        serie=dados_nota_devolucao.get('serie'),
+                                        chave_acesso=dados_nota_devolucao.get('chaveAcesso'),
+                                        dh_emissao=dados_nota_devolucao.get('dataInclusao'))
             if not ack:
                 msg = "Erro ao registrar nota de devolução"
                 raise Exception(msg)
             print("Nota de devolução recebida com sucesso!")
-            return {"success": True, "dados_nota":dados_nota_devolucao}
+            return {"success": True, "dados_nota":dados_nota_devolucao, "dados_nota_referenciada":dados_nota_referenciada}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
         
     @carrega_dados_ecommerce
-    async def lancar(self,dados_devolucao:dict) -> dict:
+    async def lancar(self,dados_devolucao:dict,dados_nota_referenciada:dict) -> dict:
 
         dados_nota_devolucao:dict={}
 
@@ -93,19 +94,16 @@ class Devolucao:
                            codemp=self.codemp)     
 
         try:
-            # Busca nota de devolução
-            print("Buscando nota de devolução...")
-            dados_nota_devolucao = await nota_olist.buscar(id=dados_devolucao.get('id_nota'))
-            if not dados_nota_devolucao:
-                msg = f"Nota de devolução não encontrada"
-                raise Exception(msg)            
+            if not isinstance(dados_devolucao,dict):
+                dados_devolucao = dados_devolucao[0]
 
-            # Busca nota de venda no Sankhya
-            print("Buscando nota de venda no Sankhya...")
-            dados_nota_referenciada = await crudNota.buscar(chave_acesso=dados_devolucao.get('chave_referenciada'))
-            if not dados_nota_referenciada:
-                msg = "Nota de venda referenciada não encontrada"
-                raise Exception(msg)            
+            if not isinstance(dados_nota_referenciada,dict):
+                dados_nota_referenciada = dados_nota_referenciada[0]
+
+            if not all([isinstance(dados_devolucao,dict),isinstance(dados_nota_referenciada,dict)]):
+                msg = "Dados da nota de devolução ou da nota referenciada inválidos"
+                raise Exception(msg)
+
             dados_venda_snk = await nota_snk.buscar(nunota=dados_nota_referenciada.get('nunota'),itens=True)
             if not dados_venda_snk:
                 msg = "Nota de venda não encontrada no Sankhya"
@@ -113,7 +111,8 @@ class Devolucao:
 
             # Converte para o formato da API do Sankhya
             print("Convertendo dados para o formato da API do Sankhya...")
-            dados_formatados = parser.to_sankhya(itens_olist=dados_nota_devolucao.get('itens'),
+            parse = parser()
+            dados_formatados = parse.to_sankhya(itens_olist=dados_devolucao.get('itens'),
                                                 itens_snk=dados_venda_snk.get('itens'))
             if not dados_formatados:
                 msg = "Erro ao converter dados da devolucao para o formato da API do Sankhya"
@@ -123,8 +122,8 @@ class Devolucao:
             print(f"Lançando devolução...")
             nunota_devolucao = await nota_snk.devolver(nunota=dados_venda_snk.get('nunota'),
                                                        itens=dados_formatados)
-            if not nunota_devolucao:
-                msg = "Erro ao lançar devolução do pedido."
+            if not isinstance(nunota_devolucao,int):
+                msg = f"Erro ao lançar devolução do pedido. Nenhum número de nota retornado. {nunota_devolucao}"
                 raise Exception(msg)
             
             # Atualiza a nota no banco de dados
@@ -137,8 +136,9 @@ class Devolucao:
             
             # Informa observação
             print("Informando observação...")
+            observacao = f"NFD {dados_devolucao.get('numero')} de {dados_devolucao.get('dataEmissao')}\n"+dados_devolucao.get('observacoes')
             ack = await nota_snk.alterar_observacao(nunota=nunota_devolucao,
-                                                    observacao=dados_nota_devolucao.get('observacao'))
+                                                    observacao=observacao)
             if not ack:
                 msg = "Erro ao informar observação da nota"
                 raise Exception(msg)
@@ -357,11 +357,13 @@ class Devolucao:
                 raise Exception(msg)
             
             dados_nota_devolucao = ack.get('dados_nota')
-            if not dados_nota_devolucao:
+            dados_nota_referenciada = ack.get('dados_nota_referenciada')
+            if not all([dados_nota_devolucao,dados_nota_referenciada]):
                 msg = f"Erro ao receber nota de devolução {numero_nota}: dados da nota não encontrados"
                 raise Exception(msg)
             
-            ack = await self.lancar(dados_devolucao=dados_nota_devolucao)
+            ack = await self.lancar(dados_devolucao=dados_nota_devolucao,
+                                    dados_nota_referenciada=dados_nota_referenciada)
             if not ack.get('success'):
                 msg = f"Erro ao lançar nota de devolução {numero_nota}: {ack.get('__exception__',None)}"
                 raise Exception(msg)
