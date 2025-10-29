@@ -2,7 +2,7 @@ import os
 import time
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -17,6 +17,7 @@ class Produto:
         self.token = None
         self.req_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL') + os.getenv('OLIST_ENDPOINT_PRODUTOS')
+        self.tempo_busca_alter_prod = int(os.getenv('OLIST_TEMPO_BUSCA_ALTER_PROD',30))
 
     @token_olist
     async def buscar(
@@ -191,7 +192,7 @@ class Produto:
             todo_historico:bool=False
         ) -> list:
         
-        data_alteracao = datetime.today().strftime("%Y-%m-%d 00:00:00")
+        data_alteracao = (datetime.now()-timedelta(minutes=self.tempo_busca_alter_prod)).strftime("%Y-%m-%d %H:%M:00")
 
         status = 200
         paginacao = {}
