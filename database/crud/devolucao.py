@@ -27,8 +27,8 @@ async def criar(
             return False
     devolucao = await buscar(id_nota=id_nota)
     if devolucao:
-        # print(f"Nota de devolução {numero} já existe")
-        return False
+        return True
+    
     async with AsyncSessionLocal() as session:        
         result = await session.execute(
             select(Nota)
@@ -37,7 +37,6 @@ async def criar(
         nota_referenciada = result.scalar_one_or_none()
 
     if not nota_referenciada:
-        # print(f"Nota referenciada não encontrada para a devolução {numero}")
         return False
     
     try:
@@ -46,12 +45,14 @@ async def criar(
                                        id_nota=id_nota,
                                        numero=numero,
                                        serie=serie,
-                                       dh_emissao=datetime.strptime(dh_emissao,'%Y-%m-%d') if dh_emissao else datetime.now(),
+                                       dh_emissao=datetime.strptime(dh_emissao,'%Y-%m-%d %H:%M:%S') if dh_emissao else datetime.now(),
                                        **kwargs)
             session.add(nova_devolucao)
             await session.commit()
+            await session.refresh(nova_devolucao)
     except Exception as e:
         print(e)
+        return False
     return True
 
 async def buscar_lancar(ecommerce_id:int) -> list[dict]:
