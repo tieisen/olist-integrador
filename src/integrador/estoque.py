@@ -1,6 +1,6 @@
 import os
 import time
-from tqdm import tqdm
+# from tqdm import tqdm
 from database.crud import log as crudLog
 from database.crud import log_estoque as crudLogEst
 from src.sankhya.estoque import Estoque as EstoqueSnk
@@ -97,25 +97,6 @@ class Estoque:
 
         return resultado
 
-    @interno
-    async def atualizar_log_lote(
-            self,
-            log_id:int,
-            lista_estoque:list
-        ) -> bool:
-        try:
-            l:dict={}
-            for l in lista_estoque:
-                await crudLogEst.criar(log_id=log_id,
-                                       codprod=l['ajuste_estoque'].get('codprod'),
-                                       idprod=l['ajuste_estoque'].get('id'),
-                                       qtdmov=l.get('variacao'),
-                                       sucesso=l.get('sucesso'))
-            return True
-        except Exception as e:
-            logger.error("Erro ao atualizar log de estoques em lote: %s",e)            
-            return False
-
     @contexto
     @log_execucao
     @carrega_dados_empresa
@@ -155,14 +136,16 @@ class Estoque:
 
         try:
             # Busca estoque dos produtos no Sankhya e no Olist
-            # print("-> Buscando estoque dos produtos no Sankhya...")
+            print("-> Buscando estoque dos produtos no Sankhya...")
             lista_dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
             if not lista_dados_estoque_snk:
                 msg = f"Erro ao buscar estoque no Sankhya. Parametro: {lista_codprod}"
                 raise Exception(msg)
 
             # Compara os estoques e calcula as variações
-            for i, produto in enumerate(tqdm(alteracoes_pendentes,desc="Processando...")):
+            print("Integrando...")
+            #for i, produto in enumerate(tqdm(alteracoes_pendentes,desc="Processando...")):
+            for i, produto in enumerate(alteracoes_pendentes):
                 dados_update:dict = {}
                 res_estoque:dict = {}
                 time.sleep(self.req_time_sleep)
