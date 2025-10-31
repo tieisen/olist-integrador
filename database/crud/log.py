@@ -72,9 +72,11 @@ async def validar_sucesso_pelo_historico(id:int) -> bool:
     match dados_log.get('contexto'):
         case c if 'pedido' in c:
             contexto = log_pedido
-        case 'produto':
+        case c if 'faturamento' in c:
+            contexto = log_pedido
+        case c if 'produto' in c:
             contexto = log_produto
-        case 'estoque':
+        case c if 'estoque' in c:
             contexto = log_estoque
 
     if not contexto:
