@@ -31,7 +31,7 @@ class Transferencia:
                 "TIPMOV":  {"$": "T"},
                 "CIF_FOB":  {"$": "C"},
                 "TIPFRETE":  {"$": "N"},
-                "OBSERVACAO":  {"$": self.dados_empresa.get('snk_texto_transferencia')}
+                "OBSERVACAO":  {"$": self.dados_empresa.get('snk_obs_transferencia')}
             }
         except Exception as e:
             print(str(e))
