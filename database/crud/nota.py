@@ -132,7 +132,8 @@ async def atualizar(
                 .where(Nota.chave_acesso == chave_acesso)
             )
         else:
-            kwargs['chave_acesso'] = chave_acesso
+            if chave_acesso:
+                kwargs['chave_acesso'] = chave_acesso
             if id_nota:
                 result = await session.execute(
                     select(Nota)
