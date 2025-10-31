@@ -130,8 +130,7 @@ async def integrar_faturamento_snk(codemp:int=None) -> dict:
             for j, ecom in enumerate(ecommerces):
                 print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 faturamento = Faturamento(id_loja=ecom.get('id_loja'))                
-                await faturamento.integrar_snk()
-        
+                await faturamento.integrar_snk()        
         retorno = {
             "status": True,
             "exception": None
