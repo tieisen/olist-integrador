@@ -16,7 +16,7 @@ class Nota:
         self.dados_empresa:dict={}
         self.empresa_id = empresa_id
         self.formatter = Formatter()
-        self.req_time_sleep = int(os.getenv('REQ_TIME_SLEEP', 1))        
+        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1))        
         self.campos_cabecalho = [
                 "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
                 "AD_MKP_IDNFE", "AD_MKP_NUMPED", "AD_MKP_ORIGEM", "AD_TAXASHOPEE", "APROVADO",
