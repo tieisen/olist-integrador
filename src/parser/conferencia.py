@@ -1,22 +1,15 @@
-import os
-import logging
 import asyncio
-from dotenv import load_dotenv
 from src.sankhya.produto import Produto
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=os.getenv('PATH_LOGS'),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Conferencia:
 
-    def __init__(self):
-        pass
-
+    def __init__(self, codemp:int):
+        self.codemp = codemp
+        
     def to_sankhya_itens(self, nuconf:int=None, dados_olist:list=None) -> list:
         new_dados_sankhya = []
 
@@ -25,7 +18,7 @@ class Conferencia:
             logger.error("Dados não informados.")
             return new_dados_sankhya
         
-        produto = Produto()
+        produto = Produto(self.codemp)
 
         seq = 0
         for item in dados_olist:

@@ -1,46 +1,67 @@
-from database.database import SessionLocal
+from database.database import AsyncSessionLocal
 from database.models import LogPedido
-from datetime import datetime
+from database.crud import pedido
+from sqlalchemy.future import select
+from src.utils.db import formatar_retorno
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
-def criar(log_id:int,id_loja:int,id_pedido:int,pedido_ecommerce:str,evento:str='I',nunota_pedido:int=0,status:bool=True,obs:str=None,nunota_nota:int=0, id_nota:int=0):
-    session = SessionLocal()
-    novo_log = LogPedido(log_id=log_id,
-                         dh_atualizacao=datetime.now(),
-                         id_loja=id_loja,
-                         id_pedido=id_pedido,
-                         pedido_ecommerce=pedido_ecommerce,
-                         evento=evento,
-                         nunota_nota=nunota_nota,
-                         id_nota=id_nota,
-                         nunota_pedido=nunota_pedido,
-                         status=status,
-                         obs=obs)
-    session.add(novo_log)
-    session.commit()
-    session.refresh(novo_log)
-    session.close()
-    return True
+COLUNAS_CRIPTOGRAFADAS = None
 
-def buscar_id(log_id: int):
-    session = SessionLocal()
-    log = session.query(LogPedido).filter(LogPedido.log_id == log_id).all()
-    session.close()
-    return log
+async def criar(
+        log_id:int,
+        evento:str,
+        pedido_id:int=None,
+        nunota:int=None,        
+        sucesso:bool=True,
+        obs:str=None
+    ) -> bool:
+    async with AsyncSessionLocal() as session:
 
-def buscar_id_pedido(id_pedido: int):
-    session = SessionLocal()
-    log = session.query(LogPedido).filter(LogPedido.id_pedido == id_pedido).first()
-    session.close()
-    return log
+        if not any([pedido_id, nunota]):
+            logger.error("É necessário informar 'pedido_id' ou 'nunota' para criar um log de pedido.")
+            return False
+        
+        if nunota:
+            lista = await pedido.buscar(nunota=nunota)
+            if lista:
+                for ped in lista:
+                    novo_log = LogPedido(log_id=log_id,
+                                        pedido_id=ped.get('id'),
+                                        evento=evento,
+                                        sucesso=sucesso,
+                                        obs=obs)
+                    session.add(novo_log)
+        else:
+            novo_log = LogPedido(log_id=log_id,
+                                pedido_id=pedido_id,
+                                evento=evento,
+                                sucesso=sucesso,
+                                obs=obs)
+            session.add(novo_log)
+        await session.commit()
+        return True
 
-def buscar_nunota_pedido(nunota_pedido: int):
-    session = SessionLocal()
-    log = session.query(LogPedido).filter(LogPedido.nunota_pedido == nunota_pedido).first()
-    session.close()
-    return log
+async def buscar_id(log_id: int) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(LogPedido)
+            .where(LogPedido.log_id == log_id)
+        )
+        logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs)        
+        return dados_logs
 
-def buscar_status_false(log_id: int):
-    session = SessionLocal()
-    log = session.query(LogPedido).filter(LogPedido.log_id == log_id, LogPedido.status.is_(False)).first()
-    session.close()
-    return log
+async def buscar_falhas(log_id: int) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(LogPedido)
+            .where(LogPedido.log_id == log_id,
+                   LogPedido.sucesso.is_(False))
+        )
+        logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs,
+                                      colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        return dados_logs

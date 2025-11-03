@@ -1,96 +1,63 @@
 import os
-import time
-import logging
 import requests
-from dotenv import load_dotenv
-from src.sankhya.connect import Connect
+import time
+from src.utils.decorador import interno
+from src.utils.buscar_script import buscar_script
+from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Produto:
 
-    def __init__(self):   
-        self.con = Connect()  
-        self.formatter = Formatter()  
-        self.req_time_sleep = int(os.getenv('REQ_TIME_SLEEP', 1))              
-        self.campos_lista = ["AD_MKP_CATEGORIA","AD_MKP_DESCRICAO","AD_MKP_DHATUALIZADO","AD_MKP_ESTPOL","AD_MKP_ESTREGBAR","AD_MKP_ESTREGBARTIP","AD_MKP_ESTREGBARVAL","AD_MKP_IDPROD","AD_MKP_IDPRODPAI","AD_MKP_INTEGRADO","AD_MKP_MARCA","AD_MKP_NOME","ALTURA","CODESPECST","CODPROD","CODVOL","DESCRPROD","ESPESSURA","ESTMAX","ESTMIN","LARGURA","NCM","ORIGPROD","PESOBRUTO","PESOLIQ","QTDEMB","REFERENCIA","REFFORN","TIPCONTEST"]
+    def __init__(self, codemp:int, empresa_id:int=None) -> None:
+        self.token = None
+        self.codemp = codemp
+        self.empresa_id = empresa_id
+        self.formatter = Formatter()
+        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
+        self.tabela = os.getenv('SANKHYA_TABELA_PRODUTO')
+        self.campos_atualiza_snk = [ "ID", "IDPRODPAI", "ATIVO" ]
 
-    async def buscar(self, codprod:int=None, idprod:int=None) -> dict:
+    @token_snk
+    async def buscar(
+            self,
+            codprod:int=None,
+            idprod:int=None
+        ) -> dict:
 
         if not any([codprod, idprod]):
             logger.error("Nenhum critério de busca fornecido. Deve ser informado 'codprod' ou 'idprod'.")
             print("Nenhum critério de busca fornecido. Deve ser informado 'codprod' ou 'idprod'.")
             return False
 
-        url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
+            return False  
 
-        if codprod:
-            criteria = {
-                "expression": {
-                    "$": "this.CODPROD = ?"
-                },
-                "parameter": [
-                    {
-                        "$": f"{codprod}",
-                        "type": "I"
-                    }
-                ]
-            }
-
-        if idprod:
-            criteria = {
-                "expression": {
-                    "$": "this.AD_MKP_IDPROD = ?"
-                },
-                "parameter": [
-                    {
-                        "$": f"{idprod}",
-                        "type": "I"
-                    }
-                ]
-            }       
+        parametero = 'SANKHYA_PATH_SCRIPT_PRODUTO'
+        script = buscar_script(parametro=parametero)
+        query = script.format_map({"codemp":self.codemp,
+                                   "codprod":codprod or 0,
+                                   "idprod":idprod or 0})
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
-                "serviceName": "CRUDServiceProvider.loadRecords",
+                "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
-                    "dataSet": {
-                        "rootEntity": "Produto",
-                        "includePresentationFields": "N",
-                        "offsetPage": "0",
-                        "criteria": criteria,
-                        "entity": {
-                            "fieldset": {
-                                "list": ','.join(self.campos_lista)
-                            }
-                        }
-                    }
+                    "sql":query
                 }
             })
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
             try:
-                return self.formatter.return_format(res.json())[0]
+                return self.formatter.return_format(res.json())
             except:
                 return []
         else:
@@ -102,29 +69,24 @@ class Produto:
                 print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
             return False
 
-    def prepapar_dados(self, payload:dict=None):
-
-        if not payload:
-            logger.error("Nenhum dado fornecido para preparar.")
-            print("Nenhum dado fornecido para preparar.")
-            return False
-        
+    def preparar_dados(
+            self,
+            payload:dict
+        ):
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
-            print("O payload deve ser um dicionário.")
             return False
-
         dados = {}
         for i in payload:
-            dados[f'{self.campos_lista.index(str.upper(i))}'] = f'{payload.get(i)}'
+            dados[f'{self.campos_atualiza_snk.index(str.upper(i))}'] = f'{payload.get(i)}'
         return dados
 
-    async def atualizar(self, codprod:int=None, payload:dict=None) -> bool:
-
-        if not all([codprod, payload]):
-            logger.error("Nenhum dado fornecido para atualizar.")
-            print("Nenhum dado fornecido para atualizar.")
-            return False
+    @token_snk
+    async def atualizar(
+            self,
+            codprod:int,
+            payload:dict
+        ) -> bool:
 
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
@@ -137,31 +99,28 @@ class Produto:
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False  
-
-        res = requests.post(
-            url=url,
-            headers={ 'Authorization': token },
-            json={
+        _payload = {
                 "serviceName":"DatasetSP.save",
                 "requestBody":{
-                    "entityName":"Produto",
+                    "entityName":self.tabela,
                     "standAlone":False,
-                    "fields":self.campos_lista,
+                    "fields":self.campos_atualiza_snk,
                     "records":[
                         {
                             "pk": {
-                                "CODPROD": str(codprod)
+                                "CODPROD": codprod,
+                                "CODEMP": self.codemp
                             },
                             "values": payload
                         }
                     ]
                 }
             }
+
+        res = requests.post(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json=_payload
         )
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
@@ -171,18 +130,21 @@ class Produto:
             print(f"Erro ao atualizar produto. Cód. {codprod}. {res.text}")
             return False        
 
+    @token_snk
     async def buscar_alteracoes(self) -> dict:
         
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
-            logger.error("Erro relacionado à url. %s",url)
+            erro = f"Parâmetro da URL não encontrado"
+            print(erro)
+            logger.error(erro)
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
+        tabela = os.getenv('SANKHYA_TABELA_RASTRO_PRODUTO')
+        if not tabela:
+            erro = f"Parâmetro da tabela de rastro de produto não encontrado"
+            print(erro)
+            logger.error(erro)
             return False
 
         offset = 0
@@ -192,28 +154,40 @@ class Produto:
         while not limite_alcancado:
             time.sleep(self.req_time_sleep)
             payload = {
-                "serviceName": "CRUDServiceProvider.loadRecords",
-                "requestBody": {
-                    "dataSet": {
-                        "rootEntity": "AD_OLISTRASTPROD",
-                        "includePresentationFields": "N",
-                        "offsetPage": offset,
-                        "entity": {
-                            "fieldset": {
-                                "list": '*'
+                    "serviceName": "CRUDServiceProvider.loadRecords",
+                    "requestBody": {
+                        "dataSet": {
+                            "rootEntity": tabela,
+                            "includePresentationFields": "N",
+                            "offsetPage": offset,
+                            "criteria": {
+                                "expression": {
+                                    "$": "this.CODEMP = ?"
+                                },
+                                "parameter": [
+                                    {
+                                        "$": f"{self.codemp}",
+                                        "type": "I"
+                                    }
+                                ]
+                            },                              
+                            "entity": {
+                                "fieldset": {
+                                    "list": "*"
+                                }
                             }
                         }
                     }
                 }
-            }
+            
             res = requests.get(
                 url=url,
-                headers={ 'Authorization':f"{token}" },
-                json=payload
-            )
+                headers={ 'Authorization':f"Bearer {self.token}" },
+                json=payload)
+            
             if res.status_code != 200:
-                print(f"Erro ao buscar alterações pendentes. {res.text}")
-                logger.error("Erro ao buscar alterações pendentes. %s",res.text)
+                print(f"Erro ao buscar produtos com alterações. {res.text}")
+                logger.error("Erro ao buscar produtos com alterações. %s",res.text)
                 return False
             
             if res.json().get('status') == '1':
@@ -222,10 +196,15 @@ class Produto:
                     offset += 1
                 else:   
                     limite_alcancado = True
-
+        
         return todos_resultados
 
-    async def excluir_alteracoes(self, codprod:int=None, lista_produtos:list=None) -> bool:
+    @token_snk
+    async def excluir_alteracoes(
+            self,
+            codprod:int=None,
+            lista_produtos:list=None
+        ) -> bool:
 
         if not any([codprod, lista_produtos]):
             print("Código do produto não informado ou lista de produtos vazia")
@@ -237,27 +216,28 @@ class Produto:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+
+        tabela = os.getenv('SANKHYA_TABELA_RASTRO_PRODUTO')
+        if not tabela:
+            erro = f"Parâmetro da tabela de rastro de produto não encontrado"
+            print(erro)
+            logger.error(erro)
+            return False          
         
         if codprod:
-            filter = [{"CODPROD": f"{codprod}"}]
+            filter = [{"CODPROD": f"{codprod}","CODEMP": f"{self.codemp}"}]
             
         if lista_produtos:
             filter = []
             for produto in lista_produtos:
                 if isinstance(produto, dict):
                     if produto.get('sucesso'):
-                        filter.append({"CODPROD": f"{produto.get('codprod')}"})
+                        filter.append({"CODPROD": f"{produto.get('codprod')}","CODEMP": f"{self.codemp}"})
                 else:
                     try:
-                        aux = produto.__dict__
+                        aux:dict=produto.__dict__
                         if aux.get('sucesso'):
-                            filter.append({"CODPROD": f"{aux.get('cod_snk')}"})
+                            filter.append({"CODPROD": f"{aux.get('codprod')}","CODEMP": f"{self.codemp}"})
                     except:
                         logger.error("Erro ao extrair dados do objeto sqlalchemy.")
                         print("Erro ao extrair dados do objeto sqlalchemy.")
@@ -265,11 +245,11 @@ class Produto:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DatasetSP.removeRecord",
                 "requestBody": {
-                    "entityName": "AD_OLISTRASTPROD",
+                    "entityName": tabela,
                     "standAlone": False,
                     "pks": filter
                 }

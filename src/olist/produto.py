@@ -1,44 +1,39 @@
 import os
 import time
 import json
-import logging
 import requests
-from datetime import datetime
-from dotenv import load_dotenv
-from src.olist.connect import Connect
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from datetime import datetime, timedelta
+from src.utils.autenticador import token_olist
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Produto:
 
-    def __init__(self):  
-        self.con = Connect() 
+    def __init__(self, codemp:int=None, empresa_id:int=None):  
+        self.codemp = codemp
+        self.empresa_id = empresa_id
+        self.token = None
         self.req_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
-        self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PRODUTOS')
-        self.fornecedor_padrao = int(os.getenv('OLIST_ID_FORN_PADRAO',753053887))
+        self.endpoint = os.getenv('OLIST_API_URL') + os.getenv('OLIST_ENDPOINT_PRODUTOS')
+        self.tempo_busca_alter_prod = int(os.getenv('OLIST_TEMPO_BUSCA_ALTER_PROD',30))
 
-    async def buscar(self,id:int=None,sku:int=None) -> bool:
+    @token_olist
+    async def buscar(
+            self,
+            id:int=None,
+            sku:int=None
+        ) -> bool:
 
         if not any([id, sku]):
             logger.error("Produto não informado.")
             print("Produto não informado.")
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-        
         if id:
             url = self.endpoint+f"/{id}"
+
         if sku:
             url = self.endpoint+f"/?codigo={sku}"
         
@@ -50,12 +45,14 @@ class Produto:
         res = requests.get(
             url=url,
             headers={
-                "Authorization":f"Bearer {token}",
+                "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             }
         )
+
         if res.status_code == 200:
+            # Busca por sku precisa fazer outra chamada com o ID para ter todos os dados
             if sku:
                 try:
                     id = res.json()['itens'][0].get('id')
@@ -63,7 +60,7 @@ class Produto:
                     res = requests.get(
                         url=url,
                         headers={
-                            "Authorization":f"Bearer {token}",
+                            "Authorization":f"Bearer {self.token}",
                             "Content-Type":"application/json",
                             "Accept":"application/json"
                         }
@@ -80,22 +77,12 @@ class Produto:
                 logger.error("Erro %s: %s sku %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), sku)
             return False
 
-    async def incluir(self,data:dict=None) -> tuple[bool,dict]:
-
-        if not data:
-            logger.error("Dados do produto não informados.")
-            print("Dados do produto não informados.")
-            return False, {}
+    @token_olist
+    async def incluir(self,data:dict) -> tuple[bool,dict]:
         
         if not isinstance(data, dict):
             logger.error("Dados do produto em formato inválido.")
             print("Dados do produto em formato inválido.")
-            return False, {}
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False, {}
         
         url = self.endpoint
@@ -106,9 +93,11 @@ class Produto:
 
         try:
             res = requests.post(url=url,
-                                headers={"Authorization":f"Bearer {token}",
-                                        "Content-Type":"application/json",
-                                        "Accept":"application/json"},
+                                headers={
+                                    "Authorization":f"Bearer {self.token}",
+                                    "Content-Type":"application/json",
+                                    "Accept":"application/json"
+                                },
                                 json=data)
         except Exception as e:
             erro = f"Produto {data.get('sku')}. Erro relacionado à requisição. {e}"
@@ -123,36 +112,32 @@ class Produto:
             print(erro)
             return False, {erro}
 
-    async def atualizar(self,id:int=None,data:dict=None) -> bool:
+    @token_olist
+    async def atualizar(
+            self,
+            id:int=None,
+            idprodpai:int=None,
+            data:dict=None
+        ) -> bool:
 
         if not all([id, data]):
             logger.error("Dados do produto e ID não informados.")
             print("Dados do produto e ID não informados.")
             return False
 
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False  
-
-        url = self.endpoint+f"/{id}"
-
-        if data.get('produtoPai'): # se for variacao
-            url = self.endpoint+f"/{data.get('produtoPai').get('id')}/variacoes/{id}"
+        url = self.endpoint+f"/{idprodpai}/variacoes/{id}" if idprodpai else self.endpoint+f"/{id}"
 
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
-        
         res = requests.put(url=url,
-                        headers={
-                            "Authorization":f"Bearer {token}",
-                            "Content-Type":"application/json",
-                            "Accept":"application/json"
-                        },
-                        json=data)
+                           headers={
+                               "Authorization":f"Bearer {self.token}",
+                               "Content-Type":"application/json",
+                               "Accept":"application/json"
+                           },
+                           json=data)
         
         if res.status_code == 204:                    
             return True
@@ -160,20 +145,15 @@ class Produto:
             logger.warning("Erro %s: %s ID %s", res.status_code, res.json(), id)
             print(f"Erro {res.status_code}: {res.json()} ID {id}")
             logger.info(json.dumps(data))
-            return True, 0        
+            return True      
         else:
             print(f"Erro {res.status_code}: {res.json()} ID {id}")
             logger.error("Erro %s: %s ID %s", res.status_code, res.json(), id)
             logger.info(json.dumps(data))
             return False
 
+    @token_olist
     async def buscar_todos(self) -> list:
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False  
 
         status = 200
         paginacao = {}
@@ -189,9 +169,11 @@ class Produto:
                 url = self.endpoint
             if url:
                 res = requests.get(url=url,
-                                   headers={"Authorization":f"Bearer {token}",
-                                            "Content-Type":"application/json",
-                                            "Accept":"application/json"})
+                                   headers={
+                                       "Authorization":f"Bearer {self.token}",
+                                       "Content-Type":"application/json",
+                                       "Accept":"application/json"
+                                    })
                 status = res.status_code
                 itens += res.json()["itens"]
                 paginacao = res.json()["paginacao"]
@@ -201,14 +183,13 @@ class Produto:
 
         return itens
     
-    async def buscar_alteracoes(self,todo_historico:bool=False) -> list:
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False  
+    @token_olist
+    async def buscar_alteracoes(
+            self,
+            todo_historico:bool=False
+        ) -> list:
         
-        data_alteracao = datetime.today().strftime("%Y-%m-%d 00:00:00")
+        data_alteracao = (datetime.now()-timedelta(minutes=self.tempo_busca_alter_prod)).strftime("%Y-%m-%d %H:%M:00")
 
         status = 200
         paginacao = {}
@@ -230,13 +211,16 @@ class Produto:
                     url = self.endpoint+f"?dataAlteracao={data_alteracao}"
             if url:
                 res = requests.get(url=url,
-                                   headers={"Authorization":f"Bearer {token}",
-                                            "Content-Type":"application/json",
-                                            "Accept":"application/json"})
+                                   headers={
+                                       "Authorization":f"Bearer {self.token}",
+                                       "Content-Type":"application/json",
+                                       "Accept":"application/json"
+                                    })
                 status = res.status_code
-                itens += res.json()["itens"]
-                paginacao = res.json()["paginacao"]
-                time.sleep(self.req_sleep)
+                if status == 200:                    
+                    itens += res.json()["itens"]
+                    paginacao = res.json()["paginacao"]
+                    time.sleep(self.req_sleep)
             else:
                 status=0
       
@@ -245,7 +229,12 @@ class Produto:
             lista_itens = []
             for i in itens:
                 if i["tipo"] == "S":
-                    lista_itens.append({"id":i.get("id"),"sku":i.get("sku"),"dh_alter":i.get("dataAlteracao"),"situacao":i.get("situacao")})
+                    lista_itens.append({
+                        "id":i.get("id"),
+                        "sku":i.get("sku"),
+                        "dh_alter":i.get("dataAlteracao"),
+                        "situacao":i.get("situacao")
+                    })
             return lista_itens
         else:
             return []    

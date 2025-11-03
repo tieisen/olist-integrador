@@ -1,39 +1,34 @@
 import os
 import time
-import logging
 import requests
-from dotenv import load_dotenv
-from src.olist.connect import Connect
+from tqdm import tqdm
+from src.utils.autenticador import token_olist
 from src.parser.estoque import Estoque as ParserEstoque
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Estoque:
 
-    def __init__(self):  
-        self.con = Connect()
+    def __init__(self, codemp:int=None, empresa_id:int=None):  
+        self.codemp = codemp
+        self.empresa_id = empresa_id
+        self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_ESTOQUES')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         
-    async def buscar(self, id:int=None, lista_produtos:list=None) -> bool:
+    @token_olist
+    async def buscar(
+            self,
+            id:int=None,
+            lista_produtos:list=None
+        ) -> bool:
         
         if not any([id,lista_produtos]):
             print("Produto não informado.")
             logger.error("Produto não informado.")
             return False
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False   
 
         result = []
 
@@ -42,7 +37,7 @@ class Estoque:
             res = requests.get(
                 url=url,
                 headers={
-                    "Authorization":f"Bearer {token}",
+                    "Authorization":f"Bearer {self.token}",
                     "Content-Type":"application/json",
                     "Accept":"application/json"
                 }
@@ -56,13 +51,13 @@ class Estoque:
                 return result            
 
         if lista_produtos:
-            for produto in lista_produtos:
+            for produto in tqdm(lista_produtos):
                 url = self.endpoint+f"/{produto}"
                 time.sleep(self.req_time_sleep)
                 res = requests.get(
                     url=url,
                     headers={
-                        "Authorization":f"Bearer {token}",
+                        "Authorization":f"Bearer {self.token}",
                         "Content-Type":"application/json",
                         "Accept":"application/json"
                     }
@@ -76,18 +71,18 @@ class Estoque:
                     return result
         
         return result
-        
-    async def enviar_saldo(self,id:int=None,data:dict=None,lista_dados:list=None) -> list:
+    
+    @token_olist
+    async def enviar_saldo(
+            self,
+            id:int=None,
+            data:dict=None,
+            lista_dados:list=None
+        ) -> list:
         
         if not all([id,data]) and not lista_dados:
             print("Dados não informados.")
             logger.error("Dados não informados.")
-            return False
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False
 
         url = None
@@ -95,7 +90,7 @@ class Estoque:
         if id and data:
             url = self.endpoint+f"/{id}"
             res = requests.post(url=url,
-                                headers={"Authorization":f"Bearer {token}",
+                                headers={"Authorization":f"Bearer {self.token}",
                                          "Content-Type":"application/json",
                                          "Accept":"application/json"},
                                 json=data)
@@ -125,7 +120,7 @@ class Estoque:
                 time.sleep(self.req_time_sleep)
                 res = requests.post(url=url,
                                     headers={
-                                        "Authorization":f"Bearer {token}",
+                                        "Authorization":f"Bearer {self.token}",
                                         "Content-Type":"application/json",
                                         "Accept":"application/json"
                                     },

@@ -1,52 +1,48 @@
 import os
 import json
-import logging
-from dotenv import load_dotenv
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Estoque:
 
     def __init__(self):
         pass
 
-    def to_olist(self, data:dict=None) -> tuple[int,dict]:
+    def to_olist(self, dados_estoque:dict) -> tuple[int,dict]:
 
-        if not data:
-            logger.error("Dados não informados.")
-            print("Dados não informados.")
-            return False, None
+        int_res:int=None
+        dict_res:dict={}        
         
-        if not isinstance(data, dict):
-            logger.error("Dados inválidos, deve ser um dicionário.")
-            print("Dados inválidos, deve ser um dicionário.")
-            return False, None
-        
-        with open(os.getenv('OBJECT_ESTOQUE',"src/json/estoque.json"), "r", encoding="utf-8") as f:
-            modelo_api = json.load(f)
-
-        if not modelo_api:
-            logger.error("Erro ao carregar o modelo de dados do estoque.")
-            print("Erro ao carregar o modelo de dados do estoque.")
-            return False, None
-
         try:
-            new_data = modelo_api.get('post')
-            new_data['deposito']['id'] = data.get('deposito')
-            new_data['tipo'] = data.get('tipo')
-            new_data['data'] = None
-            new_data['quantidade'] = data.get('quantidade')
-            new_data['precoUnitario'] = 0
-            new_data['observacoes'] = os.getenv('OLIST_OBS_MVTO_ESTOQUE','Ajuste de estoque Sankhya')
-            return data.get('id'), new_data
+            if not isinstance(dados_estoque, dict):
+                msg = "Dados inválidos, deve ser um dicionário"
+                raise Exception(msg)
+            
+            with open(os.getenv('OBJECT_ESTOQUE',"src/json/estoque.json"), "r", encoding="utf-8") as f:
+                modelo_api = json.load(f)
+
+            if not modelo_api:
+                msg = "Erro ao carregar o modelo de dados do estoque"
+                raise Exception(msg)
+
+            try:
+                dict_res = modelo_api.get('post')
+                dict_res['deposito']['id'] = dados_estoque.get('deposito')
+                dict_res['tipo'] = dados_estoque.get('tipo')
+                dict_res['data'] = None
+                dict_res['quantidade'] = dados_estoque.get('quantidade')
+                dict_res['precoUnitario'] = 0
+                dict_res['observacoes'] = os.getenv('OLIST_OBS_MVTO_ESTOQUE','Ajuste de estoque Sankhya')
+                int_res = dados_estoque.get('id')
+            except Exception as e:
+                msg = f"Erro ao atribuir valores ao dicionário. {e}"
+            finally:
+                pass
         except Exception as e:
-            logger.error("Erro ao atribuir valores ao dicionário. %s",e)
-            print("Erro ao atribuir valores ao dicionário.",e)
-            return False, None
+            logger.error(e)
+            print(e)
+        finally:
+            tuple_res = (int_res,dict_res)
+            return tuple_res

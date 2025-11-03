@@ -1,36 +1,52 @@
-from database.database import SessionLocal
+from database.database import AsyncSessionLocal
 from database.models import LogEstoque
-from datetime import datetime
+from sqlalchemy.future import select
+from src.utils.db import formatar_retorno
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
-def criar(log_id:int,codprod:int,idprod:int,status_estoque:bool=True,qtdmov:int=0,obs:str=None):
-    session = SessionLocal()
-    novo_log = LogEstoque(log_id=log_id,
-                          dh_atualizacao=datetime.now(),
-                          codprod=codprod,
-                          idprod=idprod,
-                          qtdmov=qtdmov,
-                          status_estoque=status_estoque,
-                          obs=obs)
-    session.add(novo_log)
-    session.commit()
-    session.refresh(novo_log)
-    session.close()
-    return True
+COLUNAS_CRIPTOGRAFADAS = []
 
-def buscar_codprod(codprod: int):
-    session = SessionLocal()
-    log = session.query(LogEstoque).filter(LogEstoque.codprod == codprod).order_by(LogEstoque.dh_atualizacao.desc()).all()
-    session.close()
-    return log
+async def criar(
+        log_id:int,
+        codprod:int,
+        idprod:int,
+        qtdmov:int=0,
+        sucesso:bool=True,
+        status_lotes:bool=None,
+        obs:str=None
+    ) -> bool:
+    async with AsyncSessionLocal() as session:
+        novo_log = LogEstoque(log_id=log_id,
+                              codprod=codprod,
+                              idprod=idprod,
+                              qtdmov=qtdmov,
+                              sucesso=sucesso,
+                              status_lotes=status_lotes,                              
+                              obs=obs)
+        session.add(novo_log)
+        await session.commit()
+        return True
 
-def buscar_status_false(log_id: int):
-    session = SessionLocal()
-    log = session.query(LogEstoque).filter(LogEstoque.log_id == log_id, LogEstoque.status_estoque != 1).first()
-    session.close()
-    return log
+async def buscar_falhas(log_id: int) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(LogEstoque)
+            .where(LogEstoque.log_id == log_id,
+                   LogEstoque.sucesso.is_(False))
+        )
+        logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        return dados_logs
 
-def buscar_id(log_id: int):
-    session = SessionLocal()
-    log = session.query(LogEstoque).filter(LogEstoque.log_id == log_id).all()
-    session.close()
-    return log
+async def buscar_id(log_id: int) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(LogEstoque)
+            .where(LogEstoque.log_id == log_id)
+        )
+        logs = result.scalars().all()
+        dados_logs = formatar_retorno(retorno=logs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        return dados_logs

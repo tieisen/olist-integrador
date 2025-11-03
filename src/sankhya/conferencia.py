@@ -1,60 +1,53 @@
 import os
-import logging
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
-from src.sankhya.connect import Connect
+from src.utils.decorador import carrega_dados_empresa, interno
+from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=os.getenv('PATH_LOGS'),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.buscar_script import buscar_script
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Conferencia:
 
-    def __init__(self):   
-        self.con = Connect()  
+    def __init__(self, codemp:int=None, empresa_id:int=None):
+        self.token = None
+        self.codemp = codemp
+        self.empresa_id = empresa_id
+        self.dados_empresa:dict=None
         self.formatter = Formatter()
-        self.campos_cabecalho = [ "NUCONF", "NUNOTAORIG", "STATUS", "DHINICONF", "DHFINCONF", "CODUSUCONF", "QTDVOL" ]
-        self.campos_item = [ "NUCONF", "SEQCONF", "CODBARRA", "CODPROD", "CODVOL", "CONTROLE", "QTDCONFVOLPAD", "QTDCONF" ]
+        self.campos_cabecalho = [
+            "NUCONF", "NUNOTAORIG", "STATUS", "DHINICONF",
+            "DHFINCONF", "CODUSUCONF", "QTDVOL"
+        ]
+        self.campos_item = [
+            "NUCONF", "SEQCONF", "CODBARRA", "CODPROD",
+            "CODVOL", "CONTROLE", "QTDCONFVOLPAD", "QTDCONF"
+        ]
         self.nuconf = None
 
+    @interno
     def extrai_nuconf(self,payload:dict=None):
         return int(payload['responseBody']['result'][0][0])
 
-    async def buscar_aguardando_conferencia(self):
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)                        
-            return False
+    @token_snk
+    async def buscar_aguardando_conferencia(self, id_loja:int=None):
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False  
-                
-        query = f'''
-            select cab.nunota, cab.ad_mkp_id, cab.ad_mkp_codped
-            from tgfcab cab
-            left outer join tgfvar var on cab.nunota = var.nunotaorig
-            where cab.ad_mkp_id is not null 
-                and cab.statusnota = 'L'
-                and cab.tipmov = 'P'
-                and cab.nuconfatual is null
-                and var.nunota is null
-            order by 2
-        '''
+
+        parametero = 'SANKHYA_PATH_SCRIPT_AGUARDANDO_CONFERENCIA'
+        script = buscar_script(parametro=parametero)
+        query = script.format_map({"id_loja":id_loja})        
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
@@ -69,21 +62,11 @@ class Conferencia:
             logger.error("Erro ao buscar status dos pedidos. %s",res.text)
             return False
     
-    async def buscar(self, nunota:int=None) -> dict:
-
-        if not nunota:
-            print("Número do pedido não informado.")
-            logger.error("Número do pedido não informado.")
-            return False            
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False        
-
-        if not token:
-            token = self.con.get_token()
+    @token_snk
+    async def buscar(
+            self,
+            nunota:int
+        ) -> dict:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
@@ -93,7 +76,7 @@ class Conferencia:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
@@ -123,30 +106,22 @@ class Conferencia:
         
         if res.status_code in (200,201):
             if res.json().get('status') in ['0', '2']:
-                print(res.json().get('statusMessage'))
                 return 0
             if res.json().get('status')=='1':
-                print(res.json())
-                self.nuconf = int(self.extrai_nuconf(res.json()))
-                return self.formatter.return_format(res.json())[0]
+                dados_conferencia = self.formatter.return_format(res.json())[0]
+                self.nuconf = dados_conferencia.get('nuconf')
+                return dados_conferencia
         else:
             logger.error("Erro ao buscar dados da conferência do pedido %s. %s",nunota,res.json().get('statusMessage'))
             print(res.json().get('statusMessage'))
             return False
 
-    async def criar(self, nunota:int=None) -> dict:
-
-        if not nunota:
-            print("Número do pedido não informado.")
-            logger.error("Número do pedido não informado.")
-            return False            
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
+    @token_snk
+    async def criar(
+            self,
+            nunota:int
+        ) -> dict:
+        
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
             print(f"Erro relacionado à url. {url}")
@@ -178,17 +153,15 @@ class Conferencia:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload
         )
         
-        # print(res.status_code)
         if res.status_code in (200,201):
             if res.json().get('status') in ['0', '2']:
                 print(res.json().get('statusMessage'))
                 return False
             if res.json().get('status')=='1':
-                # print(res.json())
                 self.nuconf = int(self.extrai_nuconf(res.json()))
                 return True
         else:
@@ -196,19 +169,13 @@ class Conferencia:
             print(res.json().get('statusMessage'))
             return False
 
-    async def vincular_pedido(self, nunota:int=None, nuconf:int=None) -> int:
-
-        if not all([nunota,nuconf]):
-            print("Número do pedido e da conferência não informados.")
-            logger.error("Número do pedido e da conferência não informados.")
-            return False            
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
-
+    @token_snk
+    async def vincular_pedido(
+            self,
+            nunota:int,
+            nuconf:int
+        ) -> int:
+        
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
             print(f"Erro relacionado à url. {url}")
@@ -236,7 +203,7 @@ class Conferencia:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload
         )
         
@@ -254,18 +221,11 @@ class Conferencia:
             print(res.text)
             return False
 
-    async def insere_itens(self, dados_item:list=None ):
-
-        if not dados_item:
-            print("Lista com os itens conferidos não não informada.")
-            logger.error("Lista com os itens conferidos não não informada.")
-            return False            
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+    @token_snk
+    async def insere_itens(
+            self,
+            dados_item:list
+        ) -> bool:
 
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
@@ -285,7 +245,7 @@ class Conferencia:
 
         res = requests.post(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload
         )
 
@@ -294,19 +254,13 @@ class Conferencia:
         else:
             logger.error("Erro ao inserir item(ns) na conferência. %s",res.text)
             return False
- 
-    async def concluir(self, nuconf:int=None) -> dict:
 
-        if not nuconf:
-            print("Número da conferência não informada.")
-            logger.error("Número da conferência não informada.")
-            return False            
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False
+    @token_snk
+    @carrega_dados_empresa
+    async def concluir(
+            self,
+            nuconf:int
+        ) -> dict:
 
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
@@ -333,7 +287,7 @@ class Conferencia:
                         "values": {
                             "0": "F",
                             "1": datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                            "2": os.getenv('SANKHYA_CODUSU_INTEGRACAO'),
+                            "2": self.dados_empresa.get('snk_codusu_integracao'),
                             "3": "1"
                         }
                     }
@@ -343,7 +297,7 @@ class Conferencia:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload
         )
         
@@ -352,7 +306,6 @@ class Conferencia:
                 print(res.json().get('statusMessage'))
                 return False
             if res.json().get('status')=='1':
-                # print(res.json())
                 return True
         else:
             logger.error("Erro ao concluir conferência do pedido. %s",res.json().get('statusMessage'))

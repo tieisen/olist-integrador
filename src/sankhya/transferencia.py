@@ -1,28 +1,25 @@
 import os
-import logging
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
 from src.utils.formatter import Formatter
-from src.sankhya.connect import Connect
-from src.utils.log import Log
-
-load_dotenv('keys/.env')
-logger = logging.getLogger(__name__)
-logging.basicConfig(filename=Log().buscar_path(),
-                    encoding='utf-8',
-                    format=os.getenv('LOGGER_FORMAT'),
-                    datefmt='%Y-%m-%d %H:%M:%S',
-                    level=logging.INFO)
+from src.utils.decorador import interno, carrega_dados_empresa
+from src.utils.autenticador import token_snk
+from src.utils.buscar_script import buscar_script
+from src.utils.log import set_logger
+from src.utils.load_env import load_env
+load_env()
+logger = set_logger(__name__)
 
 class Transferencia:
 
-    def __init__(self):
-        self.nunota = None
-        self.con = Connect()
+    def __init__(self, codemp:int):
+        self.token = None
+        self.codemp = codemp
+        self.empresa_id = None
+        self.dados_empresa = None
         self.formatter = Formatter()
         self.campos_cabecalho_transferencia = ["NUNOTA","DTNEG","STATUSNOTA"]
-        self.criterios_nota_transferencia = "this.STATUSNOTA = 'A' AND TIPMOV = 'T' AND CODEMP = 1 AND CODEMPNEGOC = 31 AND TRUNC(DTNEG) = ?"
+        self.criterios_nota_transferencia = os.getenv('SANKHYA_CRITERIOS_NOTA_TRANSFERENCIA')
         self.campos_cabecalho = [
                 "AD_IDSHOPEE", "AD_MKP_CODPED", "AD_MKP_DESTINO", "AD_MKP_DHCHECKOUT", "AD_MKP_ID",
                 "AD_MKP_IDNFE", "AD_MKP_NUMPED", "AD_MKP_ORIGEM", "AD_TAXASHOPEE", "APROVADO",
@@ -36,10 +33,16 @@ class Transferencia:
                 "VLRNOTA", "VLRSUBST", "VLRSTFCPINTANT", "VOLUME"
             ]
 
+    @interno
     def extrai_nunota(self,payload:dict=None):
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    async def criar(self, cabecalho:dict=None, itens:list=None) -> tuple:
+    @token_snk
+    async def criar(
+            self,
+            cabecalho:dict,
+            itens:list=None
+        ) -> tuple:
 
         if cabecalho and not itens:
             payload = {
@@ -74,18 +77,11 @@ class Transferencia:
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False 
-
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False 
+            return False
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload
         )
         
@@ -101,18 +97,17 @@ class Transferencia:
             print(f"Erro ao lançar nota de transferência. {res.json()}")
             return False, None
 
-    async def buscar(self, nunota:int=None, itens:bool=False) -> tuple[bool,dict]:
+    @token_snk
+    async def buscar(
+            self,
+            nunota:int=None,
+            itens:bool=False
+        ) -> tuple[bool,dict]:
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False, {}
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
             return False, {}
 
         if nunota:
@@ -142,7 +137,7 @@ class Transferencia:
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
@@ -171,7 +166,8 @@ class Transferencia:
                 if isinstance(dados_nota, list):
                     dados_nota = dados_nota[0]
                     if itens:
-                        dados_itens = await Itens().buscar(nunota=int(dados_nota.get('nunota')))
+                        itens_handler = Itens(self)
+                        dados_itens = await itens_handler.buscar(nunota=int(dados_nota.get('nunota')))
                         dados_nota['itens'] = dados_itens
                     return True, dados_nota
         else:
@@ -179,13 +175,11 @@ class Transferencia:
             print(f"Erro ao buscar dados da nota de transferência vigente. {res.json()}")
             return False, {}
 
-    async def confirmar(self, nunota:int=None) -> bool:
-
-        if not nunota:
-            nunota = self.nunota
-            if not nunota:
-                print("Número único da nota não informado")
-                return False
+    @token_snk
+    async def confirmar(
+            self,
+            nunota:int
+        ) -> bool:
             
         url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
         if not url:
@@ -193,15 +187,9 @@ class Transferencia:
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False          
-
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "ServicosNfeSP.confirmarNota",
                 "requestBody": {
@@ -223,30 +211,25 @@ class Transferencia:
         
 class Itens(Transferencia):
 
-    def __init__(self):
-        super().__init__()
-        self.codtab_transferencia = int(os.getenv('SANKHYA_CODTAB_TRANSFERENCIA'))
+    def __init__(self, transferencia_instance: 'Transferencia'=None, codemp:int=None):
+        self.token = transferencia_instance.token if transferencia_instance else None
+        self.codemp = transferencia_instance.codemp if transferencia_instance else codemp
+        self.empresa_id = transferencia_instance.empresa_id if transferencia_instance else None
+        self.dados_empresa = None
+        # self.codtab_transferencia = int(os.getenv('SANKHYA_CODTAB_TRANSFERENCIA'))
         self.formatter = Formatter()
         self.campos_item = [
-                "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG", "CODPROD", "CONTROLE",
-                "CODTRIB","CODVEND", "CODVOL", "NUNOTA", "QTDNEG", "RESERVA", "SEQUENCIA",
-                "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
-            ]            
+            "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG", "CODPROD",
+            "CONTROLE", "CODTRIB","CODVEND", "CODVOL", "NUNOTA", "QTDNEG", "RESERVA",
+            "SEQUENCIA", "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
+        ]            
 
-
-    async def lancar(self, nunota:int=None, dados_item:dict=None ):
-
-        if not nunota:
-            nunota = self.nunota
-            if not nunota:
-                print("Número único do pedido não informado")
-                logger.error("Número único do pedido não informado")
-                return False
-        
-        if not dados_item:
-            print("Dados dos itens não informados")
-            logger.error("Dados dos itens não informados")
-            return False
+    @token_snk
+    async def lancar(
+            self,
+            nunota:int,
+            dados_item:dict
+        ):
         
         if not isinstance(dados_item, dict):
             print("Dados dos itens devem ser um dicionário")
@@ -257,13 +240,7 @@ class Itens(Transferencia):
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False          
+            return False      
 
         payload = {
             "serviceName": "CACSP.incluirAlterarItemNota",
@@ -279,7 +256,7 @@ class Itens(Transferencia):
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json=payload)
         
         if res.status_code in (200,201) and res.json().get('status')=='1':
@@ -292,24 +269,17 @@ class Itens(Transferencia):
             logger.error("Erro ao lançar item da nota de transferência. Nunota %s. %s",nunota,res.json())      
             return False
 
-    async def buscar(self, nunota:int=None) -> dict:
-
-        if not nunota:
-            print("Número único do pedido não informado")
-            logger.error("Número único do pedido não informado")
-            return False
+    @token_snk
+    async def buscar(
+            self,
+            nunota:int
+        ) -> dict:
     
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
-        try:
-            token = self.con.get_token()
-        except Exception as e:
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False    
 
         criteria = {
             "expression": {
@@ -325,7 +295,7 @@ class Itens(Transferencia):
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
@@ -350,7 +320,14 @@ class Itens(Transferencia):
             logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
             return False
 
-    async def busca_valor_transferencia(self, codprod:int=None, lista_itens:list=None) -> float:
+    @token_snk
+    @carrega_dados_empresa
+    async def busca_valor_transferencia(
+            self,
+            codprod:int=None,
+            lista_itens:list=None
+        ) -> float:
+
         if not any([codprod, lista_itens]):
             print("Produto não informado.")
             logger.error("Produto não informado.")
@@ -361,44 +338,30 @@ class Itens(Transferencia):
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
+
+        parametro = 'SANKHYA_PATH_SCRIPT_VLR_TRANSF_LISTA' if lista_itens else 'SANKHYA_PATH_SCRIPT_VLR_TRANSF_ITEM'
+        script = buscar_script(parametro=parametro)            
+
         try:
-            token = self.con.get_token()
+            if lista_itens:                
+                query = script.format_map({
+                                    "codtab":self.dados_empresa.get('snk_codtab_transf'),
+                                    "lista_itens":','.join([str(i) for i in lista_itens])
+                                })
+            else:
+                query = script.format_map({
+                                    "codtab":self.dados_empresa.get('snk_codtab_transf'),
+                                    "codprod":codprod
+                                })
         except Exception as e:
-            print(f"Erro relacionado ao token de acesso. {e}")
-            logger.error("Erro relacionado ao token de acesso. %s",e)
-            return False         
-
-        if codprod:
-            query = f'''
-                SELECT 
-                    EXC.CODPROD,
-                    FIRST_VALUE(EXC.VLRVENDA) 
-                          OVER (ORDER BY TAB.DTVIGOR DESC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) VALOR 
-                FROM TGFNTA NTA
-                    INNER JOIN TGFTAB TAB ON NTA.CODTAB = TAB.CODTAB
-                    INNER JOIN TGFEXC EXC ON TAB.NUTAB = EXC.NUTAB
-                WHERE NTA.CODTAB = {self.codtab_transferencia}
-                    AND ROWNUM = 1
-                    AND EXC.CODPROD = {codprod}
-            '''
-
-        if lista_itens:            
-            query = f'''
-                SELECT DISTINCT
-                    EXC.CODPROD,
-                    FIRST_VALUE(EXC.VLRVENDA)
-                          OVER (PARTITION BY EXC.CODPROD ORDER BY TAB.DTVIGOR DESC ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) VALOR
-                FROM TGFNTA NTA
-                    INNER JOIN TGFTAB TAB ON NTA.CODTAB = TAB.CODTAB
-                    INNER JOIN TGFEXC EXC ON TAB.NUTAB = EXC.NUTAB
-                WHERE NTA.CODTAB = {self.codtab_transferencia}
-                    AND EXC.CODPROD IN ({','.join([str(i) for i in lista_itens])})
-            '''            
+            erro = f"Falha ao formatar query do saldo de estoque por lote. {e}"
+            print(erro)
+            logger.error(erro)
+            return False
 
         res = requests.get(
             url=url,
-            headers={ 'Authorization': token },
+            headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
                 "requestBody": {
