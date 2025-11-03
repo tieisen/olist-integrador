@@ -170,8 +170,7 @@ class Autenticacao:
         if dados_token.get('dh_expiracao_refresh_token') > datetime.now():
             return [dados_token.get('refresh_token')]
 
-        if dados_token.get('dh_expiracao_refresh_token') < datetime.now():
-            logger.warning(f"Refresh token expirado para a empresa {self.codemp or self.empresa_id}")            
+        if dados_token.get('dh_expiracao_refresh_token') < datetime.now():            
             return None     
 
     @carrega_dados_empresa

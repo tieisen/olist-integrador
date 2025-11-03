@@ -82,8 +82,7 @@ class Autenticacao:
 
         if dados_token.get('dh_expiracao_token') > datetime.now():            
             return dados_token.get('token')
-        else:
-            logger.warning(f"Token expirado para a empresa {self.codemp}")
+        else:            
             return None
 
     @interno
