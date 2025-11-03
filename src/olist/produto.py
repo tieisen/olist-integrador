@@ -116,6 +116,7 @@ class Produto:
     async def atualizar(
             self,
             id:int=None,
+            idprodpai:int=None,
             data:dict=None
         ) -> bool:
 
@@ -124,16 +125,12 @@ class Produto:
             print("Dados do produto e ID não informados.")
             return False
 
-        url = self.endpoint+f"/{id}"
-
-        if data.get('produtoPai'): # se for variacao
-            url = self.endpoint+f"/{data.get('produtoPai').get('id')}/variacoes/{id}"
+        url = self.endpoint+f"/{idprodpai}/variacoes/{id}" if idprodpai else self.endpoint+f"/{id}"
 
         if not url:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
-        
         res = requests.put(url=url,
                            headers={
                                "Authorization":f"Bearer {self.token}",
