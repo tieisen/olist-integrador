@@ -250,7 +250,8 @@ class Produto:
         # Converte para o formato da API do Olist
         # print("Convertendo para o formato da API do Olist...")        
         log_atualizacoes_olist, dados_formato_olist = self.parse.to_olist(data_olist=dados_produto_olist,
-                                                                          data_sankhya=dados_produto_sankhya)
+                                                                          data_sankhya=dados_produto_sankhya,
+                                                                          dados_empresa=self.dados_empresa)
         if not log_atualizacoes_olist:
             produto['obs'] = f'Erro ao converter dados do produto {produto.get('codprod')}/{produto.get('idprod')}'
             produto['sucesso'] = False
@@ -264,6 +265,7 @@ class Produto:
         # Envia dados para o Olist
         # print("Enviando dados para o Olist...")        
         ack_atualizacao = await self.olist.atualizar(id=int(produto.get('idprod')),
+                                                     idprodpai=dados_produto_sankhya.get('idprodpai'),
                                                      data=dados_formato_olist)
         if not ack_atualizacao:
             produto['obs'] = f'''Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Olist.
