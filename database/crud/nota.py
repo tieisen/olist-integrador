@@ -111,10 +111,11 @@ async def atualizar(
         id_nota:int=None,
         chave_acesso:str=None,
         nunota_pedido:int=None,
+        cod_pedido:int=None,
         **kwargs
     ):
 
-    if not any([id_nota,chave_acesso,nunota_pedido]):
+    if not any([id_nota,chave_acesso,nunota_pedido,cod_pedido]):
         print("Nenhum parâmetro informado")
         return False
 
@@ -132,22 +133,29 @@ async def atualizar(
                 .where(Nota.chave_acesso == chave_acesso)
             )
         else:
-            if chave_acesso:
-                kwargs['chave_acesso'] = chave_acesso
-            if id_nota:
+            kwargs['chave_acesso'] = chave_acesso
+            if cod_pedido:
+                kwargs['id_nota'] = id_nota
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.pedido_.has(Pedido.cod_pedido == cod_pedido))
+                )
+            elif id_nota:
                 result = await session.execute(
                     select(Nota)
                     .where(Nota.id_nota == id_nota)
                 )
-            if nunota_pedido:
+            elif nunota_pedido:
                 result = await session.execute(
                     select(Nota)
                     .where(Nota.pedido_.has(Pedido.nunota == nunota_pedido))
                 )
+            else:
+                return False
 
         notas = result.scalars().all()
         if not notas:
-            print(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido}")
+            print(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido or cod_pedido}")
             return False
         
         for nota in notas:
