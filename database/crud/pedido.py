@@ -1,5 +1,5 @@
 from database.database import AsyncSessionLocal
-from database.models import Pedido, Ecommerce
+from database.models import Pedido, Ecommerce, Nota
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
@@ -263,6 +263,29 @@ async def buscar_faturar(ecommerce_id:int):
                                  Pedido.dh_faturamento.is_(None),
                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
         )
+        pedidos = result.scalars().all()
+        dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=pedidos)           
+        return dados_pedidos
+    
+async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
+    if not any([ecommerce_id, nunota_nota]):
+        return False
+    
+    async with AsyncSessionLocal() as session:
+        if ecommerce_id:
+            result = await session.execute(
+                select(Pedido).where(Pedido.ecommerce_id == ecommerce_id,
+                                     Pedido.nota_.has(Nota.baixa_estoque_ecommerce.is_(False))).order_by(Pedido.num_pedido)
+            )
+        
+        if nunota_nota:
+            result = await session.execute(
+                select(Pedido).where(Pedido.ecommerce_id == ecommerce_id,
+                                     Pedido.nota_.has(Nota.nunota == nunota_nota,
+                                                      Nota.baixa_estoque_ecommerce.is_(False))).order_by(Pedido.num_pedido)
+            )
+            
         pedidos = result.scalars().all()
         dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                          retorno=pedidos)           
