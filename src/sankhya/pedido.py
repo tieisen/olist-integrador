@@ -255,7 +255,7 @@ class Pedido:
             dados_cabecalho:dict,
             dados_itens:list
         ) -> int:
-                
+        
         url = os.getenv('SANKHYA_URL_PEDIDO')
         if not url:
             print(f"Erro relacionado à url. {url}")
@@ -278,13 +278,13 @@ class Pedido:
                 }
             })
         if res.status_code in (200,201):
-            if res.json().get('status')=='0':                
+            if res.json().get('status')=='0':
                 logger.error("Erro ao lançar pedido. %s",res.text)
                 return False
             if res.json().get('status')=='1':
                 return self.extrai_nunota(res.json())
             if res.json().get('status')=='2':
-                logger.error("Pedido %s lançado com erro. %s",self.extrai_nunota(res.json()),res.text)                
+                logger.error("Pedido %s lançado com erro. %s",self.extrai_nunota(res.json()),res.text)
                 return self.extrai_nunota(res.json())
         else:
             logger.error("Erro ao lançar pedido #%s. %s",dados_cabecalho.get('AD_MKP_NUMPED'),res.text)
@@ -393,6 +393,46 @@ class Pedido:
             print(f"Erro ao faturar pedido. Nunota {nunota}. {res.text}")
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
+
+    @token_snk
+    @carrega_dados_empresa
+    async def atualizar_local(
+            self,
+            nunota:int,
+            payload:list[dict]
+        ) -> bool:
+        
+        url = os.getenv('SANKHYA_URL_SAVE')
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+        
+        _payload = {
+            "serviceName":"DatasetSP.save",
+            "requestBody":{
+                "entityName":"ItemNota",
+                "standAlone":False,
+                "fields":[
+                    "CODLOCALORIG"
+                ],
+                "records": payload
+            }
+        }
+
+        res = requests.post(
+            url=url,
+            headers={ 'Authorization' : f"Bearer {self.token}" },
+            json=_payload
+        )
+
+        if res.status_code in (200,201) and res.json().get('status')=='1':
+            return True
+        else:
+            msg = f"Erro ao atualizar local no pedido {nunota}. {res.text}"
+            logger.error(msg)
+            print(msg)
+            return False 
 
     @token_snk
     async def excluir(
