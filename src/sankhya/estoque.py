@@ -12,10 +12,10 @@ logger = set_logger(__name__)
 
 class Estoque:
 
-    def __init__(self, codemp:int):
+    def __init__(self, codemp:int=None, empresa_id:int=None):
         self.token = None
         self.codemp = codemp
-        self.empresa_id = None
+        self.empresa_id = empresa_id
         self.dados_empresa = None
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
         self.formatter = Formatter()
@@ -47,14 +47,11 @@ class Estoque:
             else:
                 filtro_produtos = ','.join(map(str,lista_produtos))
 
-        # Considera estoque da empresa ecommerce e da unidade física do estado
-        cod_empresas_estoque:str = ','.join(map(str,[self.dados_empresa.get('snk_codemp_fornecedor'),self.dados_empresa.get('snk_codemp')]))
-
         parametero = 'SANKHYA_PATH_SCRIPT_SALDO_ESTOQUE'
         script = buscar_script(parametro=parametero)
         query = script.format_map({"codlocais": self.dados_empresa.get('snk_codlocal_estoque'),
-                                   "codemp": self.codemp,
-                                   "codempresas": cod_empresas_estoque,
+                                   "codparc": self.dados_empresa.get('snk_codparc'),
+                                   "codemp_fornecedor": self.dados_empresa.get('snk_codemp_fornecedor'),
                                    "lista_produtos": filtro_produtos
                                 })
 
@@ -143,6 +140,7 @@ class Estoque:
         return todos_resultados
     
     @token_snk
+    @carrega_dados_empresa
     async def remover_alteracoes(
             self,
             codprod:int=None,
@@ -171,7 +169,7 @@ class Estoque:
             filter = [
                 {
                     "CODPROD": f"{codprod}",
-                    "CODEMP": f"{self.codemp}"
+                    "CODPARC": f"{self.dados_empresa.get('snk_codparc')}"
                 }
             ]
 
@@ -181,7 +179,7 @@ class Estoque:
                 if produto.get('sucesso'):
                     filter.append({
                         "CODPROD": f"{produto['ajuste_estoque'].get('codprod')}",
-                        "CODEMP": f"{self.codemp}"
+                        "CODPARC": f"{self.dados_empresa.get('snk_codparc')}"
                     })
         
         payload = {
@@ -280,6 +278,125 @@ class Estoque:
             return self.formatter.return_format(res.json())
         else:
             erro = f"Erro ao validar estoque do(s) item(ns) na empresa {self.codemp}. {res.json()}" 
+            logger.error(erro)
+            print(erro)
+            return False
+    
+    @interno
+    @carrega_dados_empresa
+    async def formatar_query_busca_saldo_local(
+            self,
+            codprod:int=None,
+            lista_produtos:list=None
+        ):
+            
+        if not any([lista_produtos,codprod]):
+            return False
+        
+        parametro = 'SANKHYA_PATH_SCRIPT_ESTOQUE_LOCAL'
+        script = buscar_script(parametro=parametro)
+
+        try:
+            query = script.format_map({
+                                "codemp_fornecedor":self.dados_empresa.get('snk_codemp_fornecedor'),
+                                "local_matriz":self.dados_empresa.get('snk_codlocal_venda'),
+                                "local_ecommerce":self.dados_empresa.get('snk_codlocal_ecommerce'),
+                                "produtos": codprod or ','.join(map(str,lista_produtos))
+                            })
+        except Exception as e:
+            erro = f"Falha ao formatar query do saldo de estoque por local. {e}"
+            print(erro)
+            logger.error(erro)
+            return False
+
+        return query
+    
+    @token_snk
+    async def buscar_saldo_por_local(
+            self,
+            codprod:int=None,
+            lista_produtos:list=None
+        ) -> dict:
+        
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+        
+        query = await self.formatar_query_busca_saldo_local(codprod=codprod,
+                                                            lista_produtos=lista_produtos)
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json={
+                "serviceName": "DbExplorerSP.executeQuery",
+                "requestBody": {
+                    "sql":query
+                }
+            })
+        
+        if res.status_code in (200,201) and res.json().get('status')=='1':
+            return self.formatter.return_format(res.json())
+        else:
+            erro = f"Erro ao validar estoque do(s) item(ns) na empresa {self.dados_empresa.get('snk_codemp_fornecedor')}. {res.json()}" 
+            logger.error(erro)
+            print(erro)
+            return False
+    
+    @interno
+    @carrega_dados_empresa
+    async def formatar_query_busca_saldo_ecommerce(
+            self,
+            lista_produtos:list
+        ) -> str:
+        
+        parametro = 'SANKHYA_PATH_SCRIPT_ESTOQUE_ECOMMERCE_LOTE'
+        script = buscar_script(parametro=parametro)
+
+        try:
+            query = script.format_map({
+                                "codemp_fornecedor":self.dados_empresa.get('snk_codemp_fornecedor'),
+                                "local_ecommerce":self.dados_empresa.get('snk_codlocal_ecommerce'),
+                                "produtos": ','.join(map(str,lista_produtos))
+                            })
+        except Exception as e:
+            erro = f"Falha ao formatar query do saldo de estoque por local. {e}"
+            print(erro)
+            logger.error(erro)
+            return False
+
+        return query
+    
+    @token_snk
+    async def buscar_saldo_ecommerce_por_lote(
+            self,
+            lista_produtos:list
+        ) -> dict:
+        
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+        
+        query = await self.formatar_query_busca_saldo_ecommerce(lista_produtos=lista_produtos)
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json={
+                "serviceName": "DbExplorerSP.executeQuery",
+                "requestBody": {
+                    "sql":query
+                }
+            })
+        
+        if res.status_code in (200,201) and res.json().get('status')=='1':
+            return self.formatter.return_format(res.json())
+        else:
+            erro = f"Erro ao validar estoque do(s) item(ns) de e-commerce na empresa {self.dados_empresa.get('snk_codemp_fornecedor')}. {res.json()}" 
             logger.error(erro)
             print(erro)
             return False
