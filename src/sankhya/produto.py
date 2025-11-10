@@ -1,7 +1,7 @@
 import os
 import requests
 import time
-from src.utils.decorador import interno
+from src.utils.decorador import carrega_dados_empresa
 from src.utils.buscar_script import buscar_script
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
@@ -17,11 +17,13 @@ class Produto:
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.formatter = Formatter()
+        self.dados_empresa:dict = {}
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.tabela = os.getenv('SANKHYA_TABELA_PRODUTO')
         self.campos_atualiza_snk = [ "ID", "IDPRODPAI", "ATIVO" ]
 
     @token_snk
+    @carrega_dados_empresa
     async def buscar(
             self,
             codprod:int=None,
@@ -41,7 +43,7 @@ class Produto:
 
         parametero = 'SANKHYA_PATH_SCRIPT_PRODUTO'
         script = buscar_script(parametro=parametero)
-        query = script.format_map({"codemp":self.codemp,
+        query = script.format_map({"codparc":self.dados_empresa.get('snk_codparc'),
                                    "codprod":codprod or 0,
                                    "idprod":idprod or 0})
 
@@ -82,6 +84,7 @@ class Produto:
         return dados
 
     @token_snk
+    @carrega_dados_empresa
     async def atualizar(
             self,
             codprod:int,
@@ -109,7 +112,7 @@ class Produto:
                         {
                             "pk": {
                                 "CODPROD": codprod,
-                                "CODEMP": self.codemp
+                                "CODPARC": self.dados_empresa.get('snk_codparc')
                             },
                             "values": payload
                         }
@@ -119,7 +122,7 @@ class Produto:
 
         res = requests.post(
             url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
+            headers={ 'Authorization' : f"Bearer {self.token}" },
             json=_payload
         )
 
@@ -131,6 +134,7 @@ class Produto:
             return False        
 
     @token_snk
+    @carrega_dados_empresa
     async def buscar_alteracoes(self) -> dict:
         
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
@@ -166,7 +170,7 @@ class Produto:
                                 },
                                 "parameter": [
                                     {
-                                        "$": f"{self.codemp}",
+                                        "$": f"{self.dados_empresa.get('snk_codemp_fornecedor')}",
                                         "type": "I"
                                     }
                                 ]
@@ -200,6 +204,7 @@ class Produto:
         return todos_resultados
 
     @token_snk
+    @carrega_dados_empresa
     async def excluir_alteracoes(
             self,
             codprod:int=None,
@@ -225,19 +230,19 @@ class Produto:
             return False          
         
         if codprod:
-            filter = [{"CODPROD": f"{codprod}","CODEMP": f"{self.codemp}"}]
+            filter = [{"CODPROD": f"{codprod}","CODEMP": f"{self.dados_empresa.get('snk_codemp_fornecedor')}"}]
             
         if lista_produtos:
             filter = []
             for produto in lista_produtos:
                 if isinstance(produto, dict):
                     if produto.get('sucesso'):
-                        filter.append({"CODPROD": f"{produto.get('codprod')}","CODEMP": f"{self.codemp}"})
+                        filter.append({"CODPROD": f"{produto.get('codprod')}","CODEMP": f"{self.dados_empresa.get('snk_codemp_fornecedor')}"})
                 else:
                     try:
                         aux:dict=produto.__dict__
                         if aux.get('sucesso'):
-                            filter.append({"CODPROD": f"{aux.get('codprod')}","CODEMP": f"{self.codemp}"})
+                            filter.append({"CODPROD": f"{aux.get('codprod')}","CODEMP": f"{self.dados_empresa.get('snk_codemp_fornecedor')}"})
                     except:
                         logger.error("Erro ao extrair dados do objeto sqlalchemy.")
                         print("Erro ao extrair dados do objeto sqlalchemy.")
