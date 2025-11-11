@@ -537,7 +537,7 @@ class Pedido:
                 for pedido in aux_lista_pedidos:
                     time.sleep(self.req_time_sleep)
                     retorno = {
-                        "pedido_id": pedido.get('id'),
+                        "id": pedido.get('id'),
                         "numero": pedido.get('num_pedido'),
                         "success": None,
                         "__exception__": None
