@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
-
 class EmpresaBase(BaseModel):
     ativo: Optional[bool] = True
     snk_codemp: int
@@ -42,10 +41,8 @@ class EmpresaBase(BaseModel):
     snk_codemp_fornecedor: int
     snk_obs_transferencia: Optional[str] = None
 
-
 class EmpresaCreate(EmpresaBase):
     pass
-
 
 class EmpresaDB(EmpresaBase):
     id: int
