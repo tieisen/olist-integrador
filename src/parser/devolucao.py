@@ -26,7 +26,8 @@ class Devolucao:
                 
                 # Verifica se existe quantidade disponível para devolver
                 if int(item_olist.get('quantidade')) > qtd_disponivel_devolucao:
-                    print(f"Item {item_snk.get('codprod')} não pode ser devolvido pois a quantidade disponível para devolução é menor do que a quantiade a ser devolvida.\n\tQuantidade disponível para devolução: {qtd_disponivel_devolucao}.\n\tQuantidade a ser devolvida: {item_olist.get('quantidade')}")
+                    msg = f"Item {item_snk.get('codprod')} não pode ser devolvido pois a quantidade disponível para devolução é menor do que a quantiade a ser devolvida.\n\tQuantidade disponível para devolução: {qtd_disponivel_devolucao}.\n\tQuantidade a ser devolvida: {item_olist.get('quantidade')}"
+                    logger.warning(msg)
                     continue
 
                 # Verifica se o item já está na lista de retorno e soma a quantidade
@@ -41,8 +42,7 @@ class Devolucao:
                     "QTDFAT": item_olist.get('quantidade')
                 })
             except Exception as e:
-                logger.error("Erro ao converter dados de devolução do item %s. %s",item_olist,e)
-                print(f"Erro ao converter dados de devolução do item {item_olist}. {e}")
+                logger.error("Erro ao converter dados de devolução do item %s. %s",item_olist,e)                
                 continue
 
         return resultado
