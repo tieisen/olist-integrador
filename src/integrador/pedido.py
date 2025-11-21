@@ -139,6 +139,7 @@ class Pedido:
             print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
             return {"success": True, "id": id}
         except Exception as e:
+            logger.error("Erro ao receber pedido %s. %s",num_pedido or id_pedido,e)
             return {"success": False, "id": None, "__exception__": str(e)}
 
     @interno
