@@ -20,11 +20,15 @@ class Faturamento:
     async def buscar_itens(
             self,            
             nunota:int=None
-        ):
+        ) -> list[dict]:
+        """
+        Busca lista de itens conferidos no dia ou de um pedido.
+            :param nunota: número único do pedido de venda
+            :return list[dict]: lista com os dados dos itens conferidos
+        """
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -57,17 +61,21 @@ class Faturamento:
         else:
             if nunota:
                 logger.error("Erro ao buscar itens conferidos do pedido %s. %s",nunota,res.text)
-                print(f"Erro ao buscar itens conferidos do pedido {nunota}. {res.text}")
             else:
                 logger.error("Erro ao buscar itens conferidos no dia. %s",res.text)
-                print(f"Erro ao buscar itens conferidos no dia. {res.text}")
             return False
 
     async def compara_saldos(
             self,
-            saldo_estoque:list,
-            saldo_pedidos:list
-        ):
+            saldo_estoque:list[dict],
+            saldo_pedidos:list[dict]
+        ) -> list[dict]:
+        """
+        Compara os saldos de estoque com os itens conferidos.
+            :param saldo_estoque: lista de dicionários com os dados dos itens do saldo de estoque
+            :param saldo_pedidos: lista de dicionários com os dados dos itens conferidos
+            :return list[dict]: lista com os dados dos itens a serem transferidos
+        """        
         
         lista_transferir = []        
 
