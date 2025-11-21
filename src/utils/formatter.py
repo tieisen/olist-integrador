@@ -6,11 +6,17 @@ load_env()
 logger = set_logger(__name__)
 
 class Formatter:
+    """ Classe para formatação dos retornos da API """
 
     def __init__(self):
         pass    
 
-    def limpar_json(self, dados:dict=None, modelo:dict=None):
+    def limpar_json(self, dados:dict, modelo:dict) -> dict:
+        """
+        Filtra os valores do dicionário de acordo com o modelo da API
+            :param dados: dados a serem filtrados
+            :param modelo: modelo da API
+        """
         if isinstance(modelo, dict) and isinstance(dados, dict):
             resultado = {}
             for chave in modelo:
@@ -26,6 +32,10 @@ class Formatter:
             return dados
         
     def return_format_estoque(self, dados: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Retorna dados do estoque formatados.
+            :param dados: dados a serem formatados
+        """        
         if not dados:
             return {}
 
@@ -55,7 +65,11 @@ class Formatter:
 
         return resultado        
 
-    def return_format(self, res) -> list:
+    def return_format(self, res:dict) -> list:
+        """
+        Formata os retornos da API do Sankhya para dicionário.
+            :param res: resposta da API
+        """         
 
         # RETORNO DE CONSULTA PELO DBEXPLORER
         if res.get('serviceName') == 'DbExplorerSP.executeQuery':
