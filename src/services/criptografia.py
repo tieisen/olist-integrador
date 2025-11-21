@@ -26,6 +26,7 @@ class Criptografia:
     def criptografar(self, mensagem: str) -> bytes:
         """
         Criptografa uma string e retorna em bytes.
+            :param mensagem: texto a ser criptografado
         """
         if isinstance(mensagem,bytes):
             return self.fernet.encrypt(mensagem)
@@ -35,6 +36,7 @@ class Criptografia:
     def descriptografar(self, mensagem: bytes) -> str:
         """
         Descriptografa a mensagem e retorna como string.
+            :param mensagem: texto a ser descriptografado
         """
         return self.fernet.decrypt(mensagem).decode()
     
