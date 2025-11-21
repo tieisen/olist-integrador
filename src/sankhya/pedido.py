@@ -33,7 +33,15 @@ class Pedido:
         ]
 
     @interno
-    def extrai_nunota(self,payload:dict=None):
+    def extrai_nunota(
+            self,
+            payload:dict=None
+        ) -> int:
+        """
+        Extrai o número único do pedido de venda.
+            :param payload: retorno da API do Sankhya em JSON
+            :return int: número único do pedido de venda
+        """        
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
     
     @token_snk
@@ -44,15 +52,21 @@ class Pedido:
             codpedido:str=None,
             itens:bool=False
         ) -> dict:
+        """
+        Busca um pedido de venda.
+            :param nunota: número único do pedido de venda (Sankhya)
+            :param id_olist: ID do pedido de venda (Olist)
+            :param codpedido: código do pedido de venda no E-commerce (Olist)
+            :param itens: indica se os itens também devem ser buscados ou somente o cabeçalho do pedido
+            :return dict: dados do pedido de venda
+        """
 
         if not any([nunota, id_olist, codpedido]):
-            print("Nenhum critério de busca informado. Informe nunota, id_olist ou codpedido.")
             logger.error("Nenhum critério de busca informado. Informe nunota, id_olist ou codpedido.")
             return False
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -129,18 +143,14 @@ class Pedido:
                     dados_pedido['itens'] = dados_itens
                 return dados_pedido
             except Exception as e:
-                print(f"Erro ao formatar retorno da API para o pedido {nunota}. {e}")
                 logger.error("Erro ao formatar retorno da API para o pedido %s. %s",nunota,e)                
                 return False          
         else:
             if nunota:
-                print(f"Erro ao buscar pedido. Nunota {nunota}. {res.text}")
                 logger.error("Erro ao buscar pedido. Nunota %s. %s",nunota,res.text)
             if id_olist:
-                print(f"Erro ao buscar pedido. ID {id_olist}. {res.text}")
                 logger.error("Erro ao buscar pedido. ID %s. %s",id_olist,res.text)
             if codpedido:
-                print(f"Erro ao buscar pedido. Pedido {codpedido}. {res.text}")        
                 logger.error("Erro ao buscar pedido. Pedido %s. %s",codpedido,res.text)        
             return False
     
@@ -149,10 +159,13 @@ class Pedido:
             self,
             nunota:int
         ) -> dict:
-        
+        """
+        Busca o número único da nota de venda de um pedido faturado.
+            :param nunota: número único do pedido de venda (Sankhya)
+            :return dict: número único da nota de venda
+        """        
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -173,14 +186,18 @@ class Pedido:
             return self.formatter.return_format(res.json())
         else:
             logger.error("Erro ao buscar número da nota. %s",res.json())
-            print(f"Erro ao buscar número da nota. {res.json()}")
             return False
 
     async def buscar_nota_do_pedido(
             self,
             nunota:int
         ) -> dict:
-        
+        """
+        Busca o número único da nota de venda de um pedido faturado.
+            :param nunota: número único do pedido de venda (Sankhya)
+            :return dict: dados da nota de venda gerada pelo pedido de venda
+        """
+
         nunota_nota = await self.buscar_nunota_nota(nunota=nunota)
         if not nunota_nota:            
             logger.warning("Pedido %s sem Nota vinculada",nunota_nota)
@@ -192,7 +209,6 @@ class Pedido:
                                        itens=True)
         
         if not dados_nota:
-            print(f"Erro ao buscar dados da nota {nunota_nota} vinculada ao pedido {nunota}")
             logger.error("Erro ao buscar dados da nota %s vinculada ao pedido %s", nunota_nota, nunota)
             return False
         
@@ -203,6 +219,11 @@ class Pedido:
             self,
             ibge:int
         ) -> dict:
+        """
+        Busca código Sankhya e UF da cidade.
+            :param ibge: código IBGE da cidade
+            :return dict: código Sankhya e UF da cidade
+        """
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
@@ -246,7 +267,6 @@ class Pedido:
             return self.formatter.return_format(res.json())[0]
         else:
             logger.error("Erro ao buscar dados de localização da cidade %s. %s",ibge,res.text)
-            print(f"Erro ao buscar dados de localização da cidade {ibge}. {res.text}")
             return False
 
     @token_snk
@@ -255,6 +275,12 @@ class Pedido:
             dados_cabecalho:dict,
             dados_itens:list
         ) -> int:
+        """
+        Cria um pedido de venda.
+            :param dados_cabecalho: cabeçalho da nota de transferência
+            :param dados_itens: itens da nota de transferência
+            :return int: número único do pedido de venda
+        """        
         
         url = os.getenv('SANKHYA_URL_PEDIDO')
         if not url:
@@ -288,7 +314,6 @@ class Pedido:
                 return self.extrai_nunota(res.json())
         else:
             logger.error("Erro ao lançar pedido #%s. %s",dados_cabecalho.get('AD_MKP_NUMPED'),res.text)
-            print(f"Erro ao lançar pedido #{dados_cabecalho.get('AD_MKP_NUMPED')}. {res.text}")
             return False
 
     @token_snk
@@ -296,6 +321,11 @@ class Pedido:
             self,
             nunota:int
         ) -> bool:
+        """
+        Confirma um pedido de venda.
+            :param nunota: número único do pedido de venda
+            :return bool: status da operação
+        """        
         
         url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
         if not url:
@@ -322,7 +352,6 @@ class Pedido:
             return True
         if res.status_code in (200,201) and res.json().get('status')=='0' and res.json().get('statusMessage') == f"A nota {nunota} já foi confirmada.":
             return True        
-        print(f"Erro ao confirmar pedido. Nunota {nunota}. {res.text}")
         logger.error("Erro ao confirmar pedido. Nunota %s. %s",nunota,res.text)
         return False
 
@@ -333,10 +362,16 @@ class Pedido:
             nunota:int,
             dt_fatur:str=None
         ) -> tuple[bool,int]:
+        """
+        Fatura um pedido de venda.
+            :param nunota: número único do pedido de venda
+            :param dt_fatur: data de faturamento
+            :return bool: status da operação
+            :return int: número único da nota de venda gerada
+        """        
         
         url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, None
         
@@ -345,12 +380,10 @@ class Pedido:
         if not all([top_faturamento,serie_nf]):
             erro = f"Parâmetros da TOP de faturamento ou série da NF não encontados"
             logger.error(erro)
-            print(erro)
             return False, None
 
         data_faturamento = datetime.strptime(dt_fatur,'%Y-%m-%d').strftime('%d/%m/%Y') if dt_fatur else datetime.now().strftime('%d/%m/%Y')
         if not data_faturamento:
-            print("Data de faturamento não informada.")
             logger.error("Data de faturamento não informada.")
             return False, None
 
@@ -390,7 +423,6 @@ class Pedido:
         if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
             return True, int(res.json().get('responseBody').get('notas').get('nota').get('$'))
         else:
-            print(f"Erro ao faturar pedido. Nunota {nunota}. {res.text}")
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
@@ -401,10 +433,15 @@ class Pedido:
             nunota:int,
             payload:list[dict]
         ) -> bool:
+        """
+        Atualiza o local de estoque dos itens de um pedido de venda
+            :param nunota: número único do pedido de venda
+            :param payload: dados dos itens a serem atualizados
+            :return bool: status da operação
+        """        
         
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
         
@@ -431,7 +468,6 @@ class Pedido:
         else:
             msg = f"Erro ao atualizar local no pedido {nunota}. {res.text}"
             logger.error(msg)
-            print(msg)
             return False 
 
     @token_snk
@@ -439,10 +475,14 @@ class Pedido:
             self,
             nunota:int
         ) -> bool:
+        """
+        Exclui um pedido de venda
+            :param nunota: número único do pedido de venda
+            :return bool: status da operação            
+        """
         
         url = os.getenv('SANKHYA_URL_DELETE')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, None
 
@@ -464,7 +504,6 @@ class Pedido:
             return True
         else:
             logger.error("Erro ao excluir pedido. %s",res.json())
-            print(f"Erro ao excluir pedido. {res.json()}")
             return False
 
 class Itens(Pedido):
@@ -485,15 +524,19 @@ class Itens(Pedido):
             nunota:int=None,
             pedido_ecommerce:str=None
         ) -> dict:
+        """
+        Busca os itens do pedido de venda.
+            :param nunota: número único do pedido de venda
+            :param pedido_ecommerce: ID do pedido de venda no E-commerce
+            :return list[dict]: lista com os dados dos itens do pedido de venda
+        """        
 
         if not any([nunota, pedido_ecommerce]):
-            print("Nenhum critério de busca informado. Informe nunota ou pedido_ecommerce.")
             logger.error("Nenhum critério de busca informado. Informe nunota ou pedido_ecommerce.")
             return False
         
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
         
@@ -547,9 +590,7 @@ class Itens(Pedido):
             return self.formatter.return_format(res.json())
         else:
             if nunota:
-                print(f"Erro ao buscar itens do pedido. Nunota {nunota}. {res.text}")      
                 logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.text)      
             if pedido_ecommerce:
-                print(f"Erro ao buscar itens do pedido. Pedido {pedido_ecommerce}. {res.text}")      
                 logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.text)      
             return False
