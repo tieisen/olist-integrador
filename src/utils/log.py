@@ -6,14 +6,28 @@ from src.utils.load_env import load_env
 load_env()
 
 def buscar_path() -> str:
-    mes_atual = datetime.now().strftime('%Y%m')
-    if not os.path.exists(f"./logs/{mes_atual}.log"):
-        os.makedirs("./logs/", exist_ok=True)
-        with open(f"./logs/{mes_atual}.log", "w") as f:
-            pass
-    return f"./logs/{mes_atual}.log"
+    """ Busca o caminho do log atual ou cria um novo caso não exista """
 
-def set_logger(name:str) -> logging:   
+    path_atual:str = ''
+    mes_atual:str = datetime.now().strftime('%Y%m')
+    try:
+        if not os.path.exists(f"./logs/{mes_atual}.log"):
+            os.makedirs("./logs/", exist_ok=True)
+            with open(f"./logs/{mes_atual}.log", "w") as f:
+                pass
+        path_atual = f"./logs/{mes_atual}.log"
+    except Exception as e:
+        print(f"Erro ao criar log: {e}")
+    finally:
+        pass
+    return path_atual
+
+def set_logger(name:str) -> logging:
+    """
+    Configura o logger.
+        :param name: nome da função que está sendo executada
+    """
+
     logger = logging.getLogger(name)
     logging.basicConfig(filename=buscar_path(),
                         encoding='utf-8',
