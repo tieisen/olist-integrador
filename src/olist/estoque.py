@@ -11,7 +11,11 @@ logger = set_logger(__name__)
 
 class Estoque:
 
-    def __init__(self, codemp:int=None, empresa_id:int=None):  
+    def __init__(
+            self,
+            codemp:int=None,
+            empresa_id:int=None
+        ):  
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.token = None
@@ -22,11 +26,16 @@ class Estoque:
     async def buscar(
             self,
             id:int=None,
-            lista_produtos:list=None
-        ) -> bool:
+            lista_produtos:list[int]=None
+        ) -> list[dict]:
+        """
+        Busca estoque atual dos produtos
+            :param id: ID do produto (Olist)
+            :param lista_produtos: lista de IDs dos produtos
+            :return list[dict]: lista de dicionários com os dados de estoque dos produtos
+        """        
         
         if not any([id,lista_produtos]):
-            print("Produto não informado.")
             logger.error("Produto não informado.")
             return False
 
@@ -46,7 +55,6 @@ class Estoque:
             if res.status_code == 200:
                 result.append(res.json())                
             else:                      
-                print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} cod {id}")
                 logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
                 return result            
 
@@ -66,7 +74,6 @@ class Estoque:
                 if res.status_code == 200:
                     result.append(res.json())
                 else: 
-                    print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} cod {id}")                     
                     logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
                     return result
         
@@ -78,10 +85,16 @@ class Estoque:
             id:int=None,
             data:dict=None,
             lista_dados:list=None
-        ) -> list:
+        ) -> list[dict]:
+        """
+        Atualiza o estoque do produto no Olist
+            :param id: ID do produto (Olist)
+            :param data: dicionário com os dados do estoque atualizado
+            :param lista_dados: lista de dicionários com os dados do estoque atualizado
+            :return list[dict]: lista de dicionários com os dados de confirmação da atualização de estoque
+        """
         
         if not all([id,data]) and not lista_dados:
-            print("Dados não informados.")
             logger.error("Dados não informados.")
             return False
 
@@ -97,7 +110,6 @@ class Estoque:
             if res.status_code == 200:
                 data['sucesso'] = True
             else:
-                print(f"Erro {res.status_code}: {res.json()} cod {id}")
                 logger.error("Erro %s: %s cod %s", res.status_code, res.json(), id)
                 data['sucesso'] = False
             return data
@@ -112,7 +124,6 @@ class Estoque:
                 id_produto, payload = parser.to_olist(dados.get('ajuste_estoque'))
                 if not all([id_produto, payload]):
                     dados['sucesso'] = False
-                    print(f"Erro ao preparar dados para o produto cod {dados['ajuste_estoque'].get('id')}")
                     logger.error("Erro ao preparar dados para o produto cod %s", dados['ajuste_estoque'].get('id'))
                     continue
 
@@ -129,6 +140,5 @@ class Estoque:
                     dados['sucesso'] = True
                 else:
                     dados['sucesso'] = False
-                    print(f"Erro {res.status_code}: cod {id_produto}")
                     logger.error("Erro %s: cod %s", res.status_code, id_produto)
             return lista_dados
