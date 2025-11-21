@@ -13,7 +13,12 @@ class Transferencia:
         self.dados_empresa = None
 
     @interno
-    def cabecalho(self):
+    def cabecalho(self) -> dict:
+        """
+        Cria o cabeçalho da nota de transferência.
+            :return dict: cabeçalho da nota de transferência
+        """
+
         cabecalho:dict={}
         try:
             cabecalho = {
@@ -42,10 +47,17 @@ class Transferencia:
     @interno
     def itens(
             self,
-            itens_transferencia:list,
+            itens_transferencia:list[dict],
             nunota:int=None,        
-            itens_transferidos:list=None
+            itens_transferidos:list[dict]=None
         ) -> list[dict]:
+        """
+        Cria os itens da nota de transferência.
+            :param itens_transferencia: lista com os itens a serem lançados na nota de transferência
+            :param nunota: número único da nota de transferência
+            :param itens_transferidos: lista com os itens já lançados na nota de transferência
+            :return list[dict]: lista com os itens da nota de transferência
+        """
 
         dados_item = {}
         res = []
@@ -119,6 +131,15 @@ class Transferencia:
             itens_transferencia:list=None,
             itens_transferidos:list=None
         ) -> tuple[dict,list[dict]]:
+        """
+        Cria o cabeçalho e os itens da nota de transferência.
+            :param objeto: objeto a ser lançado na nota de transferência (cabecalho, item ou nota)
+            :param nunota: número único da nota de transferência
+            :param itens_transferencia: lista com os itens a serem lançados na nota de transferência
+            :param itens_transferidos: lista com os itens já lançados na nota de transferência
+            :return dict: cabeçalho da nota de transferência
+            :return list[dict]: lista com os itens da nota de transferência
+        """
 
         dados_cabecalho = {}
         dados_itens = []        
