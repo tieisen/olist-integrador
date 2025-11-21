@@ -14,6 +14,12 @@ class Empresa:
             id:int=None,
             codemp:int=None
         ) -> list[dict]:
+        """
+        Busca dados da empresa.
+            :param id: id da empresa
+            :param codemp: código da empresa
+            :return list[dict]: lista com os dados da empresa
+        """
 
         dados_empresas:list[dict]=[]
         dados_empresas = await empresa.buscar(id=id,
