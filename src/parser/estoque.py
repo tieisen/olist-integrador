@@ -10,7 +10,16 @@ class Estoque:
     def __init__(self):
         pass
 
-    def to_olist(self, dados_estoque:dict) -> tuple[int,dict]:
+    def to_olist(
+            self,
+            dados_estoque:dict
+        ) -> tuple[int,dict]:
+        """
+        Converte os dados da movimentação de estoque no formato da API do Olist.
+            :param dados_estoque: dados da movimentação de estoque
+            :return int: ID do produto no Olist
+            :return dict: dicionário com os dados do estoque do produto
+        """        
 
         int_res:int=None
         dict_res:dict={}        
@@ -42,7 +51,5 @@ class Estoque:
                 pass
         except Exception as e:
             logger.error(e)
-            print(e)
         finally:
-            tuple_res = (int_res,dict_res)
-            return tuple_res
+            return int_res,dict_res
