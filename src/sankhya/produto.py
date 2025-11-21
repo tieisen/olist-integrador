@@ -13,14 +13,14 @@ logger = set_logger(__name__)
 class Produto:
 
     def __init__(self, codemp:int, empresa_id:int=None) -> None:
-        self.token = None
-        self.codemp = codemp
-        self.empresa_id = empresa_id
+        self.token:str = None
+        self.codemp:int = codemp
+        self.empresa_id:int = empresa_id
         self.formatter = Formatter()
         self.dados_empresa:dict = {}
-        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
-        self.tabela = os.getenv('SANKHYA_TABELA_PRODUTO')
-        self.campos_atualiza_snk = [ "ID", "IDPRODPAI", "ATIVO" ]
+        self.req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP',1.5))
+        self.tabela:str = os.getenv('SANKHYA_TABELA_PRODUTO')
+        self.campos_atualiza_snk:list[str] = [ "ID", "IDPRODPAI", "ATIVO" ]
 
     @token_snk
     @carrega_dados_empresa
@@ -29,15 +29,18 @@ class Produto:
             codprod:int=None,
             idprod:int=None
         ) -> dict:
+        """
+        Busca os dados do produto no Sankhya.
+            :param codprod: Código do produto no Sankhya.
+            :param idprod: ID do produto no Olist.
+        """
 
         if not any([codprod, idprod]):
             logger.error("Nenhum critério de busca fornecido. Deve ser informado 'codprod' ou 'idprod'.")
-            print("Nenhum critério de busca fornecido. Deve ser informado 'codprod' ou 'idprod'.")
             return False
 
         url = os.getenv('SANKHYA_URL_DBEXPLORER')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False  
 
@@ -64,17 +67,19 @@ class Produto:
                 return []
         else:
             if codprod:
-                logger.error("Erro ao buscar produto. Cód. %s. %s",codprod,res.text)
-                print(f"Erro ao buscar produto. Cód. {codprod}. {res.text}")
+                logger.error("Erro ao buscar produto. Cód. %s. %s",codprod,res.text)                
             if idprod:
-                logger.error("Erro ao buscar produto. ID %s. %s",idprod,res.text)
-                print(f"Erro ao buscar produto. ID. {idprod}. {res.text}")
+                logger.error("Erro ao buscar produto. ID %s. %s",idprod,res.text)                
             return False
 
     def preparar_dados(
             self,
             payload:dict
-        ):
+        ) -> dict:
+        """
+        Prepara os dados para atualização do produto no Sankhya.
+            :param payload: Dicionário com os dados a serem atualizados no Sankhya.
+        """        
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
             return False
@@ -90,15 +95,17 @@ class Produto:
             codprod:int,
             payload:dict
         ) -> bool:
-
+        """
+        Atualiza os dados do produto no Sankhya.
+            :param codprod: Código do produto no Sankhya.
+            :param payload: Dicionário com os dados a serem atualizados no Sankhya.
+        """
         if not isinstance(payload, dict):
             logger.error("O payload deve ser um dicionário.")
-            print("O payload deve ser um dicionário.")
             return False
 
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
         
@@ -130,24 +137,22 @@ class Produto:
             return True
         else:
             logger.error("Erro ao atualizar produto. Cód. %s. %s",codprod,res.text)
-            print(f"Erro ao atualizar produto. Cód. {codprod}. {res.text}")
             return False        
 
     @token_snk
     @carrega_dados_empresa
     async def buscar_alteracoes(self) -> dict:
-        
+        """ Busca a lista de alterações nos cadastros de produtos integrados. """        
+
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             erro = f"Parâmetro da URL não encontrado"
-            print(erro)
             logger.error(erro)
             return False
         
         tabela = os.getenv('SANKHYA_TABELA_RASTRO_PRODUTO')
         if not tabela:
             erro = f"Parâmetro da tabela de rastro de produto não encontrado"
-            print(erro)
             logger.error(erro)
             return False
 
@@ -190,7 +195,6 @@ class Produto:
                 json=payload)
             
             if res.status_code != 200:
-                print(f"Erro ao buscar produtos com alterações. {res.text}")
                 logger.error("Erro ao buscar produtos com alterações. %s",res.text)
                 return False
             
@@ -210,22 +214,24 @@ class Produto:
             codprod:int=None,
             lista_produtos:list=None
         ) -> bool:
+        """
+        Remove os produtos atualizados da fila de atualização.
+            :param codprod: Código do produto no Sankhya.
+            :param lista_produtos: Lista dos códigos de produto.
+        """
 
         if not any([codprod, lista_produtos]):
-            print("Código do produto não informado ou lista de produtos vazia")
             logger.error("Código do produto não informado ou lista de produtos vazia")
             return False
 
         url = os.getenv('SANKHYA_URL_DELETE')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
         tabela = os.getenv('SANKHYA_TABELA_RASTRO_PRODUTO')
         if not tabela:
             erro = f"Parâmetro da tabela de rastro de produto não encontrado"
-            print(erro)
             logger.error(erro)
             return False          
         
@@ -245,7 +251,6 @@ class Produto:
                             filter.append({"CODPROD": f"{aux.get('codprod')}","CODEMP": f"{self.dados_empresa.get('snk_codemp_fornecedor')}"})
                     except:
                         logger.error("Erro ao extrair dados do objeto sqlalchemy.")
-                        print("Erro ao extrair dados do objeto sqlalchemy.")
                         return False
 
         res = requests.get(
@@ -264,5 +269,4 @@ class Produto:
             return True
         else:
             logger.error("Erro ao remover alterações pendentes. %s",res.json())
-            print(f"Erro ao remover alterações pendentes. {res.json()}")
             return False
