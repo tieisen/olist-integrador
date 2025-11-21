@@ -10,16 +10,20 @@ class Conferencia:
     def __init__(self, codemp:int):
         self.codemp = codemp
         
-    def to_sankhya_itens(self, nuconf:int=None, dados_olist:list=None) -> list:
-        new_dados_sankhya = []
-
-        if not dados_olist or not nuconf:
-            print("Dados não informados.")
-            logger.error("Dados não informados.")
-            return new_dados_sankhya
+    def to_sankhya_itens(
+            self,
+            nuconf:int,
+            dados_olist:list
+        ) -> list[dict]:
+        """
+        Converte os dados dos pedidos no formato da API do Sankhya.
+            :param nuconf: número da conferência
+            :param dados_olist: lista de pedidos da API do Olist
+            :return list[dict]: lista de dicionários com as dados dos itens da conferência
+        """        
         
+        new_dados_sankhya:list[dict] = []        
         produto = Produto(self.codemp)
-
         seq = 0
         for item in dados_olist:
             dados_produto = asyncio.run(produto.buscar(codprod=item.get('codigo')))
