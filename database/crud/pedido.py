@@ -275,15 +275,18 @@ async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
     async with AsyncSessionLocal() as session:
         if ecommerce_id:
             result = await session.execute(
-                select(Pedido).where(Pedido.ecommerce_id == ecommerce_id,
-                                     Pedido.nota_.has(Nota.baixa_estoque_ecommerce.is_(False))).order_by(Pedido.num_pedido)
+                select(Pedido)
+                .where(Pedido.ecommerce_id == ecommerce_id,
+                       Pedido.nota_.any(Nota.baixa_estoque_ecommerce.is_(False)))
+                .order_by(Pedido.num_pedido)
             )
         
         if nunota_nota:
             result = await session.execute(
-                select(Pedido).where(Pedido.ecommerce_id == ecommerce_id,
-                                     Pedido.nota_.has(Nota.nunota == nunota_nota,
-                                                      Nota.baixa_estoque_ecommerce.is_(False))).order_by(Pedido.num_pedido)
+                select(Pedido)
+                .where(Pedido.nota_.any(Nota.nunota == nunota_nota),
+                       Pedido.nota_.any(Nota.baixa_estoque_ecommerce.is_(False)))
+                .order_by(Pedido.num_pedido)
             )
             
         pedidos = result.scalars().all()
