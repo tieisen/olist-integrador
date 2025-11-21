@@ -31,7 +31,10 @@ class Autenticacao:
     @interno
     @carrega_dados_empresa
     async def solicitar_token(self) -> dict:
-        """ Solicita um novo token. """
+        """ 
+        Solicita um novo token. 
+            :return dict: dicionário de retorno da API de autenticação.
+        """
 
         self.formatar_header()
 
@@ -41,7 +44,6 @@ class Autenticacao:
         
         if res.status_code != 200:
             logger.error("Erro %s ao obter token: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code} ao obter token: {res.text}")
             return {}
         
         if not res.json().get('bearerToken'):
@@ -56,6 +58,7 @@ class Autenticacao:
         """
         Salva o token no banco de dados.
             :param dados_token: dicionário de retorno da API de autenticação.
+            :return bool: status da operação.
         """
 
         try:
@@ -78,7 +81,10 @@ class Autenticacao:
     @interno
     @carrega_dados_empresa
     async def buscar_token_salvo(self) -> str:
-        """ Busca o último token salvo no banco de dados. """        
+        """
+        Busca o último token salvo no banco de dados.
+            :return str: token descriptografado.
+        """
         dados_token = await crud.buscar(empresa_id=self.dados_empresa.get('id'))
 
         if not dados_token:
@@ -94,7 +100,11 @@ class Autenticacao:
     @interno
     @carrega_dados_empresa
     async def login(self) -> str:
-        """ Executa rotina de autenticação. """
+        """
+        Executa rotina de autenticação.
+            :return str: token descriptografado.        
+        """
+
         token = await self.solicitar_token()
         if not token:
             return ''
@@ -107,7 +117,10 @@ class Autenticacao:
 
     @carrega_dados_empresa
     async def autenticar(self) -> str:
-        """ Busca último token salvo ou executa a rotina de autenticação. """
+        """
+        Busca último token salvo ou executa a rotina de autenticação.
+            :return str: token descriptografado.
+        """
         try:
             token = await self.buscar_token_salvo()
             if token:
