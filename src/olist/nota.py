@@ -26,11 +26,17 @@ class Nota:
             id:int=None,
             numero:int=None,
             cod_pedido:str=None
-        ) -> bool:
+        ) -> dict:
+        """
+        Busca os dados da nota fiscal.
+            :param id: ID da NF (Olist)
+            :param numero: número da NF (Olist)
+            :param cod_pedido: Código do pedido (E-commerce)
+            :return dict: dicionários com os dados da NF
+        """        
 
         if not any([id, cod_pedido, numero]):
             logger.error("Nota não informada.")
-            print("Nota não informada.")
             return False
 
         if id:
@@ -56,7 +62,6 @@ class Nota:
 
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         if res.status_code == 200 and id:
@@ -78,13 +83,22 @@ class Nota:
         if nota:
             return nota
         else:
-            print("Nota cancelada")
             logger.error("Nota cancelada")
             return False
     
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar_canceladas(self,data:str=None,tipo:str='S') -> list[dict]:
+    async def buscar_canceladas(
+            self,
+            data:str=None,
+            tipo:str='S'
+        ) -> list[dict]:
+        """
+        Busca os dados das notas fiscais canceladas.
+            :param data: data da emissão da NF
+            :param tipo: tipo de movimento (Saída | Entrada)
+            :return list[dict]: lista de dicionários com os dados resumidos das NFs
+        """          
 
         if not data:
             data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
@@ -104,7 +118,6 @@ class Nota:
 
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         if not res.json().get('itens'):
@@ -114,7 +127,15 @@ class Nota:
     
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar_devolucoes(self,data:str=None) -> list[dict]:
+    async def buscar_devolucoes(
+            self,
+            data:str=None
+        ) -> list[dict]:
+        """
+        Busca os dados das notas fiscais de devolução.
+            :param data: data da emissão da NFD
+            :return list[dict]: lista de dicionários com os dados resumidos das NFDs
+        """
 
         if not data:
             data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
@@ -134,7 +155,6 @@ class Nota:
 
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         if not res.json().get('itens'):
@@ -148,12 +168,24 @@ class Nota:
             self,
             id:int=None,
             cod_pedido:str=None
-        ) -> bool:
+        ) -> dict:
+        """
+        Busca os dados e o XML da nota fiscal.
+            :param id: ID da NF (Olist)
+            :param cod_pedido: Código do pedido (E-commerce)
+            :return dict: dicionários com os dados da NF
+        """
 
         def desmembra_xml(
                 dados_nota:dict,
                 xml:str
-            ):
+            ) -> dict:
+            """
+            Extrai dados de controle de lotes e chave de acesso do XML da NF.
+                :param dados_nota: dicionário com os dados da NF
+                :param xml: XML completo da NF
+                :return dict: dicionários com os dados atualizados da NF
+            """            
                         
             from lxml import etree
             ns = {'nfe': 'http://www.portalfiscal.inf.br/nfe'}
@@ -193,10 +225,8 @@ class Nota:
 
             return dados_nota
 
-
         if not any([id, cod_pedido]):
             logger.error("Nota não informada.")
-            print("Nota não informada.")
             return False
         
         if id:
@@ -219,7 +249,6 @@ class Nota:
         nota = None
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         if res.status_code == 200 and id and res.json().get('itens'):
@@ -248,7 +277,6 @@ class Nota:
                 }
             )
             if res.status_code != 200:
-                print(f"Erro {res.status_code} ao buscar XML da nota: {res.text} cod {nota.get('numero')}")            
                 logger.error("Erro %s ao buscar XML da nota: %s cod %s", res.status_code, res.text, nota.get('numero'))            
                 return False
 
@@ -256,7 +284,6 @@ class Nota:
                 return desmembra_xml(dados_nota=nota, xml=res.json().get('xmlNfe'))          
             
         else:
-            print("Nota cancelada")
             logger.error("Nota cancelada")
             return False
 
@@ -266,6 +293,11 @@ class Nota:
             self,
             id:int
         ) -> dict:
+        """
+        Autoriza NFe na Sefaz
+            :param id: ID da NFe
+            :return dict: dicionário com os dados de confirmação da NF autorizada
+        """
         
         url = self.endpoint+f"/{id}/emitir"
         if not url:
@@ -298,8 +330,15 @@ class Nota:
             serie:str=None,
             numero:str=None,
             id:int=None
-        ) -> bool:
-        
+        ) -> dict:
+        """
+        Busca o registro de contas a receber gerado pela NF
+            :param serie: série da NF
+            :param numero: número da NF
+            :param id: ID da NF
+            :return dict: dicionário com os dados do contas a receber
+        """
+
         if id:
             url = self.endpoint_fin+f"/{id}"
         elif all([serie, numero]):
@@ -333,6 +372,13 @@ class Nota:
             id:int,
             valor:float
         ) -> bool:
+        """
+        Realiza o recebimento/baixa do registro de contas a receber gerado pela NF
+            :param id: ID do registro de contas a receber
+            :param valor: valor do recebimento
+            :return dict: dicionário com os dados do contas a receber
+            :return bool: status da operação            
+        """        
 
         url = self.endpoint_fin+f"/{id}/baixar"
         if not url:
@@ -370,7 +416,6 @@ class Nota:
         # Financeiro da nota já foi baixado (409)
         if res.status_code not in (409,204):
             logger.error("Erro %s: %s fin %s", res.status_code, res.text, id)            
-            print(f"Erro {res.status_code}: {res.text}")
             return False       
 
         return True        
