@@ -31,7 +31,15 @@ class Nota:
             ]
 
     @interno
-    def extrai_nunota(self,payload:dict=None):
+    def extrai_nunota(
+            self,
+            payload:dict=None
+        ) -> int:
+        """
+        Extrai o número único da nota de venda.
+            :param payload: retorno da API do Sankhya em JSON
+            :return int: número único do nota de venda
+        """        
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
     @token_snk
@@ -44,15 +52,23 @@ class Nota:
             offset:int=0,
             itens:bool=False
         ) -> dict:
+        """
+        Busca uma nota de venda.
+            :param nunota: número único da nota de venda (Sankhya)
+            :param id_olist: ID do pedido de venda (Olist)
+            :param codpedido: código do pedido de venda no E-commerce (Olist)
+            :param pendentes: indica se é busca das notas pendentes de confirmação
+            :param offset: número do offset da busca (quando há paginação)
+            :param itens: indica se os itens também devem ser buscados ou somente o cabeçalho do pedido
+            :return dict: dados da nota de venda
+        """
 
         if not any([nunota, id_olist, codpedido, pendentes]):
-            print("Nenhum critério de busca informado. Nenhum dado será retornado.")
             logger.error("Nenhum critério de busca informado. Nenhum dado será retornado.")
             return False
         
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS') 
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -143,16 +159,12 @@ class Nota:
             return dados_nota  
         else:
             if nunota:
-                print(f"Erro ao buscar nota. Nunota {nunota}. {res.json()}")
                 logger.error("Erro ao buscar nota. Nunota %s. %s",nunota,res.json())
             if id_olist:
-                print(f"Erro ao buscar nota. ID {id_olist}. {res.json()}")
                 logger.error("Erro ao buscar nota. ID %s. %s",id_olist,res.json())
             if codpedido:
-                print(f"Erro ao buscar nota. Pedido {codpedido}. {res.json()}")
                 logger.error("Erro ao buscar nota. Pedido %s. %s",codpedido,res.json())
             if pendentes:
-                print(f"Erro ao buscar notas pendentes. {res.json()}")
                 logger.error("Erro ao buscar notas pendentes. %s",res.json())
             return False
 
@@ -161,10 +173,14 @@ class Nota:
             self,
             nunota:int
         ) -> bool:
+        """
+        Confirma uma nota de venda.
+            :param nunota: número único da nota de venda
+            :return bool: status da operação
+        """               
         
         url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False  
 
@@ -189,7 +205,6 @@ class Nota:
             if 'confirmada' in res.json().get('statusMessage'):
                 print(res.json().get('statusMessage'))
                 return None
-            logger.error("Erro ao confirmar nota. Nunota %s. %s",nunota,res.json())
             print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
             return False
 
@@ -201,15 +216,21 @@ class Nota:
             numero:str=None,
             id_nota:int=None
         ) -> bool:
+        """
+        Informa dados da NFe na nota de venda do Sankhya.
+            :param nunota: número único da nota de venda
+            :param chavenfe: chave NFe
+            :param numero: número da nota fiscal
+            :param id_nota: ID da nota fiscal no Olist
+            :return bool: status da operação
+        """
         
         if not all([nunota, chavenfe, numero, id_nota]):
-            print("Número único da nota, chave NFe, número e ID da nota não informados.")
             logger.error("Número único da nota, chave NFe, número e ID da nota não informados.")
             return False
 
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -247,7 +268,6 @@ class Nota:
             return True
         else:
             logger.error("Erro informar dados da NFe na nota de venda do Sankhya. Nunota %s. Nota %s. %s",nunota,numero,res.json())
-            print(f"Erro informar dados da NFe na nota de venda do Sankhya. Nunota {nunota}. Nota {numero}. {res.json()}")
             return False
 
     @token_snk
@@ -257,10 +277,15 @@ class Nota:
             nunota:int,
             itens:list
         ) -> int:
-
+        """
+        Devolve um pedido de venda.
+            :param nunota: número único da nota de venda
+            :param itens: itens da nota de venda
+            :return int: número único da nota de venda gerada
+        """
+        
         url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -294,7 +319,6 @@ class Nota:
         if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
             return int(res.json().get('responseBody').get('notas').get('nota').get('$'))
         else:
-            print(f"Erro ao devolver pedidos. Nunota {nunota}. {res.text}")
             logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
             return False
 
@@ -304,6 +328,12 @@ class Nota:
             nunota:int,
             observacao:str
         ) -> bool:
+        """
+        Altera a observação de uma nota de devolução.
+            :param nunota: número único da nota de devolução
+            :param observacao: observação da nota de devolução
+            :return bool: status da operação
+        """
 
         url = os.getenv('SANKHYA_URL_SAVE')
         if not url:
@@ -338,7 +368,6 @@ class Nota:
         if res.status_code == 200 and res.json().get('status') == '1':
             return True
         else:
-            print(f"Erro ao informar campo observacao. Nunota {nunota}. {res.text}")
             logger.error("Erro ao informar campo observacao. Nunota %s. %s",nunota,res.text)
             return False
 
@@ -347,10 +376,14 @@ class Nota:
             self,
             nunota:int
         ) -> bool:
+        """
+        Exclui uma nota de venda.
+            :param nunota: número único da nota de venda
+            :return bool: status da operação
+        """        
         
         url = os.getenv('SANKHYA_URL_DELETE')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, None
 
@@ -372,7 +405,6 @@ class Nota:
             return True
         else:
             logger.error("Erro ao excluir pedido. %s",res.json())
-            print(f"Erro ao excluir pedido. {res.json()}")
             return False
 
 class Itens(Nota):
@@ -394,10 +426,14 @@ class Itens(Nota):
             self,
             nunota:int
         ) -> dict:
+        """
+        Busca os itens da nota de venda.
+            :param nunota: número único da nota de venda
+            :return list[dict]: lista com os dados dos itens da nota de venda
+        """         
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
         
@@ -436,6 +472,5 @@ class Itens(Nota):
         if res.status_code in (200,201) and res.json().get('status')=='1':            
             return self.formatter.return_format(res.json())
         else:
-            print(f"Erro ao buscar itens do pedido. Nunota {nunota}. {res.json()}")
             logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
             return False
