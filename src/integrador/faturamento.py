@@ -323,19 +323,14 @@ class Faturamento:
             if ack is False:
                 msg = f"Erro ao confirmar nota {nunota_nota}"
                 raise Exception(msg)
-            if ack is None:
-                print(f"Nota de venda {nunota_nota} já foi confirmada")
-            if ack:
-                pass
+            else:
+                await crudNota.atualizar(nunota=nunota_nota,dh_confirmacao=datetime.now())
 
             # Realiza baixa de estoque do local e-commerce
             ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
             if not ack.get('success'):
                 raise Exception(ack.get('__exception__'))
-
-            # Atualiza base de dados
-            await crudNota.atualizar(nunota_pedido=nunota,
-                                     dh_confirmacao=datetime.now())
+            
             print(f"Faturamento do pedido {nunota} concluído!")
             return {"success": True}
         except Exception as e:
@@ -490,6 +485,7 @@ class Faturamento:
             print(f"Baixa de estoque do ecommerce concluída!")
             return {"success": True, "__exception__": None}
         except Exception as e:
+            logger.error("Erro ao baixar estoque do ecommerce: %s",str(e))
             return {"success": False, "__exception__": str(e)}
 
     @contexto
