@@ -24,11 +24,16 @@ class Produto:
             self,
             id:int=None,
             sku:int=None
-        ) -> bool:
+        ) -> dict:
+        """
+        Busca os dados do produto no Olist.
+            :param id: ID do produto (Olist)
+            :param sku: Código do produto (Sankhya)
+            :return dict: dicionário com os dados do produto
+        """
 
         if not any([id, sku]):
             logger.error("Produto não informado.")
-            print("Produto não informado.")
             return False
         
         if id:
@@ -38,7 +43,6 @@ class Produto:
             url = self.endpoint+f"/?codigo={sku}"
         
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False  
 
@@ -70,24 +74,29 @@ class Produto:
             return res.json()
         else:
             if id and not sku:
-                print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} cod {id}")
                 logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
             if sku:
-                print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} sku {sku}")
                 logger.error("Erro %s: %s sku %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), sku)
             return False
 
     @token_olist
-    async def incluir(self,data:dict) -> tuple[bool,dict]:
+    async def incluir(
+            self,
+            data:dict
+        ) -> tuple[bool,dict]:
+        """
+        Inclui um novo produto no Olist.
+            :param data: dicionário com os dados do produto
+            :return bool: status da operação
+            :return dict: dicionário com os dados de confirmação do cadastro
+        """        
         
         if not isinstance(data, dict):
             logger.error("Dados do produto em formato inválido.")
-            print("Dados do produto em formato inválido.")
             return False, {}
         
         url = self.endpoint
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, {}
 
@@ -109,7 +118,6 @@ class Produto:
         else:
             erro = f"Erro {res.status_code}: {res.json()} cod {data.get('sku')}"
             logger.error(erro)
-            print(erro)
             return False, {erro}
 
     @token_olist
@@ -119,18 +127,24 @@ class Produto:
             idprodpai:int=None,
             data:dict=None
         ) -> bool:
+        """
+        Atualiza um produto no Olist.
+            :param id: ID do produto (Olist)
+            :param idprodpai: ID do produto pai, se variação (Olist)
+            :param data: dicionário com os dados do produto
+            :return bool: status da operação
+        """           
 
         if not all([id, data]):
             logger.error("Dados do produto e ID não informados.")
-            print("Dados do produto e ID não informados.")
             return False
 
         url = self.endpoint+f"/{idprodpai}/variacoes/{id}" if idprodpai else self.endpoint+f"/{id}"
 
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
-            return False 
+            return False
+        
         res = requests.put(url=url,
                            headers={
                                "Authorization":f"Bearer {self.token}",
@@ -143,17 +157,19 @@ class Produto:
             return True
         if res.status_code in [404,409]:
             logger.warning("Erro %s: %s ID %s", res.status_code, res.json(), id)
-            print(f"Erro {res.status_code}: {res.json()} ID {id}")
             logger.info(json.dumps(data))
             return True      
         else:
-            print(f"Erro {res.status_code}: {res.json()} ID {id}")
             logger.error("Erro %s: %s ID %s", res.status_code, res.json(), id)
             logger.info(json.dumps(data))
             return False
 
     @token_olist
-    async def buscar_todos(self) -> list:
+    async def buscar_todos(self) -> list[dict]:
+        """
+        Busca os dados de todos os produtos no Olist.
+            :return list[dict]: lista de dicionários com os dados dos produtos
+        """        
 
         status = 200
         paginacao = {}
@@ -187,7 +203,12 @@ class Produto:
     async def buscar_alteracoes(
             self,
             todo_historico:bool=False
-        ) -> list:
+        ) -> list[dict]:
+        """
+        Busca lista de produtos com alteração no cadastro no último período.
+            :param todo_historico: se busca todo o histórico ou considera a janela de tempo padrão em minutos
+            :return list[dict]: lista de dicionários com os dados resumidos dos produtos alterados
+        """
         
         data_alteracao = (datetime.now()-timedelta(minutes=self.tempo_busca_alter_prod)).strftime("%Y-%m-%d %H:%M:00")
 
