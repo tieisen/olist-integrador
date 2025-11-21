@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
@@ -12,6 +13,7 @@ class Separacao:
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.token = None
+        self.req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
     @token_olist
@@ -28,6 +30,7 @@ class Separacao:
         status = True
         lista = []
         for u in url:
+            time.sleep(self.req_time_sleep)
             res = requests.get(
                 url = u,
                 headers = {
