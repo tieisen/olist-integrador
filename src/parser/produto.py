@@ -12,23 +12,37 @@ class Produto:
     def __init__(self):
         self.formatter = Formatter()        
 
-    def parse_ncm(self, ncm:str) -> str:
+    def parse_ncm(
+            self,
+            ncm:str
+        ) -> str:
+        """
+        Adiciona máscara no NCM
+            :param ncm: código do NCM
+            :return str: código do NCM com máscara
+        """
         if not ncm:
             return None
         ncm = re.sub(r"(\d{4})(\d{2})(\d{2})", r"\1.\2.\3", str(ncm))
         if len(ncm) != 10:
             logger.error(f"NCM inválido: {ncm}")
-            print(f"NCM inválido: {ncm}")
             return None
         return ncm
 
-    def parse_cest(self, cest:str) -> str:
+    def parse_cest(
+            self,
+            cest:str
+        ) -> str:
+        """
+        Adiciona máscara no CEST
+            :param cest: código do CEST
+            :return str: código do CEST com máscara
+        """        
         if not cest:
             return None
         cest = re.sub(r"(\d{2})(\d{3})(\d{2})", r"\1.\2.\3", str(cest))
         if len(cest) != 9:
             logger.error(f"CEST inválido: {cest}")
-            print(f"CEST inválido: {cest}")
             return None
         return cest
 
@@ -38,6 +52,14 @@ class Produto:
             data_sankhya:dict=None,
             type:str='update'
         ) -> tuple[list,dict]:
+        """
+        Valida alterações nos dados do produto e cria dicionário no formato da API do Sankhya.
+            :param data_olist: dados do produto da API do Olist
+            :param data_sankhya: dados do produto da API do Sankhya
+            :param type: tipo de operação (update, insert ou delete)
+            :return list: lista de alterações a serem aplicadas no produto            
+            :return dict: dicionário com os dados do produto
+        """
 
         if not type or type not in ['update', 'insert', 'delete']:
             logger.error(f"Tipo de operação inválido: {type}")
@@ -51,7 +73,6 @@ class Produto:
 
             if not all([data_olist,data_sankhya]):
                 logger.error("Dados insuficientes para atualização.")
-                print("Dados insuficientes para atualização.")
                 return [], {}
 
             if str(data_sankhya['id']).strip() != str(data_olist.get('id')).strip():
@@ -95,7 +116,21 @@ class Produto:
 
         return updates, new_data
 
-    def to_olist(self, data_sankhya:dict, data_olist:dict=None, dados_empresa:dict=None) -> tuple[list,dict]:
+    def to_olist(
+            self,
+            data_sankhya:dict,
+            data_olist:dict=None,
+            dados_empresa:dict=None
+        ) -> tuple[list,dict]:
+        """
+        Valida alterações nos dados do produto e cria dicionário no formato da API do Olist.
+            :param data_sankhya: dados do produto da API do Sankhya
+            :param data_olist: dados do produto da API do Olist
+            :param dados_empresa: dados da empresa da API do Olist
+            :return list: lista de alterações a serem aplicadas no produto
+            :return dict: dicionário com os dados do produto
+        """
+
         updates = []
         new_data = data_olist.copy() if data_olist else None
 
