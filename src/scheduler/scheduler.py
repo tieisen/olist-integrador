@@ -73,7 +73,7 @@ async def rotina_notificacao():
         logger.exception(f"Erro ao enviar notificação: {e}")
 
 async def rotina_cache():
-    logger.info("🧹 Limpando cache antigo...")
+    logger.info("Limpando cache antigo...")
     try:
         await limpar_cache.excluir_cache()
         logger.info("Cache limpo com sucesso.")
@@ -120,9 +120,8 @@ async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
     jobs = [
-        ("sincronizar_tudo", rotina_completa, "interval", {"minutes": 10}),
-        ("sincronizar_devolucoes", rotina_devolucoes, "cron", {"hour": 19}),
-        ("notificar_erros", rotina_notificacao, "interval", {"hours": 4}),
+        ("sincronizar_tudo", rotina_completa, "interval", {"minutes": 10}),        
+        ("notificar_erros", rotina_notificacao, "interval", {"hours": 6}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
     ]
 
