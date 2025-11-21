@@ -1,9 +1,18 @@
+import os
 from fastapi import FastAPI
 from datetime import datetime
+from src.utils.load_env import load_env
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from routers import empresas, estoque, pedidos, produtos, notas, devolucoes
 from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
+load_env()
+
+api_title:str = os.getenv('API_TITLE')
+api_description:str = os.getenv('API_DESCRIPTION')
+api_version:str = os.getenv('API_VERSION')
+if not any([api_title,api_description,api_version]):
+    raise ValueError("API config not found.")
 
 async def startup_event():
     await iniciar_agendador()
@@ -19,9 +28,9 @@ async def lifespan(app: FastAPI):
     # Shutdown code
     await shutdown_event()
 
-app = FastAPI(title="Integrador Olist x Sankhya",
-              description="Integrador Olist x Sankhya",
-              version="1.0",
+app = FastAPI(title=api_title,
+              description=api_description,
+              version=api_version,
               lifespan=lifespan)    
 
 app.add_middleware(
@@ -41,7 +50,7 @@ app.include_router(devolucoes.router, prefix="/devolucoes", tags=["Devoluções"
 
 @app.get("/",include_in_schema=False)
 def read_root():
-    return {"message": "Integrador Olist x Sankhya"}
+    return {"message": f"{api_title}. Version {api_version}."}
 
 print(f"\n====================================")
 print(f"===> START AT: {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}")
