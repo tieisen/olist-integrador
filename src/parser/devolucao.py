@@ -13,6 +13,12 @@ class Devolucao:
             itens_olist:list[dict],
             itens_snk:list[dict]
         ) -> list[dict]:
+        """
+        Converte os dados dos pedidos no formato da API do Sankhya para realizar a devolução por NFD.
+            :param itens_olist: dados da nota de devolução no Olist
+            :param itens_snk: dados da nota de venda no Sankhya
+            :return list[dict]: lista de dicionários com as dados dos itens da nota
+        """        
 
         resultado:list[dict]=[]
         for item_olist in itens_olist:
