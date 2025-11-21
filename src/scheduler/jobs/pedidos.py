@@ -3,9 +3,6 @@ from database.crud import empresa, ecommerce
 from src.integrador.pedido import Pedido
 from src.integrador.separacao import Separacao
 
-# ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 15 MINUTOS
-# APÓS A ROTINA DE ESTOQUE
-
 async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
 
     retorno:dict={}

@@ -2,9 +2,6 @@ import asyncio
 from database.crud import empresa
 from src.integrador.estoque import Estoque
 
-# ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 15 MINUTOS
-# APÓS A ROTINA DE PRODUTOS E ANTES DA ROTINA DE PEDIDOS
-
 async def integrar_estoque(codemp:int=None):
     
     empresas:list[dict]=[]

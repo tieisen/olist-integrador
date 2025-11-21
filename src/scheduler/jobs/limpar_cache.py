@@ -2,8 +2,6 @@ import asyncio
 from database.crud import log, sankhya, olist
 from src.utils.decorador import contexto, log_execucao
 
-# ROTINA A SER EXECUTADA QUINZENALMENTE
-
 def retorno(ack):
     match ack:
         case True:
