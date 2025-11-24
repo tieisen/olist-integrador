@@ -22,11 +22,7 @@ class Estoque:
     
     @token_snk
     @carrega_dados_empresa
-    async def buscar(
-            self,
-            codprod:int=None,
-            lista_produtos:list[int]=None
-        ) -> dict | list[dict]:
+    async def buscar(self,codprod:int=None,lista_produtos:list[int]=None) -> dict | list[dict]:
         """
         Busca estoque atual do(s) item(ns) no Sankhya.
             :param codprod: Código do produto no Sankhya.
@@ -76,10 +72,7 @@ class Estoque:
             return False
     
     @token_snk
-    async def buscar_alteracoes(
-            self,
-            codemp:int
-        ) -> list[dict]:
+    async def buscar_alteracoes(self,codemp:int) -> list[dict]:
         """
         Busca a lista de produtos com movimentação de estoque.
             :param codemp: Código da empresa no Sankhya.
@@ -149,11 +142,7 @@ class Estoque:
     
     @token_snk
     @carrega_dados_empresa
-    async def remover_alteracoes(
-            self,
-            codprod:int=None,
-            lista_produtos:list=None
-        ) -> bool:
+    async def remover_alteracoes(self,codprod:int=None,lista_produtos:list=None) -> bool:
         """
         Remove os produtos atualizados da fila de atualização.
             :param codprod: Código do produto no Sankhya.
@@ -216,12 +205,7 @@ class Estoque:
     
     @interno
     @carrega_dados_empresa
-    async def formatar_query_busca_saldo_lote(
-            self,
-            codprod:int=None,
-            controle:str=None,
-            lista_produtos:list=None
-        ) -> str:
+    async def formatar_query_busca_saldo_lote(self,codprod:int=None,controle:str=None,lista_produtos:list=None) -> str:
         """
         Formata a query de busca de saldo de estoque por lote.
             :param codprod: Código do produto no Sankhya.
@@ -261,12 +245,7 @@ class Estoque:
         return query
 
     @token_snk
-    async def buscar_saldo_por_lote(
-            self,
-            codprod:int=None,
-            controle:str=None,
-            lista_produtos:list[dict]=None
-        ) -> list[dict]:
+    async def buscar_saldo_por_lote(self,codprod:int=None,controle:str=None,lista_produtos:list[dict]=None) -> list[dict]:
         """
         Busca saldo de estoque atual desmembrado por lote.
             :param codprod: Código do produto no Sankhya.
@@ -303,11 +282,7 @@ class Estoque:
     
     @interno
     @carrega_dados_empresa
-    async def formatar_query_busca_saldo_local(
-            self,
-            codprod:int=None,
-            lista_produtos:list[int]=None
-        ) -> str:
+    async def formatar_query_busca_saldo_local(self,codprod:int=None,lista_produtos:list[int]=None) -> str:
 
         """
         Formata a query de busca de saldo de estoque por local.
@@ -337,11 +312,7 @@ class Estoque:
         return query
     
     @token_snk
-    async def buscar_saldo_por_local(
-            self,
-            codprod:int=None,
-            lista_produtos:list[int]=None
-        ) -> dict:
+    async def buscar_saldo_por_local(self,codprod:int=None,lista_produtos:list[int]=None) -> dict:
         """
         Busca saldo de estoque atual por local.
             :param codprod: Código do produto no Sankhya.
@@ -376,10 +347,7 @@ class Estoque:
     
     @interno
     @carrega_dados_empresa
-    async def formatar_query_busca_saldo_ecommerce(
-            self,
-            lista_produtos:list[int]
-        ) -> str:
+    async def formatar_query_busca_saldo_ecommerce(self,lista_produtos:list[int]) -> str:
         """
         Formata a query de busca de saldo de estoque no local ECOMMERCE.
             :param lista_produtos: Lista de códigos de produto no Sankhya.
@@ -403,10 +371,7 @@ class Estoque:
         return query
     
     @token_snk
-    async def buscar_saldo_ecommerce_por_lote(
-            self,
-            lista_produtos:list[int]
-        ) -> list[dict]:
+    async def buscar_saldo_ecommerce_por_lote(self,lista_produtos:list[int]) -> list[dict]:
         """
         Busca saldo de estoque atual no local ECOMMERCE, desmembrado por lote.
             :param lista_produtos: Lista de códigos de produto no Sankhya.
