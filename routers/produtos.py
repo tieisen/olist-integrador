@@ -8,7 +8,7 @@ class ProdutoModel(BaseModel):
     codemp:int
 
 @router.post("/integrar")
-async def integrar(produto:ProdutoModel):
+async def integrar(produto:ProdutoModel) -> bool:
     """
     Cria o cadastro de produtos novos no Olist.
     Atualiza no Olist os dados dos produtos que tiveram alteração no cadastro do Sankhya.
