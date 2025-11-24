@@ -3,12 +3,15 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 from sqlalchemy.sql import text
 from src.utils.load_env import load_env
+from src.utils.log import set_logger
 load_env()
+logger = set_logger(__name__)
 
 DATABASE_URL = os.getenv("POSTGRES_URL")
 DB_NAME = os.getenv("DB_NAME")
 
 if not all([DATABASE_URL,DB_NAME]):
+    logger.error("DATABASE_URL e/ou DB_NAME não encontados no arquivo de ambiente")
     raise FileNotFoundError("DATABASE_URL e/ou DB_NAME não encontados no arquivo de ambiente")
 
 engine = create_async_engine(DATABASE_URL+DB_NAME, echo=False)
@@ -28,9 +31,11 @@ async def verificar_criar_banco():
         existe = result.scalar()
         if not existe:
             await conn.execute(text(f'CREATE DATABASE "{DB_NAME}"'))
-            print(f"✅ Banco '{DB_NAME}' criado com sucesso!")
+            logger.info(f"Banco '{DB_NAME}' criado com sucesso!")
+            print(f"Banco '{DB_NAME}' criado com sucesso!")
         else:
-            print(f"ℹ️ Banco '{DB_NAME}' já existe.")
+            logger.warning(f"Banco '{DB_NAME}' já existe.")
+            print(f"Banco '{DB_NAME}' já existe.")
 
     await engine_admin.dispose()
 
@@ -40,4 +45,5 @@ async def criar_tabelas():
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    print("✅ Tabelas criadas com sucesso!")
+    logger.info("Tabelas criadas com sucesso!")
+    print("Tabelas criadas com sucesso!")
