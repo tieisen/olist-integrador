@@ -21,7 +21,7 @@ class PedidoAnular(BaseModel):
     nunota:int
 
 @router.post("/integrar-lote")
-async def integrar(body:PedidoEmpresa):
+async def integrar(body:PedidoEmpresa) -> bool:
     """
     Busca os pedidos novos do Olist que estão com status Preparando Envio.
     Importa os pedidos pendentes do Olist.
@@ -38,7 +38,7 @@ async def integrar(body:PedidoEmpresa):
     return True
 
 @router.post("/integrar-loja")
-async def integrar_loja(body:PedidoLoja):
+async def integrar_loja(body:PedidoLoja) -> bool:
     """
     Busca os pedidos novos do Olist, por E-commerce, que estão com status Preparando Envio.
     Importa os pedidos pendentes do Olist.
@@ -54,7 +54,7 @@ async def integrar_loja(body:PedidoLoja):
     return True
 
 @router.post("/faturar-lote")
-async def faturar(body:PedidoEmpresa):
+async def faturar(body:PedidoEmpresa) -> bool:
     """
     Emite e autoriza as NFs dos pedidos no Olist.
     Envia os pedidos para separação no Olist.
@@ -69,7 +69,7 @@ async def faturar(body:PedidoEmpresa):
     return True
 
 @router.post("/faturar-loja")
-async def faturar_loja(body:PedidoLoja):
+async def faturar_loja(body:PedidoLoja) -> bool:
     """
     Emite e autoriza as NFs dos pedidos no Olist, por E-commerce.
     Envia os pedidos para separação no Olist.
@@ -84,7 +84,7 @@ async def faturar_loja(body:PedidoLoja):
     return True
 
 @router.post("/faturar/olist")
-async def faturar_olist(body:PedidoEmpresa):
+async def faturar_olist(body:PedidoEmpresa) -> bool:
     """
     Emite e autoriza as NFs dos pedidos no Olist.
     Envia os pedidos para separação no Olist.
@@ -96,7 +96,7 @@ async def faturar_olist(body:PedidoEmpresa):
     return True
 
 @router.post("/faturar-loja/olist")
-async def faturar_olist_loja(body:PedidoLoja):
+async def faturar_olist_loja(body:PedidoLoja) -> bool:
     """
     Emite e autoriza as NFs dos pedidos no Olist, por E-commerce.
     Envia os pedidos para separação no Olist.
@@ -108,7 +108,7 @@ async def faturar_olist_loja(body:PedidoLoja):
     return True
 
 @router.post("/faturar/snk")
-async def faturar_sankhya(body:PedidoEmpresa):
+async def faturar_sankhya(body:PedidoEmpresa) -> bool:
     """
     Cria e confirma a nota de transferência no Sankhya.
     Fatura o pedido no Sankhya.
@@ -121,7 +121,7 @@ async def faturar_sankhya(body:PedidoEmpresa):
     return True
 
 @router.post("/faturar/venda-interna")
-async def faturar_venda_interna(body:PedidoEmpresa):
+async def faturar_venda_interna(body:PedidoEmpresa) -> bool:
     """
     Cria e confirma a nota de transferência no Sankhya.
     """
@@ -132,7 +132,7 @@ async def faturar_venda_interna(body:PedidoEmpresa):
     return True
 
 @router.post("/receber")
-async def receber_pedido(body:PedidoReceber):
+async def receber_pedido(body:PedidoReceber) -> bool:
     """
     Busca um pedido específico do Olist
     """
@@ -143,7 +143,7 @@ async def receber_pedido(body:PedidoReceber):
     return True
 
 @router.post("/separacao/buscar")
-async def buscar_separacao(body:PedidoEmpresa):
+async def buscar_separacao(body:PedidoEmpresa) -> bool:
     """
     Busca as separações pendentes no Olist
     """
@@ -154,7 +154,7 @@ async def buscar_separacao(body:PedidoEmpresa):
     return True
 
 @router.post("/anular")
-async def anular_pedidos(body:PedidoAnular):
+async def anular_pedidos(body:PedidoAnular) -> bool:
     """
     Exclui pedido não faturado do Sankhya
     """
