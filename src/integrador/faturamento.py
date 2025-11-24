@@ -490,7 +490,7 @@ class Faturamento:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_olist(self,**kwargs):
+    async def integrar_olist(self,**kwargs) -> bool:
         """
         Busca os pedidos pendentes e executa a rotina para faturar os pedidos no Olist.
             :return bool: status da operação
@@ -524,7 +524,7 @@ class Faturamento:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_snk(self,**kwargs):
+    async def integrar_snk(self,**kwargs) -> bool:
         """
         Busca os pedidos pendentes e executa a rotina para faturar os pedidos no Sankhya.
             :return bool: status da operação
@@ -561,7 +561,7 @@ class Faturamento:
     @contexto
     @log_execucao
     @carrega_dados_empresa
-    async def realizar_venda_interna(self,**kwargs):
+    async def realizar_venda_interna(self,**kwargs) -> bool:
         """
         Executa a rotina da nota de ressuprimento de estoque considerando tudo que foi conferido no dia.
             :return bool: status da operação
