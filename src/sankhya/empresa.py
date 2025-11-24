@@ -9,11 +9,7 @@ class Empresa:
     def __init__(self):
         pass
 
-    async def buscar(
-            self,
-            id:int=None,
-            codemp:int=None
-        ) -> list[dict]:
+    async def buscar(self,id:int=None,codemp:int=None) -> list[dict]:
         """
         Busca dados da empresa.
             :param id: id da empresa
@@ -22,6 +18,5 @@ class Empresa:
         """
 
         dados_empresas:list[dict]=[]
-        dados_empresas = await empresa.buscar(id=id,
-                                              codemp=codemp)
+        dados_empresas = await empresa.buscar(id=id,codemp=codemp)
         return dados_empresas
