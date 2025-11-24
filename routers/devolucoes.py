@@ -13,7 +13,7 @@ class DevolucaoNota(BaseModel):
     numero:int
 
 @router.post("/integrar")
-async def integrar(devolucao:DevolucaoEmpresa):
+async def integrar(devolucao:DevolucaoEmpresa) -> bool:
     """
     Busca as notas de devolução no Olist e lança no Sankhya
     """
@@ -24,7 +24,7 @@ async def integrar(devolucao:DevolucaoEmpresa):
     return True
 
 @router.post("/devolver")
-async def devolver_nota(devolucao:DevolucaoNota):
+async def devolver_nota(devolucao:DevolucaoNota) -> bool:
     """
     Lança de devolução de uma nota específica
     """
@@ -36,7 +36,7 @@ async def devolver_nota(devolucao:DevolucaoNota):
     return True
 
 @router.post("/cancelar")
-async def cancelar_devolucao(devolucao:DevolucaoNota):
+async def cancelar_devolucao(devolucao:DevolucaoNota) -> bool:
     """
     Cancela nota de devolução
     """
