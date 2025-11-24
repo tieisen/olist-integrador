@@ -14,7 +14,7 @@ class ContaModel(BaseModel):
     id:int
 
 @router.post("/baixar-contas")
-async def baixar_contas(nota:ContaModel):
+async def baixar_contas(nota:ContaModel) -> bool:
     """
     Baixa contas a receber que estão pendentes.
     """
@@ -24,7 +24,7 @@ async def baixar_contas(nota:ContaModel):
     return True
 
 @router.post("/cancelar")
-async def cancelar_nota(nota:NotaModel):
+async def cancelar_nota(nota:NotaModel) -> bool:
     """
     Cancela nota de devolução
     """
