@@ -29,10 +29,7 @@ class Conferencia:
         self.nuconf = None
 
     @interno
-    def extrai_nuconf(
-            self,
-            payload:dict=None
-        ) -> int:
+    def extrai_nuconf(self,payload:dict=None) -> int:
         """
         Extrai o número da conferência.
             :param payload: retorno da API do Sankhya em JSON
@@ -42,10 +39,7 @@ class Conferencia:
         return int(payload['responseBody']['result'][0][0])
 
     @token_snk
-    async def buscar_aguardando_conferencia(
-            self,
-            id_loja:int=None
-        ) -> list[dict]:
+    async def buscar_aguardando_conferencia(self,id_loja:int=None) -> list[dict]:
         """
         Busca pedidos de venda com status de aguardando conferência.
             :param id_loja: ID do E-commerce no Olist
@@ -78,10 +72,7 @@ class Conferencia:
             return False
     
     @token_snk
-    async def buscar(
-            self,
-            nunota:int
-        ) -> list[dict]:
+    async def buscar(self,nunota:int) -> list[dict]:
         """
         Busca conferência pelo número único do pedido de venda.
             :param nunota: número único do pedido de venda (Sankhya)
@@ -135,10 +126,7 @@ class Conferencia:
             return False
 
     @token_snk
-    async def criar(
-            self,
-            nunota:int
-        ) -> bool:
+    async def criar(self,nunota:int) -> bool:
         """
         Cria uma conferência vinculada ao pedido de venda.
             :param nunota: número único do pedido de venda (Sankhya)
@@ -190,11 +178,7 @@ class Conferencia:
             return False
 
     @token_snk
-    async def vincular_pedido(
-            self,
-            nunota:int,
-            nuconf:int
-        ) -> bool:
+    async def vincular_pedido(self,nunota:int,nuconf:int) -> bool:
         """
         Vincula a conferência criada ao pedido de venda.            
             :param nunota: número único do pedido de venda (Sankhya)
@@ -244,10 +228,7 @@ class Conferencia:
             return False
 
     @token_snk
-    async def insere_itens(
-            self,
-            dados_item:list[dict]
-        ) -> bool:
+    async def insere_itens(self,dados_item:list[dict]) -> bool:
         """
         Insere itens na conferência.
             :param dados_item: dados dos itens a serem inseridos na conferência
@@ -283,10 +264,7 @@ class Conferencia:
 
     @token_snk
     @carrega_dados_empresa
-    async def concluir(
-            self,
-            nuconf:int
-        ) -> bool:
+    async def concluir(self,nuconf:int) -> bool:
         """
         Atualiza o status da conferência para Finalizada
             :param nuconf: número da conferência
