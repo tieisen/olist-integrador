@@ -145,6 +145,7 @@ class Estoque:
                 raise Exception(msg)
 
             # Compara os estoques e calcula as variações
+            alteracoes_pendentes = alteracoes_pendentes[:limite_lista]
             for i, produto in enumerate(alteracoes_pendentes):
                 dados_update:dict = {}
                 res_estoque:dict = {}
