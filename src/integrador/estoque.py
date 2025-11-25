@@ -129,21 +129,19 @@ class Estoque:
         
         # Extrai lista dos produtos
         lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
-        produtos_buscar:str=''
+        produtos_buscar:list[int]=[]
         limite_lista:int=500        
-        if len(lista_codprod) == 1:
-            produtos_buscar = str(lista_codprod[0])
-        elif len(lista_codprod) > limite_lista:
-            produtos_buscar = ','.join(map(str,lista_codprod[:limite_lista]))
+        if len(lista_codprod) > limite_lista:
+            produtos_buscar = lista_codprod[:limite_lista]
             logger.warning("A lista de produtos excedeu o limite de %s itens. Apenas os %s primeiros serão considerados na consulta.",limite_lista,limite_lista)
         else:                
-            produtos_buscar = ','.join(map(str,lista_codprod))          
+            produtos_buscar = lista_codprod.copy()
 
         try:
             # Busca estoque dos produtos no Sankhya e no Olist
             lista_dados_estoque_snk = await estoque_snk.buscar(lista_produtos=produtos_buscar)
             if not lista_dados_estoque_snk:
-                msg = f"Erro ao buscar estoque no Sankhya. Parametro: {lista_codprod}"
+                msg = f"Erro ao buscar estoque no Sankhya. Parametro: {produtos_buscar}"
                 raise Exception(msg)
 
             # Compara os estoques e calcula as variações
