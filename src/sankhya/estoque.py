@@ -37,15 +37,12 @@ class Estoque:
         if not url:
             logger.error("Erro relacionado à url. %s",url)
             return False
-        
+
         filtro_produtos:str=''
         if codprod:
             filtro_produtos = str(codprod)
-        if lista_produtos:
-            if len(lista_produtos) == 1:
-                filtro_produtos = str(lista_produtos[0])
-            else:
-                filtro_produtos = ','.join(map(str,lista_produtos))
+        if lista_produtos:   
+            filtro_produtos = ','.join(map(str,lista_produtos))                
 
         parametero = 'SANKHYA_PATH_SCRIPT_SALDO_ESTOQUE'
         script = buscar_script(parametro=parametero)
