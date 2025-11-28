@@ -10,7 +10,7 @@ logger = set_logger(__name__)
 
 class Nota:
 
-    def __init__(self, id_loja:int=None, codemp:int=None, empresa_id:int=None):  
+    def __init__(self, id_loja:int=None, codemp:int=None, empresa_id:int=None):
         self.id_loja = id_loja
         self.codemp = codemp
         self.empresa_id = empresa_id        
@@ -21,12 +21,7 @@ class Nota:
 
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar(
-            self,
-            id:int=None,
-            numero:int=None,
-            cod_pedido:str=None
-        ) -> dict:
+    async def buscar(self,id:int=None,numero:int=None,cod_pedido:str=None) -> dict:
         """
         Busca os dados da nota fiscal.
             :param id: ID da NF (Olist)
@@ -88,11 +83,7 @@ class Nota:
     
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar_canceladas(
-            self,
-            data:str=None,
-            tipo:str='S'
-        ) -> list[dict]:
+    async def buscar_canceladas(self,data:str=None,tipo:str='S') -> list[dict]:
         """
         Busca os dados das notas fiscais canceladas.
             :param data: data da emissão da NF
@@ -127,10 +118,7 @@ class Nota:
     
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar_devolucoes(
-            self,
-            data:str=None
-        ) -> list[dict]:
+    async def buscar_devolucoes(self,data:str=None) -> list[dict]:
         """
         Busca os dados das notas fiscais de devolução.
             :param data: data da emissão da NFD
@@ -164,11 +152,7 @@ class Nota:
     
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar_legado(
-            self,
-            id:int=None,
-            cod_pedido:str=None
-        ) -> dict:
+    async def buscar_legado(self,id:int=None,cod_pedido:str=None) -> dict:
         """
         Busca os dados e o XML da nota fiscal.
             :param id: ID da NF (Olist)
@@ -289,10 +273,7 @@ class Nota:
 
     @carrega_dados_ecommerce
     @token_olist
-    async def emitir(
-            self,
-            id:int
-        ) -> dict:
+    async def emitir(self,id:int) -> dict:
         """
         Autoriza NFe na Sefaz
             :param id: ID da NFe
@@ -325,17 +306,12 @@ class Nota:
 
     @carrega_dados_ecommerce
     @token_olist
-    async def buscar_financeiro(
-            self,
-            serie:str=None,
-            numero:str=None,
-            id:int=None
-        ) -> dict:
+    async def buscar_financeiro(self,serie:str=None,numero:str=None,id:int=None) -> dict:
         """
         Busca o registro de contas a receber gerado pela NF
             :param serie: série da NF
             :param numero: número da NF
-            :param id: ID da NF
+            :param id: ID do lançamento
             :return dict: dicionário com os dados do contas a receber
         """
 
@@ -343,9 +319,9 @@ class Nota:
             url = self.endpoint_fin+f"/{id}"
         elif all([serie, numero]):
             url = self.endpoint_fin+f"?numeroDocumento={serie}{numero}/01"
-        else:            
-            return False         
-
+        else:
+            return False
+        
         res = requests.get(
             url = url,            
             headers = {
@@ -362,45 +338,111 @@ class Nota:
         
         if id:
             return res.json()
-        else:
+        elif all([serie, numero]):
             return res.json().get('itens')[0]
+        else:
+            return res.json().get('itens')
+
+    async def busca_paginada(self,token:str,url:str) -> list[dict]:
+
+        import time
+
+        def ordena_por_id(lista_itens:list[dict]) -> list[dict]:
+            """
+            Ordenação crescente dos pedidos por ID.
+                :param lista_itens: lista de dicionários com os dados da busca
+                :return list[dict]: lista de dicionários ordenada pelo ID
+            """
+            lista_itens.sort(key=lambda i: i['id'])
+            return True
+
+        status:int = 200
+        itens:list[dict]=[]
+        paginacao:dict = {}
+        req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP',1.5))
+
+        try:
+            while status == 200:
+                # Verifica se há paginação
+                if paginacao:        
+                    if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
+                        offset = paginacao["limit"] + paginacao["offset"]
+                        url+=f"&offset={offset}"
+                    else:
+                        url = None
+
+                if url:
+                    res = requests.get( url=url,
+                                        headers={
+                                            "Authorization":f"Bearer {token}",
+                                            "Content-Type":"application/json",
+                                            "Accept":"application/json"
+                                        })
+                    status=res.status_code
+                    itens += res.json().get("itens",[])
+                    paginacao = res.json().get("paginacao",{})
+                    time.sleep(req_time_sleep)
+                else:
+                    status = 0
+            ordena_por_id(itens)
+        except Exception as e:
+            logger.error(f"Erro ao realizar busca paginada: {e}")
+        finally:
+            pass
+    
+        return itens
 
     @carrega_dados_ecommerce
     @token_olist
-    async def baixar_financeiro(
-            self,
-            id:int,
-            valor:float
-        ) -> bool:
+    async def buscar_lista_financeiro_aberto(self,dt_emissao:str=None) -> list[dict]:
+        """
+        Busca a lista de contas a receber em aberto pela data
+            :param dt_emissao: data da geração do título no Olist. data atual se nulo
+            :return list[dict]: lista de dicionários com os dados das contas a receber do dia
+        """
+        if not dt_emissao:
+            dt_emissao = datetime.today().strftime('%Y-%m-%d')
+        url = self.endpoint_fin+f"/?situacao=aberto&dataInicialEmissao={dt_emissao}&dataFinalEmissao={dt_emissao}"
+
+        res = await self.busca_paginada(token=self.token,url=url)
+        
+        if not res:
+            return False
+        
+        return res
+
+    @carrega_dados_ecommerce
+    @token_olist
+    async def baixar_financeiro(self,id:int,payload:dict,valor:float=None) -> bool:
         """
         Realiza o recebimento/baixa do registro de contas a receber gerado pela NF
             :param id: ID do registro de contas a receber
             :param valor: valor do recebimento
-            :return dict: dicionário com os dados do contas a receber
+            :return payload: dicionário com os dados do contas a receber
             :return bool: status da operação            
         """        
 
         url = self.endpoint_fin+f"/{id}/baixar"
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
         
-        payload = {
-            "contaDestino": {
-                "id": self.dados_ecommerce.get('id_conta_destino')
-            },
-            "data": None,
-            "categoria": {
-                "id": self.dados_ecommerce.get('id_categoria_financeiro')
-            },
-            "historico": None,
-            "taxa": None,
-            "juros": None,
-            "desconto": None,
-            "valorPago": valor,
-            "acrescimo": None
-        }
+        if not payload and valor:
+            payload = {
+                "contaDestino": {
+                    "id": self.dados_ecommerce.get('id_conta_destino')
+                },
+                "data": None,
+                "categoria": {
+                    "id": self.dados_ecommerce.get('id_categoria_financeiro')
+                },
+                "historico": None,
+                "taxa": None,
+                "juros": None,
+                "desconto": None,
+                "valorPago": valor,
+                "acrescimo": None
+            }
 
         res = requests.post(
             url = url,            
