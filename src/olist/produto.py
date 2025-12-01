@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import busca_paginada
 load_env()
 logger = set_logger(__name__)
 
@@ -20,11 +21,7 @@ class Produto:
         self.tempo_busca_alter_prod = int(os.getenv('OLIST_TEMPO_BUSCA_ALTER_PROD',30))
 
     @token_olist
-    async def buscar(
-            self,
-            id:int=None,
-            sku:int=None
-        ) -> dict:
+    async def buscar(self,id:int=None,sku:int=None) -> dict:
         """
         Busca os dados do produto no Olist.
             :param id: ID do produto (Olist)
@@ -80,10 +77,7 @@ class Produto:
             return False
 
     @token_olist
-    async def incluir(
-            self,
-            data:dict
-        ) -> tuple[bool,dict]:
+    async def incluir(self,data:dict) -> tuple[bool,dict]:
         """
         Inclui um novo produto no Olist.
             :param data: dicionário com os dados do produto
@@ -121,12 +115,7 @@ class Produto:
             return False, {erro}
 
     @token_olist
-    async def atualizar(
-            self,
-            id:int=None,
-            idprodpai:int=None,
-            data:dict=None
-        ) -> bool:
+    async def atualizar(self,id:int=None,idprodpai:int=None,data:dict=None) -> bool:
         """
         Atualiza um produto no Olist.
             :param id: ID do produto (Olist)
@@ -169,41 +158,11 @@ class Produto:
         """
         Busca os dados de todos os produtos no Olist.
             :return list[dict]: lista de dicionários com os dados dos produtos
-        """        
-
-        status = 200
-        paginacao = {}
-        itens = []
-        while status == 200:
-            if paginacao:        
-                if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
-                    offset = paginacao["limit"] + paginacao["offset"]
-                    url = self.endpoint+f"?offset={offset}"
-                else:
-                    url = None
-            else:
-                url = self.endpoint
-            if url:
-                res = requests.get(url=url,
-                                   headers={
-                                       "Authorization":f"Bearer {self.token}",
-                                       "Content-Type":"application/json",
-                                       "Accept":"application/json"
-                                    })
-                status = res.status_code
-                itens += res.json()["itens"]
-                paginacao = res.json()["paginacao"]
-                time.sleep(self.req_sleep)
-            else:
-                status=0
-
-        return itens
+        """
+        return await busca_paginada(token=self.token,url=self.endpoint)
     
     @token_olist
-    async def buscar_alteracoes(
-            self,
-            todo_historico:bool=False
-        ) -> list[dict]:
+    async def buscar_alteracoes(self,todo_historico:bool=False) -> list[dict]:
         """
         Busca lista de produtos com alteração no cadastro no último período.
             :param todo_historico: se busca todo o histórico ou considera a janela de tempo padrão em minutos
@@ -211,39 +170,9 @@ class Produto:
         """
         
         data_alteracao = (datetime.now()-timedelta(minutes=self.tempo_busca_alter_prod)).strftime("%Y-%m-%d %H:%M:00")
+        url = self.endpoint if todo_historico else self.endpoint+f"?dataAlteracao={data_alteracao}"
 
-        status = 200
-        paginacao = {}
-        itens = []
-        while status == 200:
-            if paginacao:        
-                if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
-                    offset = paginacao["limit"] + paginacao["offset"]
-                    if todo_historico:
-                        url = self.endpoint+f"?offset={offset}"
-                    else:
-                        url = self.endpoint+f"?dataAlteracao={data_alteracao}&offset={offset}"
-                else:
-                    url = None
-            else:
-                if todo_historico:
-                    url = self.endpoint
-                else:
-                    url = self.endpoint+f"?dataAlteracao={data_alteracao}"
-            if url:
-                res = requests.get(url=url,
-                                   headers={
-                                       "Authorization":f"Bearer {self.token}",
-                                       "Content-Type":"application/json",
-                                       "Accept":"application/json"
-                                    })
-                status = res.status_code
-                if status == 200:                    
-                    itens += res.json()["itens"]
-                    paginacao = res.json()["paginacao"]
-                    time.sleep(self.req_sleep)
-            else:
-                status=0
+        itens = await busca_paginada(token=self.token,url=url)
       
         if itens:
             itens.sort(key=lambda i: i['dataAlteracao'])
