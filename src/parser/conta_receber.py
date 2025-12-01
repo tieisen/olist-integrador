@@ -77,45 +77,42 @@ class ContaReceber:
 
     def recebimento(self,dados_ecommerce:dict,dados_conta:dict,dados_custo:dict,data:str=None) -> dict:
         """
-        Converte os dados dos pedidos no formato da API do Sankhya.
-            :param nuconf: número da conferência
-            :param dados_olist: lista de pedidos da API do Olist
-            :return list[dict]: lista de dicionários com as dados dos itens da conferência
+        Converte os dados dos lançamentos no formato da API do Olist.
+            :param dados_ecommerce: dicionário com os dados do e-commerce
+            :param dados_conta: dicionário com os dados da conta a receber
+            :param dados_custo: dicionário com os dados dos custos do pedido
+            :param data: data da baixa no formato dd/mm/aaaa
+            :return dict: dicionário com os dados formatados para a API
         """        
         def formata_vlr(vlr:float) -> str:
             return vlr.__format__('.2f').replace('.',',')
         
         def calcula_comissao_blz(vlr_pedido:float) -> float:
+            """ Calcula o valor da comissão do BLZWeb (taxa fixa de envio + percentual sobre o valor do pedido) """
             return vlr_pedido*self.comissao_blz+self.taxa_blz_envios
-        
-        # def formata_historico(texto:str) -> str:
-        #     import re
-        #     regex = r"\(.+\)"
-        #     return re.sub(regex, '', texto, 1)
         
         def formata_historico(dados_custo:dict) -> str:
             return f"Referente ao pedido {dados_custo.get('n_pedido')} - OC nº {dados_custo.get('pedido_ecommerce')}"
         
         payload:dict = {}
+        historico:str=''
+        vlr_comissao:float=0            
+        vlr_pago:float=0
 
-        try:
-            historico:str=''
-            vlr_comissao:float=0            
-            vlr_pago:float=0            
+        try:       
             if len(dados_custo.get('n_pedido_ecommerce')) == 14:
-                # Shopee
+                # Shopee - valor da comissão é variável por pedido e já está informado no relatório
                 vlr_comissao = dados_custo.get('total_comissao',0) + dados_custo.get('frete_do_pedido',0)
                 vlr_pago = dados_custo.get('total_liquido')
-                historico = dados_conta.get('historico')
             else:
-                # BLZ                
+                # BLZ - valor da comissão precisa ser calculado
                 vlr_comissao = round(calcula_comissao_blz(dados_custo.get('total')) + dados_custo.get('frete_do_pedido'),2)
                 vlr_pago = round(dados_custo.get('total') + dados_custo.get('frete_do_pedido') - vlr_comissao,2)
-                historico = dados_conta.get('historico')
             
+            # Se histórico muito grande (contas agrupadas), formatar
+            historico = dados_conta.get('historico')            
             if len(historico) >= 150:
-                historico = formata_historico(dados_custo=dados_custo)
-            
+                historico = formata_historico(dados_custo=dados_custo)            
             historico+=f"<br>\nTotal produtos R${formata_vlr(dados_custo.get('total'))} | Comissão R${formata_vlr(vlr_comissao-dados_custo.get('frete_do_pedido'))} | Frete R${formata_vlr(dados_custo.get('frete_do_pedido'))} | Incentivo R${formata_vlr(dados_custo.get('total_incentivo'))}"
             
             payload = {
