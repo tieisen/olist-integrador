@@ -427,7 +427,7 @@ class Nota:
             logger.error("Erro relacionado à url. %s",url)
             return False 
         
-        if not payload and valor:
+        if all([payload,valor]):
             payload = {
                 "contaDestino": {
                     "id": self.dados_ecommerce.get('id_conta_destino')
