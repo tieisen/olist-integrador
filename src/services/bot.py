@@ -16,55 +16,106 @@ class Bot:
         self.link_erp = os.getenv('OLIST_URL_ERP')
         self.link_estoque = os.getenv('OLIST_URL_ESTOQUE')
         self.link_produto = os.getenv('OLIST_URL_CAD_PRODUTO')
+        self.link_relatorio_custos = os.getenv('OLIST_URL_RELATORIO_CUSTOS')
         self.link_logout = os.getenv('OLIST_URL_LOGOUT')
         self.time_sleep = float(os.getenv('REQ_TIME_SLEEP'))
         self.username = os.getenv('OLIST_BOT_USERNAME')
         self.password = os.getenv('OLIST_BOT_PASSWORD')
         self.timeout_lotes = int(os.getenv('OLIST_TIMEOUT_LANCA_LOTES'))
+        self.driver = None
 
     async def login(self):
         try:
-            driver = webdriver.Chrome()
-            driver.maximize_window() 
-            driver.get(self.link_erp)
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
-            login_input = driver.find_element(By.ID, "username")
-            next_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
+            self.driver = webdriver.Firefox()
+            self.driver.maximize_window() 
+            self.driver.get(self.link_erp)
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
+            login_input = self.driver.find_element(By.ID, "username")
+            next_button = self.driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             login_input.clear()
             login_input.send_keys(self.username)
             next_button.click()
 
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "password")))
-            pass_input = driver.find_element(By.ID, "password")
-            submit_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "password")))
+            pass_input =  self.driver.find_element(By.ID, "password")
+            submit_button = self.driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             pass_input.clear()
             pass_input.send_keys(self.password)
             submit_button.click()
 
             try:
-                WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//h3[@class='modal-title']")))
-                elemento = driver.find_element(By.XPATH, "//h3[@class='modal-title']")
+                WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, "//h3[@class='modal-title']")))
+                elemento = self.driver.find_element(By.XPATH, "//h3[@class='modal-title']")
                 if elemento.text == 'Este usuário já está logado em outro dispositivo':
-                    btn_confirma_login = driver.find_element(By.XPATH, "//button[@class='btn btn-primary']")
+                    btn_confirma_login = self.driver.find_element(By.XPATH, "//button[@class='btn btn-primary']")
                     btn_confirma_login.click()
-                    WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-logo-usuario']")))
+                    WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-logo-usuario']")))
                     time.sleep(self.time_sleep)
             except:
                 pass
 
-            if WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-iniciais-usuario']"))):
-                return True, driver
+            if WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, "//div[@class='sidebar-menu-iniciais-usuario']"))):
+                return True
             else:
-                return False, None
+                return False
             
         except Exception as e:
             print(f"Falha no login. {e}")
             logger.error("Falha no login. %s",e)
-            return False, None 
+            return False
 
-    async def logout(self,driver):
-        driver.get(self.link_logout)
-        driver.quit()        
+    async def logout(self):
+        self.driver.get(self.link_logout)
+        self.driver.quit()
+
+    async def acessa_relatorio_custos(self):
+
+        try:
+            self.driver.get(self.link_relatorio_custos)
+        except Exception as e:
+            logger.error("Erro ao acessar relatorio de custos. %s",e)
+            return False, None
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-periodo")))
+        return True
+
+    async def gerar_relatorio_custos(self,data_inicial,data_final):
+        
+        if WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "opc-periodo"))):
+            btn_intervalo = self.driver.find_element(By.ID, "opc-periodo")
+            btn_intervalo.click()
+        else:
+            logger.error("Erro no botao intervalo")
+            return False
+        
+        if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "dataIni"))):
+
+            data_ini = self.driver.find_element(By.ID, "dataIni")
+            data_fim = self.driver.find_element(By.ID, "dataFim")
+
+            data_ini.clear()
+            data_fim.clear()
+
+            data_ini.send_keys(data_inicial)
+            data_fim.send_keys(data_final)
+
+            btn_gerar = self.driver.find_element(By.ID,"btn-visualizar")
+            btn_gerar.click()
+            time.sleep(self.time_sleep)
+            return True
+        else:
+            logger.error("Erro no selecionar opção")
+            return False
+
+    async def baixar_relatorio_custos(self):
+        
+        if WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "btn-download"))):
+            btn_download = self.driver.find_element(By.ID, "btn-download")
+            btn_download.click()
+            time.sleep(30)
+            return True
+        else:
+            logger.error("Erro no botao download")
+            return False
 
     async def habilita_controle_lotes(self,driver,id_produto):
         driver.get(self.link_produto.format(id_produto))
