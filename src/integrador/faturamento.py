@@ -12,6 +12,7 @@ from src.integrador.pedido import Pedido as IntegradorPedido
 from src.parser.transferencia import Transferencia as ParserTransferencia
 from src.parser.pedido import Pedido as ParserPedido
 from src.olist.separacao import Separacao as SeparacaoOlist
+from src.olist.nota import Nota as NotaOlist
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPed
 from database.crud import pedido as crudPedido
@@ -246,12 +247,6 @@ class Faturamento:
             ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
             if not ack_conta.get('success'):
                 raise Exception(ack_conta.get('__exception__'))
-            
-            # Baixa contas a receber do Olist
-            ack_baixa = await integra_nota.baixar_conta(id_nota=ack_criacao['dados_nota'].get('id'),                                                       
-                                                        dados_financeiro=ack_conta.get('dados_financeiro'))
-            if not ack_baixa.get('success'):
-                raise Exception(ack_baixa.get('__exception__'))
             
             return {"success": True, "__exception__": str(e)}
         except Exception as e:
@@ -580,4 +575,57 @@ class Faturamento:
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         return status_log
+
+    @contexto
+    @log_execucao
+    @carrega_dados_ecommerce
+    async def realizar_baixa_contas_receber(self,data_conta:str,relatorio_custos:dict,**kwargs) -> bool:
+
+        def filtra_loja(contas_dia:list[dict],id_loja:int) -> list[dict]:
+            if id_loja in [9227,9265]:
+                return [conta for conta in contas_dia if not str.strip(conta['cliente'].get('email'))]
+            elif id_loja == 10940:
+                return [conta for conta in contas_dia if str.strip(conta['cliente'].get('email'))]
+            else:
+                return []
+
+        import re
+        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                          de='olist',
+                                          para='sankhya',
+                                          contexto=kwargs.get('_contexto'))
+        
+        REGEX = r"OC nº (\S+)"
+
+        nota_olist = NotaOlist(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
+        integrador_nota = IntegradorNota(id_loja=self.dados_ecommerce.get('id_loja'))
+        data_conta:datetime = datetime.strptime(data_conta, '%d/%m/%Y').date()
+        contas_dia:list[dict] = await nota_olist.buscar_lista_financeiro_aberto(dt_emissao=data_conta.strftime('%Y-%m-%d'))
+
+        contas_dia = filtra_loja(contas_dia=contas_dia,id_loja=self.id_loja)
+
+        if not contas_dia:
+            await crudLog.atualizar(id=self.log_id,sucesso=True)
+            return True
+        
+        print(f"{len(contas_dia)} contas para baixar")
+
+        status_log:list[bool] = []
+        for conta in contas_dia:
+            try:
+                matches = re.search(REGEX, conta.get('historico'))
+                codigo_pedido:str=matches.group(1)
+                print(f"\nPedido {codigo_pedido}") #
+                custo:dict = next((r for r in relatorio_custos if r.get("pedido_ecommerce") == codigo_pedido), None)
+                status = await integrador_nota.baixar_conta_liquido(data_baixa=data_conta,dados_conta=conta,dados_custo=custo)
+                status_log.append(status.get('success'))
+            except Exception as e:
+                logger.error("Erro ao baixar conta a receber do pedido %s: %s",codigo_pedido,str(e))
+                status_log.append(False)
+            finally:
+                print(f"status: {status_log[-1]}") #
+                time.sleep(self.req_time_sleep)
+
+        await crudLog.atualizar(id=self.log_id,sucesso=all(status_log))
+        return all(status_log)
     
