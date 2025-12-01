@@ -4,7 +4,7 @@ from datetime import datetime
 from src.utils.load_env import load_env
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from routers import empresas, estoque, pedidos, produtos, notas, devolucoes
+from routers import empresas, estoque, pedidos, produtos, notas, devolucoes, financeiro
 from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
 load_env()
 
@@ -46,6 +46,7 @@ app.include_router(estoque.router, prefix="/estoque", tags=["Estoque"])
 app.include_router(produtos.router, prefix="/produtos", tags=["Produtos"])
 app.include_router(pedidos.router, prefix="/pedidos", tags=["Pedidos"])
 app.include_router(notas.router, prefix="/notas", tags=["Notas"])
+app.include_router(financeiro.router, prefix="/financeiro", tags=["Financeiro"])
 app.include_router(devolucoes.router, prefix="/devolucoes", tags=["Devoluções"])
 
 @app.get("/",include_in_schema=False)
