@@ -5,6 +5,7 @@ from src.utils.decorador import carrega_dados_ecommerce
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import busca_paginada
 load_env()
 logger = set_logger(__name__)
 
@@ -98,23 +99,7 @@ class Nota:
             
         url = self.endpoint+f"/?tipo={tipo}&situacao=3&dataInicial={data}&dataFinal={data}"
 
-        res = requests.get(
-            url = url,
-            headers = {
-                "Authorization":f"Bearer {self.token}",
-                "Content-Type":"application/json",
-                "Accept":"application/json"
-            }
-        )
-
-        if res.status_code != 200:
-            logger.error("Erro %s: %s", res.status_code, res.text)
-            return False
-        
-        if not res.json().get('itens'):
-            return []
-
-        return res.json().get('itens')
+        return await busca_paginada(token=self.token,url=url)
     
     @carrega_dados_ecommerce
     @token_olist
@@ -132,23 +117,7 @@ class Nota:
             
         url = self.endpoint+f"/?tipo=E&dataInicial={data}&dataFinal={data}"
 
-        res = requests.get(
-            url = url,
-            headers = {
-                "Authorization":f"Bearer {self.token}",
-                "Content-Type":"application/json",
-                "Accept":"application/json"
-            }
-        )
-
-        if res.status_code != 200:
-            logger.error("Erro %s: %s", res.status_code, res.text)
-            return False
-        
-        if not res.json().get('itens'):
-            return []
-
-        return res.json().get('itens')
+        return await busca_paginada(token=self.token,url=url)
     
     @carrega_dados_ecommerce
     @token_olist
@@ -343,56 +312,6 @@ class Nota:
         else:
             return res.json().get('itens')
 
-    async def busca_paginada(self,token:str,url:str) -> list[dict]:
-
-        import time
-
-        def ordena_por_id(lista_itens:list[dict]) -> list[dict]:
-            """
-            Ordenação crescente dos pedidos por ID.
-                :param lista_itens: lista de dicionários com os dados da busca
-                :return list[dict]: lista de dicionários ordenada pelo ID
-            """
-            lista_itens.sort(key=lambda i: i['id'])
-            return True
-
-        status:int = 200
-        itens:list[dict]=[]
-        paginacao:dict = {}
-        req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP',1.5))
-
-        try:
-            while status == 200:
-                # Verifica se há paginação
-                if paginacao:        
-                    if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
-                        offset = paginacao["limit"] + paginacao["offset"]
-                        url+=f"&offset={offset}"
-                    else:
-                        url = None
-
-                if url:
-                    res = requests.get( url=url,
-                                        headers={
-                                            "Authorization":f"Bearer {token}",
-                                            "Content-Type":"application/json",
-                                            "Accept":"application/json"
-                                        })
-                    status=res.status_code
-                    itens += res.json().get("itens",[])
-                    paginacao = res.json().get("paginacao",{})
-                    time.sleep(req_time_sleep)
-                else:
-                    status = 0
-            ordena_por_id(itens)
-        except Exception as e:
-            logger.error(f"Erro ao realizar busca paginada: {e}")
-        finally:
-            pass
-    
-        return itens
-
-    @carrega_dados_ecommerce
     @token_olist
     async def buscar_lista_financeiro_aberto(self,dt_emissao:str=None) -> list[dict]:
         """
@@ -404,12 +323,7 @@ class Nota:
             dt_emissao = datetime.today().strftime('%Y-%m-%d')
         url = self.endpoint_fin+f"/?situacao=aberto&dataInicialEmissao={dt_emissao}&dataFinalEmissao={dt_emissao}"
 
-        res = await self.busca_paginada(token=self.token,url=url)
-        
-        if not res:
-            return False
-        
-        return res
+        return await busca_paginada(token=self.token,url=url)
 
     @carrega_dados_ecommerce
     @token_olist
@@ -458,6 +372,7 @@ class Nota:
         # Financeiro da nota já foi baixado (409)
         if res.status_code not in (409,204):
             logger.error("Erro %s: %s fin %s", res.status_code, res.text, id)            
+            logger.error("payload: %s", payload)
             return False       
 
         return True        
