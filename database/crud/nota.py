@@ -57,12 +57,13 @@ async def buscar(
         nunota:int=None,
         numero_ecommerce:dict=None,
         chave_acesso:str=None,
+        cod_pedido:str=None,
         tudo:bool=False,
     ) -> dict:
     res:dict={}
 
     try:
-        if not any([id_nota,nunota,chave_acesso]) and not tudo:
+        if not any([id_nota,nunota,chave_acesso,cod_pedido,numero_ecommerce]) and not tudo:
             raise ValueError("Parâmetro não informado")
                 
         async with AsyncSessionLocal() as session:
@@ -87,6 +88,12 @@ async def buscar(
                     .where(Nota.numero == numero_ecommerce.get('numero'),
                         Nota.pedido_
                             .has(Pedido.ecommerce_id==numero_ecommerce.get('ecommerce')))
+                )
+            elif cod_pedido:
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.pedido_
+                               .has(Pedido.cod_pedido==cod_pedido))
                 )
             elif tudo:
                 result = await session.execute(
@@ -128,7 +135,7 @@ async def atualizar(
             return False
             
     async with AsyncSessionLocal() as session:
-        if chave_acesso and not any([id_nota,nunota_pedido]):
+        if chave_acesso and not any([id_nota,nunota_pedido,cod_pedido]):
             result = await session.execute(
                 select(Nota)
                 .where(Nota.chave_acesso == chave_acesso)
