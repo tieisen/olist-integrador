@@ -131,8 +131,7 @@ class ContaReceber:
                 "acrescimo": dados_custo.get('total_incentivo')
             }
         except Exception as e:
-            logger.error("Erro ao converter dados para baixa de contas a receber. %s", e)
-            print(f"Erro ao converter dados para baixa de contas a receber. {e}")
+            logger.error("Erro ao converter dados para baixa de contas a receber do pedido %s. %s", dados_custo.get('n_pedido_ecommerce'), e)
         finally:
             pass
         return payload
