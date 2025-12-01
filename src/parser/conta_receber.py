@@ -11,7 +11,7 @@ class ContaReceber:
         self.taxa_blz_envios:float = float(os.getenv('BLZWEB_TAXA_ENVIO'))
         self.comissao_blz:float = float(os.getenv('BLZWEB_TAXA_COMISSAO'))
 
-    def carregar_relatorio(self,path:str) -> dict:
+    def carregar_relatorio(self,path:str=None,arquivo=None) -> dict:
         """
         Carrega o relatório de custos do e-commerce
             :param path(str): caminho do arquivo
@@ -22,13 +22,30 @@ class ContaReceber:
 
         def ler_relatorio(path:str):
             """
-            Lê o arquivo Excel do relatório de custos
+            Busca e lê o arquivo Excel do relatório de custos
                 :param path(str): caminho do arquivo
             """
             nonlocal relatorio
             df:pd.DataFrame = pd.DataFrame()
             try:
                 df = pd.read_excel(path,engine="calamine",usecols="A:L")
+            except Exception as e:
+                logger.error(f"Erro ao ler arquivo do relatório de custos: {e}")
+            finally:                
+                relatorio = df.copy()
+            return True
+
+        def carregar_arquivo(arquivo):
+            """
+            Carrega o arquivo Excel do relatório de custos
+                :param arquivo: arquivo carregado em memória
+            """
+            nonlocal relatorio
+            conteudo = arquivo.read()
+            df:pd.DataFrame = pd.DataFrame()
+            try:
+
+                df = pd.read_excel(conteudo,engine="calamine",usecols="A:L")
             except Exception as e:
                 logger.error(f"Erro ao ler arquivo do relatório de custos: {e}")
             finally:                
@@ -66,7 +83,10 @@ class ContaReceber:
             return True
         
         try:
-            ler_relatorio(path=path)
+            if arquivo:
+                carregar_arquivo(arquivo=arquivo)
+            else:
+                ler_relatorio(path=path)
             padroniza_colunas()
             trata_codigo_pedido()
         except Exception as e:
