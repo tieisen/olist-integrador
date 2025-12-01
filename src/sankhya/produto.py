@@ -2,7 +2,7 @@ import os
 import requests
 import time
 from src.utils.decorador import carrega_dados_empresa
-from src.utils.buscar_script import buscar_script
+from src.utils.buscar_arquivo import buscar_script
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
@@ -24,11 +24,7 @@ class Produto:
 
     @token_snk
     @carrega_dados_empresa
-    async def buscar(
-            self,
-            codprod:int=None,
-            idprod:int=None
-        ) -> dict:
+    async def buscar(self,codprod:int=None,idprod:int=None) -> dict:
         """
         Busca os dados do produto no Sankhya.
             :param codprod: Código do produto no Sankhya.
@@ -72,10 +68,7 @@ class Produto:
                 logger.error("Erro ao buscar produto. ID %s. %s",idprod,res.text)                
             return False
 
-    def preparar_dados(
-            self,
-            payload:dict
-        ) -> dict:
+    def preparar_dados(self,payload:dict) -> dict:
         """
         Prepara os dados para atualização do produto no Sankhya.
             :param payload: Dicionário com os dados a serem atualizados no Sankhya.
@@ -90,11 +83,7 @@ class Produto:
 
     @token_snk
     @carrega_dados_empresa
-    async def atualizar(
-            self,
-            codprod:int,
-            payload:dict
-        ) -> bool:
+    async def atualizar(self,codprod:int,payload:dict) -> bool:
         """
         Atualiza os dados do produto no Sankhya.
             :param codprod: Código do produto no Sankhya.
@@ -209,11 +198,7 @@ class Produto:
 
     @token_snk
     @carrega_dados_empresa
-    async def excluir_alteracoes(
-            self,
-            codprod:int=None,
-            lista_produtos:list=None
-        ) -> bool:
+    async def excluir_alteracoes(self,codprod:int=None,lista_produtos:list=None) -> bool:
         """
         Remove os produtos atualizados da fila de atualização.
             :param codprod: Código do produto no Sankhya.

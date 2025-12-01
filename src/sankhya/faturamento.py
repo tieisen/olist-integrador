@@ -1,7 +1,7 @@
 import os
 import requests
 from src.utils.autenticador import token_snk
-from src.utils.buscar_script import buscar_script
+from src.utils.buscar_arquivo import buscar_script
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -17,10 +17,7 @@ class Faturamento:
         self.formatter = Formatter()
 
     @token_snk
-    async def buscar_itens(
-            self,            
-            nunota:int=None
-        ) -> list[dict]:
+    async def buscar_itens(self,nunota:int=None) -> list[dict]:
         """
         Busca lista de itens conferidos no dia ou de um pedido.
             :param nunota: número único do pedido de venda
@@ -65,11 +62,7 @@ class Faturamento:
                 logger.error("Erro ao buscar itens conferidos no dia. %s",res.text)
             return False
 
-    async def compara_saldos(
-            self,
-            saldo_estoque:list[dict],
-            saldo_pedidos:list[dict]
-        ) -> list[dict]:
+    async def compara_saldos(self,saldo_estoque:list[dict],saldo_pedidos:list[dict]) -> list[dict]:
         """
         Compara os saldos de estoque com os itens conferidos.
             :param saldo_estoque: lista de dicionários com os dados dos itens do saldo de estoque

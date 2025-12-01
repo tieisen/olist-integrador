@@ -4,7 +4,7 @@ import requests
 from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
-from src.utils.buscar_script import buscar_script
+from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()

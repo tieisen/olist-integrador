@@ -4,7 +4,7 @@ from datetime import datetime
 from src.utils.formatter import Formatter
 from src.utils.decorador import interno, carrega_dados_empresa
 from src.utils.autenticador import token_snk
-from src.utils.buscar_script import buscar_script
+from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -43,11 +43,7 @@ class Transferencia:
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
     @token_snk
-    async def criar(
-            self,
-            cabecalho:dict,
-            itens:list=None
-        ) -> tuple:
+    async def criar(self,cabecalho:dict,itens:list=None) -> tuple:
         """
         Cria uma nota de transferência.
             :param cabecalho: cabeçalho da nota de transferência
@@ -106,11 +102,7 @@ class Transferencia:
             return False, None
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int=None,
-            itens:bool=False
-        ) -> tuple[bool,dict]:
+    async def buscar(self,nunota:int=None,itens:bool=False) -> tuple[bool,dict]:
         """
         Busca uma nota de transferência.
             :param nunota: número único da nota de transferência
@@ -189,10 +181,7 @@ class Transferencia:
             return False, {}
 
     @token_snk
-    async def confirmar(
-            self,
-            nunota:int
-        ) -> bool:
+    async def confirmar(self,nunota:int) -> bool:
         """
         Confirma uma nota de transferência.
             :param nunota: número único da nota de transferência
@@ -240,11 +229,7 @@ class Itens(Transferencia):
         ]            
 
     @token_snk
-    async def lancar(
-            self,
-            nunota:int,
-            dados_item:dict
-        ) -> bool:
+    async def lancar(self,nunota:int,dados_item:dict) -> bool:
         """
         Lança um item na nota de transferência.
             :param nunota: número único da nota de transferência
@@ -287,10 +272,7 @@ class Itens(Transferencia):
             return False
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int
-        ) -> list[dict]:
+    async def buscar(self,nunota:int) -> list[dict]:
         """
         Busca os itens da nota de transferência.
             :param nunota: número único da nota de transferência
@@ -342,11 +324,7 @@ class Itens(Transferencia):
 
     @token_snk
     @carrega_dados_empresa
-    async def busca_valor_transferencia(
-            self,
-            codprod:int=None,
-            lista_itens:list=None
-        ) -> float | list[dict]:
+    async def busca_valor_transferencia(self,codprod:int=None,lista_itens:list=None) -> float | list[dict]:
         """
         Busca o valor do item na tabela de preços de transferência.
             :param codprod: código do produto

@@ -5,7 +5,7 @@ from src.sankhya.nota import Nota
 from src.utils.decorador import interno, carrega_dados_empresa
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
-from src.utils.buscar_script import buscar_script
+from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -33,10 +33,7 @@ class Pedido:
         ]
 
     @interno
-    def extrai_nunota(
-            self,
-            payload:dict=None
-        ) -> int:
+    def extrai_nunota(self,payload:dict=None) -> int:
         """
         Extrai o número único do pedido de venda.
             :param payload: retorno da API do Sankhya em JSON
@@ -45,13 +42,7 @@ class Pedido:
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
     
     @token_snk
-    async def buscar(
-            self,
-            nunota:int=None,
-            id_olist:int=None,
-            codpedido:str=None,
-            itens:bool=False
-        ) -> dict:
+    async def buscar(self,nunota:int=None,id_olist:int=None,codpedido:str=None,itens:bool=False) -> dict:
         """
         Busca um pedido de venda.
             :param nunota: número único do pedido de venda (Sankhya)
@@ -155,10 +146,7 @@ class Pedido:
             return False
     
     @token_snk
-    async def buscar_nunota_nota(
-            self,
-            nunota:int
-        ) -> dict:
+    async def buscar_nunota_nota(self,nunota:int) -> dict:
         """
         Busca o número único da nota de venda de um pedido faturado.
             :param nunota: número único do pedido de venda (Sankhya)
@@ -188,10 +176,7 @@ class Pedido:
             logger.error("Erro ao buscar número da nota. %s",res.json())
             return False
 
-    async def buscar_nota_do_pedido(
-            self,
-            nunota:int
-        ) -> dict:
+    async def buscar_nota_do_pedido(self,nunota:int) -> dict:
         """
         Busca o número único da nota de venda de um pedido faturado.
             :param nunota: número único do pedido de venda (Sankhya)
@@ -215,10 +200,7 @@ class Pedido:
         return dados_nota
 
     @token_snk
-    async def buscar_cidade(
-            self,
-            ibge:int
-        ) -> dict:
+    async def buscar_cidade(self,ibge:int) -> dict:
         """
         Busca código Sankhya e UF da cidade.
             :param ibge: código IBGE da cidade
@@ -270,11 +252,7 @@ class Pedido:
             return False
 
     @token_snk
-    async def lancar(
-            self,
-            dados_cabecalho:dict,
-            dados_itens:list
-        ) -> int:
+    async def lancar(self,dados_cabecalho:dict,dados_itens:list) -> int:
         """
         Cria um pedido de venda.
             :param dados_cabecalho: cabeçalho da nota de transferência
@@ -317,10 +295,7 @@ class Pedido:
             return False
 
     @token_snk
-    async def confirmar(
-            self,
-            nunota:int
-        ) -> bool:
+    async def confirmar(self,nunota:int) -> bool:
         """
         Confirma um pedido de venda.
             :param nunota: número único do pedido de venda
@@ -357,11 +332,7 @@ class Pedido:
 
     @token_snk
     @carrega_dados_empresa
-    async def faturar(
-            self,
-            nunota:int,
-            dt_fatur:str=None
-        ) -> tuple[bool,int]:
+    async def faturar(self,nunota:int,dt_fatur:str=None) -> tuple[bool,int]:
         """
         Fatura um pedido de venda.
             :param nunota: número único do pedido de venda
@@ -428,11 +399,7 @@ class Pedido:
 
     @token_snk
     @carrega_dados_empresa
-    async def atualizar_local(
-            self,
-            nunota:int,
-            payload:list[dict]
-        ) -> bool:
+    async def atualizar_local(self,nunota:int,payload:list[dict]) -> bool:
         """
         Atualiza o local de estoque dos itens de um pedido de venda
             :param nunota: número único do pedido de venda
@@ -471,10 +438,7 @@ class Pedido:
             return False 
 
     @token_snk
-    async def excluir(
-            self,
-            nunota:int
-        ) -> bool:
+    async def excluir(self,nunota:int) -> bool:
         """
         Exclui um pedido de venda
             :param nunota: número único do pedido de venda
@@ -519,11 +483,7 @@ class Itens(Pedido):
         ]            
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int=None,
-            pedido_ecommerce:str=None
-        ) -> dict:
+    async def buscar(self,nunota:int=None,pedido_ecommerce:str=None) -> dict:
         """
         Busca os itens do pedido de venda.
             :param nunota: número único do pedido de venda
