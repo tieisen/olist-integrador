@@ -171,36 +171,33 @@ class Nota:
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
 
+    @contexto
     @carrega_dados_ecommerce
-    async def baixar_conta_liquido(self,data_baixa:str,dados_conta:dict,dados_custo:dict,**kwargs) -> dict:
+    async def baixar_conta_liquido(self,data_baixa:datetime,dados_conta:dict,dados_custo:dict,**kwargs) -> dict:
         """
         Faz a baixa do contas a receber referente à NF no Olist com base no relatório de custos
-            :param id_nota: ID da NF no Olist
-            :param dados_financeiro: dicionário com os dados do lançamento do contas a receber
+            :param data_baixa: data da baixa
+            :param dados_conta: dicionário com os dados do lançamento do contas a receber
+            :param dados_custo: dicionário com os dados da planilha de custos do e-commerce
             :return dict: dicionário com status e erro
         """
 
-        REGEX = r"OC nº (\S+)"
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                               de='olist',
                                               para='olist',
                                               contexto=kwargs.get('_contexto'))
         try:
-            data_conta:datetime = datetime.strptime(data_baixa, '%d/%m/%Y').date()
-            matches = re.search(REGEX, dados_conta.get('historico'))
-            codigo_pedido:str=matches.group(1)
             cr = ContaReceber()
-            nota = NotaOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))            
-            dados_custo={}
+            nota = NotaOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
             payload={}    
 
             payload = cr.recebimento(dados_ecommerce=self.dados_ecommerce,
                                      dados_conta=dados_conta,
                                      dados_custo=dados_custo,
-                                     data=data_conta.strftime('%d/%m/%Y'))
+                                     data=data_baixa.strftime('%d/%m/%Y'))
             if not payload:
-                msg = f"Erro montar payload pedido {codigo_pedido}"
+                msg = f"Erro montar payload"
                 raise Exception(msg)
             
             if not await nota.baixar_financeiro(id=dados_conta.get('id'),payload=payload):
@@ -210,6 +207,7 @@ class Nota:
             if not await crudNota.atualizar(cod_pedido=dados_custo.get('n_pedido_ecommerce'),dh_baixa_financeiro=datetime.now()):
                 msg = f"Erro ao atualizar contas a receber da nota"
                 raise Exception(msg)
+            
             return {"success": True, "__exception__": None}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}  
