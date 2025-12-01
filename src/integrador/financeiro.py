@@ -25,7 +25,7 @@ class Financeiro:
 
     @contexto
     @carrega_dados_ecommerce
-    async def realizar_baixa_contas_receber(self,data_conta:str,relatorio_custos:dict,**kwargs) -> bool:
+    async def realizar_baixa_contas_receber(self,data_conta:datetime,relatorio_custos:dict,**kwargs) -> bool:
 
         def filtra_loja(contas_dia:list[dict],id_loja:int) -> list[dict]:
             if id_loja in [9227,9265]:
@@ -43,7 +43,6 @@ class Financeiro:
         REGEX = r"OC nº (\S+)"
         nota_olist = NotaOlist(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
         integrador_nota = IntegradorNota(id_loja=self.dados_ecommerce.get('id_loja'))
-        data_conta:datetime = datetime.strptime(data_conta, '%d/%m/%Y').date()
         contas_dia:list[dict] = await nota_olist.buscar_lista_financeiro_aberto(dt_emissao=data_conta.strftime('%Y-%m-%d'))
         contas_dia = filtra_loja(contas_dia=contas_dia,id_loja=self.id_loja)
         if not contas_dia:
@@ -67,12 +66,11 @@ class Financeiro:
     
     @contexto
     @carrega_dados_ecommerce
-    async def baixar_relatorio_custos(self,data:str,**kwargs) -> bool:
+    async def baixar_relatorio_custos(self,data:datetime,**kwargs) -> bool:
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
                                           para='sankhya',
                                           contexto=kwargs.get('_contexto'))        
-        data:datetime = datetime.strptime(data, '%d/%m/%Y').date()
         data_ini:datetime = data - timedelta(days=2)
         bot = Bot()
         try:
@@ -91,7 +89,7 @@ class Financeiro:
     
     @contexto
     @log_execucao
-    async def executar_baixa(self,data:str) -> bool:
+    async def executar_baixa(self,data:datetime) -> bool:
         if await self.baixar_relatorio_custos(data=data):
             relatorio_custos:list[dict] = buscar_relatorio_custos()
             if not relatorio_custos:
