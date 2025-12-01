@@ -4,6 +4,7 @@ import requests
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import busca_paginada
 load_env()
 logger = set_logger(__name__)
 
@@ -23,44 +24,18 @@ class Separacao:
             :return list[dict]: lista de dicionários com os dados resumidos das separações
         """
         
-        url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
+        urls = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
                 self.endpoint+"/?situacao=4" ] # Em Separacao
-        
-        if not url:
-            logger.error("Erro relacionado à url. %s",url)
-            return False        
 
         status = True
         lista = []
-        for u in url:
-            time.sleep(self.req_time_sleep)
-            res = requests.get(
-                url = u,
-                headers = {
-                    "Authorization":f"Bearer {self.token}",
-                    "Content-Type":"application/json",
-                    "Accept":"application/json"
-                }
-            )
-
-            if res.status_code != 200:
-                status == False
-                logger.error("Erro %s: %s", res.status_code, res.text)
-                print(f"Erro {res.status_code}: {res.text}")
-                continue
-
-            if res.status_code == 200 and not res.json().get('itens'):
-                continue
-            
-            lista+=res.json().get('itens',[])
+        for url in urls:
+            lista+= await busca_paginada(token=self.token,url=url)
 
         return lista if status else status        
 
     @token_olist
-    async def buscar(
-            self,
-            id:int
-        ) -> dict:
+    async def buscar(self,id:int) -> dict:
         """
         Busca os dados de uma separação.
             :params id: ID da separação
@@ -88,10 +63,7 @@ class Separacao:
         return res.json()
     
     @token_olist
-    async def separar(
-            self,
-            id:int
-        ) -> bool:
+    async def separar(self,id:int) -> bool:
         """
         Atualiza o status da separação de um pedido para Separado.
             :params id: ID da separação
@@ -122,10 +94,7 @@ class Separacao:
         return True
 
     @token_olist
-    async def concluir(
-            self,
-            id:int
-        ) -> bool:
+    async def concluir(self,id:int) -> bool:
         """
         Atualiza o status da separação de um pedido para Embalada (checkout).
             :params id: ID da separação
