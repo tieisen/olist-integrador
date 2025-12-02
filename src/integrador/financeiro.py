@@ -1,10 +1,10 @@
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.integrador.nota import Nota as IntegradorNota
 from src.olist.nota import Nota as NotaOlist
 from database.crud import log as crudLog
-from src.services.bot import Bot
+from src.parser.conta_receber import ContaReceber
 from datetime import datetime
 from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao
 from src.utils.log import set_logger
@@ -15,7 +15,7 @@ logger = set_logger(__name__)
 
 class Financeiro:
 
-    def __init__(self, id_loja:int=None):
+    def __init__(self, id_loja:int):
         self.id_loja = id_loja
         self.log_id = None
         self.contexto = 'financeiro'
@@ -25,7 +25,7 @@ class Financeiro:
 
     @contexto
     @carrega_dados_ecommerce
-    async def realizar_baixa_contas_receber(self,data_conta:datetime,relatorio_custos:dict,**kwargs) -> bool:
+    async def realizar_baixa_contas_receber(self,data_conta:datetime,relatorio_custos:list[dict],**kwargs) -> bool:
 
         def filtra_loja(contas_dia:list[dict],id_loja:int) -> list[dict]:
             if id_loja in [9227,9265]:
@@ -41,18 +41,21 @@ class Financeiro:
                                           para='sankhya',
                                           contexto=kwargs.get('_contexto'))        
         REGEX = r"OC nº (\S+)"
-        nota_olist = NotaOlist(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
-        integrador_nota = IntegradorNota(id_loja=self.dados_ecommerce.get('id_loja'))
+
+        nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+        integrador_nota = IntegradorNota(id_loja=self.id_loja)
         contas_dia:list[dict] = await nota_olist.buscar_lista_financeiro_aberto(dt_emissao=data_conta.strftime('%Y-%m-%d'))
         contas_dia = filtra_loja(contas_dia=contas_dia,id_loja=self.id_loja)
         if not contas_dia:
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             return True
         status_log:list[bool] = []
-        for conta in contas_dia:
+        # print(f"Contas a receber para baixar: {len(contas_dia)}")
+        for conta in contas_dia:            
             try:
                 matches = re.search(REGEX, conta.get('historico'))
                 codigo_pedido:str=matches.group(1)
+                # print(f"Baixando conta do pedido {codigo_pedido}")
                 custo:dict = next((r for r in relatorio_custos if r.get("pedido_ecommerce") == codigo_pedido), None)
                 status = await integrador_nota.baixar_conta_liquido(data_baixa=data_conta,dados_conta=conta,dados_custo=custo)
                 status_log.append(status.get('success'))
@@ -60,40 +63,21 @@ class Financeiro:
                 logger.error("Erro ao baixar conta a receber do pedido %s: %s",codigo_pedido,str(e))
                 status_log.append(False)
             finally:
+                # print(status.get('success'))
                 time.sleep(self.req_time_sleep)
         await crudLog.atualizar(id=self.log_id,sucesso=all(status_log))
         return all(status_log)
     
-    @contexto
-    @carrega_dados_ecommerce
-    async def baixar_relatorio_custos(self,data:datetime,**kwargs) -> bool:
-        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                          de='olist',
-                                          para='sankhya',
-                                          contexto=kwargs.get('_contexto'))        
-        data_ini:datetime = data - timedelta(days=2)
-        bot = Bot()
-        try:
-            await bot.login()
-            await bot.acessa_relatorio_custos()
-            await bot.gerar_relatorio_custos(data_inicial=data_ini.strftime('%d/%m/%Y'),
-                                             data_final=data.strftime('%d/%m/%Y'))
-            await bot.baixar_relatorio_custos()
-            await crudLog.atualizar(id=self.log_id,sucesso=True)
-            await bot.logout()
-            return True            
-        except Exception as e:
-            logger.error("Erro ao baixar relatorio de custos: %s",str(e))
-            await crudLog.atualizar(id=self.log_id,sucesso=False)
-            return False
-    
-    @contexto
     @log_execucao
     async def executar_baixa(self,data:datetime) -> bool:
-        if await self.baixar_relatorio_custos(data=data):
-            relatorio_custos:list[dict] = buscar_relatorio_custos()
-            if not relatorio_custos:
-                logger.error("Relatório de custos não encontrado ou vazio.")
-                return False
-            sucesso_baixa = await self.realizar_baixa_contas_receber(data_conta=data,relatorio_custos=relatorio_custos)
-            return sucesso_baixa
+        parser = ContaReceber()
+        relatorio_custos:list[dict] = buscar_relatorio_custos()
+        if not relatorio_custos:
+            logger.error("Relatório de custos não encontrado ou vazio.")
+            return False
+        relatorio_custos = parser.carregar_relatorio(lista=relatorio_custos)
+        if not relatorio_custos:
+            await crudLog.atualizar(id=self.log_id,sucesso=True)
+            return True        
+        sucesso_baixa = await self.realizar_baixa_contas_receber(data_conta=data,relatorio_custos=relatorio_custos)
+        return sucesso_baixa
