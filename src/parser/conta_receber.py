@@ -11,7 +11,7 @@ class ContaReceber:
         self.taxa_blz_envios:float = float(os.getenv('BLZWEB_TAXA_ENVIO'))
         self.comissao_blz:float = float(os.getenv('BLZWEB_TAXA_COMISSAO'))
 
-    def carregar_relatorio(self,path:str=None,arquivo=None) -> dict:
+    def carregar_relatorio(self,path:str=None,arquivo=None,lista:list[dict]=None) -> dict:
         """
         Carrega o relatório de custos do e-commerce
             :param path(str): caminho do arquivo
@@ -52,6 +52,15 @@ class ContaReceber:
                 relatorio = df.copy()
             return True
 
+        def converter_relatorio(lista:list[dict]):
+            """
+            Converte lista de dicionários em dataframe
+                :param lista: lista de dicionários
+            """
+            nonlocal relatorio
+            relatorio = pd.DataFrame(lista)
+            return True
+
         def padroniza_colunas():
             """ Padroniza colunas do relatório de custos """
             nonlocal relatorio
@@ -85,8 +94,12 @@ class ContaReceber:
         try:
             if arquivo:
                 carregar_arquivo(arquivo=arquivo)
-            else:
+            elif lista:
+                converter_relatorio(lista=lista)
+            elif path:
                 ler_relatorio(path=path)
+            else:
+                raise ValueError("Nenhum parâmetro válido para carregar o relatório de custos")
             padroniza_colunas()
             trata_codigo_pedido()
         except Exception as e:
