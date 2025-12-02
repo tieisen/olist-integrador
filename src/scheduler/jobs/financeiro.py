@@ -25,8 +25,7 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
         for i, emp in enumerate(empresas):
             print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             bot = Bot(empresa_id=emp.get('id'))
-            # if await bot.rotina_relatorio_custos(data=data):
-            if True:
+            if await bot.rotina_relatorio_custos(data=data):            
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
