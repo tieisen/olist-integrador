@@ -141,8 +141,8 @@ class Bot:
             time.sleep(1)
             multiempresa = self.driver.find_element(By.XPATH, elemento_multiempresa)
             multiempresa.click()               
-            time.sleep(30)
-            if WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
+            time.sleep(5)
+            if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
                 return True
             else:
                 return False
@@ -170,17 +170,19 @@ class Bot:
             if self.empresa_id != 1:
                 sucesso_troca = await self.trocar_empresa(empresa_id=self.empresa_id)
                 if not sucesso_troca:
+                    await self.logout()
                     logger.error("Erro ao trocar de empresa no self")
                     await crudLog.atualizar(id=self.log_id,sucesso=False)
                     return False
             await self.acessa_relatorio_custos()
             await self.gerar_relatorio_custos(data_inicial=data_ini.strftime('%d/%m/%Y'),
-                                             data_final=data.strftime('%d/%m/%Y'))
+                                              data_final=data.strftime('%d/%m/%Y'))
             await self.baixar_relatorio_custos()
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             await self.logout()
             return True            
         except Exception as e:
+            await self.logout()
             logger.error("Erro ao baixar relatorio de custos: %s",str(e))
             await crudLog.atualizar(id=self.log_id,sucesso=False)
             return False
