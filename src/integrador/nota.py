@@ -190,8 +190,7 @@ class Nota:
         try:
             cr = ContaReceber()
             nota = NotaOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
-            payload={}    
-
+            payload = {}
             payload = cr.recebimento(dados_ecommerce=self.dados_ecommerce,
                                      dados_conta=dados_conta,
                                      dados_custo=dados_custo,
@@ -210,6 +209,7 @@ class Nota:
             
             return {"success": True, "__exception__": None}
         except Exception as e:
+            logger.error("Erro ao baixar conta: %s",str(e))
             return {"success": False, "__exception__": str(e)}  
     
     async def registrar_cancelamento(self,dados_nota:dict) -> dict:
