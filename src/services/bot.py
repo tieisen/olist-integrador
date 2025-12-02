@@ -164,7 +164,7 @@ class Bot:
                 await crudLog.atualizar(id=self.log_id,sucesso=False)
                 return False
             
-        data_ini:datetime = data - timedelta(days=2)
+        data_ini:datetime = data - timedelta(days=4)
         try:
             await self.login()
             if self.empresa_id != 1:
