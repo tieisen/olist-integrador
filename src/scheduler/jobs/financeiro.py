@@ -15,7 +15,7 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
         try:
             data = datetime.strptime(data, "%Y-%m-%d")
         except:
-            raise Exception("Data inválida. Use o formato YYYY-MM-DD")
+            raise Exception(f"Data inválida. Use o formato YYYY-MM-DD. Data informada: {data}")
 
 
     print(":::::::::::::::::::: FATURAMENTO DE PEDIDOS ::::::::::::::::::::")    
