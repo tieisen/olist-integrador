@@ -127,26 +127,38 @@ class ContaReceber:
         def formata_historico(dados_custo:dict) -> str:
             return f"Referente ao pedido {dados_custo.get('n_pedido')} - OC nº {dados_custo.get('pedido_ecommerce')}"
         
+        def soma_valor_incentivo(vlr_total:float,vlr_incentivo:float) -> float:
+            return round(vlr_total + vlr_incentivo,2)
+        
         payload:dict = {}
         historico:str=''
+        vlr_total_pedido:float=0
+        vlr_desconto_total:float=0
         vlr_comissao:float=0            
         vlr_pago:float=0
 
         try:       
             if len(dados_custo.get('n_pedido_ecommerce')) == 14:
                 # Shopee - valor da comissão é variável por pedido e já está informado no relatório
-                vlr_comissao = dados_custo.get('total_comissao',0) + dados_custo.get('frete_do_pedido',0)
-                vlr_pago = dados_custo.get('total_liquido')
+                vlr_comissao = dados_custo.get('total_comissao',0)
+                vlr_desconto_total = vlr_comissao + dados_custo.get('frete_do_pedido',0)
+                if dados_custo.get('total',0) < vlr_comissao:                    
+                    vlr_total_pedido = soma_valor_incentivo(dados_custo.get('total',0),vlr_comissao) + dados_custo.get('frete_do_pedido',0)
+                else:
+                    vlr_total_pedido = dados_custo.get('total',0) + dados_custo.get('frete_do_pedido',0)
+                vlr_pago = round(vlr_total_pedido - vlr_desconto_total,2)
             else:
                 # BLZ - valor da comissão precisa ser calculado
-                vlr_comissao = round(calcula_comissao_blz(dados_custo.get('total')) + dados_custo.get('frete_do_pedido'),2)
-                vlr_pago = round(dados_custo.get('total') + dados_custo.get('frete_do_pedido') - vlr_comissao,2)
+                vlr_comissao = round(calcula_comissao_blz(dados_custo.get('total')),2)
+                vlr_desconto_total = round(vlr_comissao + dados_custo.get('frete_do_pedido'),2)
+                vlr_total_pedido = dados_custo.get('total',0) + dados_custo.get('frete_do_pedido',0)
+                vlr_pago = round(vlr_total_pedido - vlr_desconto_total,2)
             
             # Se histórico muito grande (contas agrupadas), formatar
             historico = dados_conta.get('historico')            
             if len(historico) >= 150:
                 historico = formata_historico(dados_custo=dados_custo)            
-            historico+=f"<br>\nTotal produtos R${formata_vlr(dados_custo.get('total'))} | Comissão R${formata_vlr(vlr_comissao-dados_custo.get('frete_do_pedido'))} | Frete R${formata_vlr(dados_custo.get('frete_do_pedido'))} | Incentivo R${formata_vlr(dados_custo.get('total_incentivo'))}"
+            historico+=f"<br>\nTotal pedido (produtos + frete) R${formata_vlr(vlr_total_pedido)} | Comissão R${formata_vlr(vlr_comissao)} | Valor pago R${formata_vlr(vlr_pago)}"
             
             payload = {
                 "contaDestino": {
@@ -157,11 +169,11 @@ class ContaReceber:
                     "id": dados_ecommerce.get('id_categoria_financeiro')
                 },
                 "historico": historico,
-                "taxa": vlr_comissao,
+                "taxa": vlr_desconto_total,
                 "juros": None,
                 "desconto": None,
                 "valorPago": vlr_pago,
-                "acrescimo": dados_custo.get('total_incentivo')
+                "acrescimo": None
             }
         except Exception as e:
             logger.error("Erro ao converter dados para baixa de contas a receber do pedido %s. %s", dados_custo.get('n_pedido_ecommerce'), e)
