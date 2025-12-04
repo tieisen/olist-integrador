@@ -10,6 +10,7 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
     ecommerces:list[dict]=[]
     emp:dict={}
     ecom:dict={}
+    lista_status:list[bool]=[]
 
     if not isinstance(data,datetime):
         try:
@@ -30,13 +31,11 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     financeiro = Financeiro(id_loja=ecom.get('id_loja'))
-                    if await financeiro.executar_baixa(data=data):
-                        retorno = {
-                            "status": True,
-                            "exception": None
-                        }
-                    else:
-                        raise Exception("Erro ao baixar contas a receber")
+                    lista_status.append(await financeiro.executar_baixa(data=data))
+                retorno = {
+                    "status": all(lista_status),
+                    "exception": "Erro ao baixar contas a receber" if not all(lista_status) else None
+                }
             else:
                 raise Exception("Erro ao baixar relatório de custos")
     except Exception as e:
