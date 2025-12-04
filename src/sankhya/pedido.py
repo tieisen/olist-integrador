@@ -346,7 +346,7 @@ class Pedido:
             logger.error("Erro relacionado à url. %s",url)
             return False, None
         
-        top_faturamento = self.dados_empresa.get('snk_top_venda')
+        top_faturamento = self.dados_empresa.get('snk_top_transferencia')
         serie_nf = self.dados_empresa.get('serie_nfe')
         if not all([top_faturamento,serie_nf]):
             erro = f"Parâmetros da TOP de faturamento ou série da NF não encontados"
