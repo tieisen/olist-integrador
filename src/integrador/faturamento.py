@@ -354,9 +354,10 @@ class Faturamento:
             for item_pedido in itens_pedidos:
                 lista_produtos_baixa.append(item_pedido)
                 match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
+                # print(f"Validando produto {item_pedido.get('codprod')} - Qtd pedido: {item_pedido.get('qtdneg')} x Qtd nota: {match.get('qtdneg') if match else '0'}")
                 if not match:
                     pass
-                elif int(item_pedido.get('qtdneg')) < int(match.get('qtdneg')):
+                elif int(item_pedido.get('qtdneg')) > int(match.get('qtdneg')):
                     lista_produtos_baixa[lista_produtos_baixa.index(item_pedido)]['qtdneg'] = int(item_nota.get('qtdneg')) - int(item_pedido.get('qtdneg'))
                 else:
                     pass
@@ -367,6 +368,7 @@ class Faturamento:
         return lista_produtos_baixa
 
     @carrega_dados_empresa
+    @carrega_dados_ecommerce
     async def desmembrar_lotes_baixa_ecommerce(self,lista_itens:list[dict]) -> list[dict]:
         """
         Desmembra a quantidade total dos itens para baixa do local do e-commerce no Sankhya dentre os lotes disponíveis no sistema.
@@ -377,9 +379,11 @@ class Faturamento:
         lista_produtos_baixa:list[dict] = []
 
         # Buscar o estoque atual no e-commerce por lote
-        estoque = EstoqueSnk(codemp=self.codemp)
-        estoque_atual:list[dict] = await estoque.buscar_saldo_ecommerce_por_lote(lista_produtos=[item.get('codprod') for item in lista_itens])
+        estoque = EstoqueSnk(codemp=self.codemp, empresa_id=self.dados_ecommerce.get('empresa_id'))
+        lista_produtos_busca:list[int] = [int(item.get('codprod')) for item in lista_itens]
+        estoque_atual:list[dict] = await estoque.buscar_saldo_ecommerce_por_lote(lista_produtos=lista_produtos_busca)
         if not estoque_atual:
+            print("Saldo de estoque atual não encontrado.")
             return lista_produtos_baixa
 
         try:
@@ -408,7 +412,6 @@ class Faturamento:
         return lista_produtos_baixa
 
     @contexto
-    @interno
     @carrega_dados_ecommerce
     async def baixar_ecommerce(self,nunota_nota:int,**kwargs) -> dict:
         """
@@ -426,7 +429,7 @@ class Faturamento:
             estoque_baixar:list[dict] = await crudPedido.buscar_baixar_estoque(ecommerce_id=self.dados_ecommerce.get('id'))
             if not estoque_baixar:
                 return True
-                        
+            
             # Unifica os itens dos pedidos
             dados_pedidos_olist:list[dict] = [pedido.get('dados_pedido') for pedido in estoque_baixar]
             pedidos_agrupados, itens_agrupados = integrador_pedido.unificar(lista_pedidos=dados_pedidos_olist)
@@ -445,6 +448,7 @@ class Faturamento:
             if not lista_produtos_baixa:
                 msg = "Erro ao validar quantidades para baixa de estoque"
                 raise Exception(msg)
+
             lista_produtos_baixa = await self.desmembrar_lotes_baixa_ecommerce(lista_itens=lista_produtos_baixa)
             if not lista_produtos_baixa:
                 msg = "Erro ao desmembrar lotes para baixa de estoque"
@@ -536,12 +540,15 @@ class Faturamento:
             await crudLog.atualizar(id=self.log_id)
             return True
         
+        print(f"Pedidos para faturar: {len(pedidos_faturar)}")
+        
         pedidos_faturar = list(set([p.get("nunota") for p in pedidos_faturar]))
 
         for i, pedido in enumerate(pedidos_faturar):
+            print(f"Faturando pedido {pedido} ({i+1}/{len(pedidos_faturar)})")
             time.sleep(self.req_time_sleep)
             # Fatura pedido no Olist
-            ack_pedido = await self.faturar_sankhya(pedido=pedido,loja_unica=loja_unica)
+            ack_pedido = await self.faturar_sankhya(nunota=pedido,loja_unica=loja_unica)
             await crudLogPed.criar(log_id=self.log_id,
                                    nunota=pedido,
                                    evento='F',
