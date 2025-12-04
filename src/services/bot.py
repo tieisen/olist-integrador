@@ -3,6 +3,7 @@ import time
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
@@ -29,12 +30,14 @@ class Bot:
         self.driver = None
         self.empresa_id = empresa_id
         self.contexto = 'bot'
+        self.wait = None
 
     async def login(self):
         try:
             self.driver = webdriver.Firefox()
             self.driver.maximize_window() 
             self.driver.get(self.link_erp)
+            # self.wait = WebDriverWait(self.driver, 10)
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
             login_input = self.driver.find_element(By.ID, "username")
             next_button = self.driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
@@ -188,73 +191,175 @@ class Bot:
             await crudLog.atualizar(id=self.log_id,sucesso=False)
             return False
 
-    async def acessa_contas_receber(self):
+    async def acessa_contas_receber(self) -> bool:
         try:
+            # Acessa tela de contas a receber
             self.driver.get(self.link_contas_receber)
         except Exception as e:
             logger.error("Erro ao acessar contas a receber. %s",e)
             return False
+        
+        # Aguarda carregamento da tela        
         if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "periodoDatas"))):
             return False
-        return True        
+        return True
 
-    async def informa_data_baixa(self,data):
+    async def seleciona_filtro_historico(self) -> bool:
+        # Busca botao de tipo de filtro
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.XPATH, "//span[@class='input-group-btn dropdown dropdown-in dropdown-refinar-busca']"))):
+            logger.error("Erro no botao de tipo de filtro")
+            return False
+        btn_tipo_filtro = self.driver.find_element(By.XPATH, "//span[@class='input-group-btn dropdown dropdown-in dropdown-refinar-busca']")
+        btn_tipo_filtro.click()
+
+        # Busca lista de opções de filtro
+        if not WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//ul[@class='dropdown-menu dropdown-menu-right']"))):
+            logger.error("Erro ao exibir opções de filtro")
+            return False
+        
+        # Seleciona opção histórico
+        try:
+            lista_opcoes = self.driver.find_element(By.XPATH, "//ul[@class='dropdown-menu dropdown-menu-right']")
+            opc_historico = lista_opcoes.find_elements(By.XPATH, "//a[@class='no-icon']")
+            for opc in opc_historico:
+                if opc.text == 'Histórico':
+                    opc.click()
+                    break
+        except Exception as e:
+            logger.error("Erro ao selecionar opção histórico. %s",e)
+            return False
+        return True    
+
+    async def informa_historico(self, numero_nota:int) -> bool:
+        
+        # Busca campo de filtro
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "pesquisa-mini"))):
+            logger.error("Erro no campo de filtro")
+            return False
+        campo_filtro = self.driver.find_element(By.ID, "pesquisa-mini")
+        
+        try:
+            # Informa número da nota campo
+            campo_filtro.clear()
+            campo_filtro.send_keys(f"NF nº {numero_nota}")
+            campo_filtro.send_keys(Keys.ENTER)
+        except Exception as e:
+            logger.error("Erro ao informar número da nota no campo de filtro. %s",e)
+            return False
+
+        # Aguarda carregamento da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "tabelaListagem"))):
+            logger.error("Erro ao aplicar filtro")
+            return False
+        
+        return True
+
+    async def agrupa_titulos(self) -> bool:
+
+        # Aguarda carregamento da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "marcarTodos"))):
+            logger.error("Erro ao aplicar filtro")
+            return False
+        
+        # Clica no checkbox de selecionar todos
+        chk_marcar_todos = self.driver.find_element(By.ID, "marcarTodos")
+        chk_marcar_todos.click()
+
+        # Aguarda carregamento do botão agrupar
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@original-title=' Agrupar contas']"))):
+            logger.error("Erro ao buscar botão de agrupar")
+            return False
+        
+        # Clica no botão agrupar títulos
+        btn_agrupar = self.driver.find_element(By.XPATH, "//button[@original-title=' Agrupar contas']")
+        btn_agrupar.click()
+
+        # Aguarda carregamento do modal de confirmação
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "pesquisa-mini"))):
+            logger.error("Erro no modal de confirmação")
+            return False       
+        
+        return True
+    
+    async def informa_data_baixa(self,data) -> bool:
+        
+        # Busca pill de filtro por período
         if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "periodoDatas"))):
             logger.error("Erro no botao intervalo")
-            return False            
+            return False
         btn_periodo = self.driver.find_element(By.ID, "periodoDatas")
         btn_periodo.click()
         
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "p-data"))):
-            logger.error("Erro no campo de data")
-            return False        
-        campo_data = self.driver.find_element(By.ID, "p-data")
-        campo_data.clear()
-        campo_data.send_keys(data)
-        btn_opcdata.click()
-        
+        # Busca pill de período do dia
         if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-data"))):
             logger.error("Erro no botao opção data")
             return False        
         btn_opcdata = self.driver.find_element(By.ID, "opc-data")
         btn_opcdata.click()
-        
+
+        # Busca campo de data
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "p-data"))):
+            logger.error("Erro no campo de data")
+            return False        
+        campo_data = self.driver.find_element(By.ID, "p-data")
+
+        # Informa data no campo
+        campo_data.clear()
+        campo_data.send_keys(data)
+        btn_opcdata.click()
+
+        # Busca e clica no botao aplicar filtro
         if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-primary filter-apply']"))):
             logger.error("Erro no botao aplicar filtro")
             return False        
         btn_filtrar = self.driver.find_element(By.XPATH, "//button[@class='btn btn-primary filter-apply']")
         btn_filtrar.click()
 
+        # Aguarda carregamento da tabela
         if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
             logger.error("Erro ao aplicar filtro")
             return False
         return True    
 
-    async def alterna_aba_contas_emitidas(self):
+    async def alterna_aba_contas_emitidas(self) -> bool:
+        
+        # Aguarda carregamento da tela 
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "sit-1"))):
+            logger.error("Erro no botao contas emitidas")
+            return False
+        
+        # Clica na aba contas emitidas
+        btn_aba_emitidas = self.driver.find_element(By.ID, "sit-1")
+        btn_aba_emitidas.click()
+
+        # Aguarda carregamento/atualização da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
+            logger.error("Erro ao alternar aba contas emitidas")
+            return False
+        return True
+
+    async def pesquisa_lancamentos_nota(self,numero_nota:int) -> bool:
+
+        # Aguarda carregamento da tela
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-default dropdown-toggle']"))):
+            logger.error("Erro ao acessar tela")
+            return False
+        
+        # Busca aba de contas emitidas
         if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "sit-1"))):
             logger.error("Erro no botao contas emitidas")
             return False            
         btn_aba_emitidas = self.driver.find_element(By.ID, "sit-1")
         btn_aba_emitidas.click()
 
+        # Aguarda carregamento da tela
         if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
             logger.error("Erro ao alternar aba contas emitidas")
             return False
+        tabela = self.driver.find_element(By.ID, "tabelaListagem")
+        tbody = tabela.find_element(By.TAG_NAME, "tbody")
+        rows = tbody.find_elements(By.TAG_NAME, "tr")
         return True
-
-    # async def pesquisa_lancamentos_nota(self,numero_nota):
-    #     if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-default dropdown-toggle']"))):
-    #         logger.error("Erro ao acessar tela")
-    #         return False            
-    #     if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "sit-1"))):
-    #         logger.error("Erro no botao contas emitidas")
-    #         return False            
-    #     btn_aba_emitidas = self.driver.find_element(By.ID, "sit-1")
-    #     btn_aba_emitidas.click()
-    #     if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
-    #         logger.error("Erro ao alternar aba contas emitidas")
-    #         return False
-    #     return True
 
     async def habilita_controle_lotes(self,id_produto):
         self.driver.get(self.link_produto.format(id_produto))
