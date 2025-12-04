@@ -20,6 +20,7 @@ class Bot:
         self.link_estoque = os.getenv('OLIST_URL_ESTOQUE')
         self.link_produto = os.getenv('OLIST_URL_CAD_PRODUTO')
         self.link_relatorio_custos = os.getenv('OLIST_URL_RELATORIO_CUSTOS')
+        self.link_contas_receber = os.getenv('OLIST_URL_CONTAS_RECEBER')
         self.link_logout = os.getenv('OLIST_URL_LOGOUT')
         self.time_sleep = float(os.getenv('REQ_TIME_SLEEP'))
         self.username = os.getenv('OLIST_BOT_USERNAME')
@@ -78,7 +79,7 @@ class Bot:
             self.driver.get(self.link_relatorio_custos)
         except Exception as e:
             logger.error("Erro ao acessar relatorio de custos. %s",e)
-            return False, None
+            return False
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-periodo")))
         return True
 
@@ -186,6 +187,74 @@ class Bot:
             logger.error("Erro ao baixar relatorio de custos: %s",str(e))
             await crudLog.atualizar(id=self.log_id,sucesso=False)
             return False
+
+    async def acessa_contas_receber(self):
+        try:
+            self.driver.get(self.link_contas_receber)
+        except Exception as e:
+            logger.error("Erro ao acessar contas a receber. %s",e)
+            return False
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "periodoDatas"))):
+            return False
+        return True        
+
+    async def informa_data_baixa(self,data):
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "periodoDatas"))):
+            logger.error("Erro no botao intervalo")
+            return False            
+        btn_periodo = self.driver.find_element(By.ID, "periodoDatas")
+        btn_periodo.click()
+        
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "p-data"))):
+            logger.error("Erro no campo de data")
+            return False        
+        campo_data = self.driver.find_element(By.ID, "p-data")
+        campo_data.clear()
+        campo_data.send_keys(data)
+        btn_opcdata.click()
+        
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-data"))):
+            logger.error("Erro no botao opção data")
+            return False        
+        btn_opcdata = self.driver.find_element(By.ID, "opc-data")
+        btn_opcdata.click()
+        
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-primary filter-apply']"))):
+            logger.error("Erro no botao aplicar filtro")
+            return False        
+        btn_filtrar = self.driver.find_element(By.XPATH, "//button[@class='btn btn-primary filter-apply']")
+        btn_filtrar.click()
+
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
+            logger.error("Erro ao aplicar filtro")
+            return False
+        return True    
+
+    async def alterna_aba_contas_emitidas(self):
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "sit-1"))):
+            logger.error("Erro no botao contas emitidas")
+            return False            
+        btn_aba_emitidas = self.driver.find_element(By.ID, "sit-1")
+        btn_aba_emitidas.click()
+
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
+            logger.error("Erro ao alternar aba contas emitidas")
+            return False
+        return True
+
+    # async def pesquisa_lancamentos_nota(self,numero_nota):
+    #     if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-default dropdown-toggle']"))):
+    #         logger.error("Erro ao acessar tela")
+    #         return False            
+    #     if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "sit-1"))):
+    #         logger.error("Erro no botao contas emitidas")
+    #         return False            
+    #     btn_aba_emitidas = self.driver.find_element(By.ID, "sit-1")
+    #     btn_aba_emitidas.click()
+    #     if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
+    #         logger.error("Erro ao alternar aba contas emitidas")
+    #         return False
+    #     return True
 
     async def habilita_controle_lotes(self,id_produto):
         self.driver.get(self.link_produto.format(id_produto))
