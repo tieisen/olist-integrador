@@ -249,6 +249,7 @@ class Faturamento:
             
             return {"success": True, "__exception__": str(e)}
         except Exception as e:
+            logger.error("Erro ao faturar pedido no Olist: %s",str(e))
             return {"success": False, "__exception__": str(e)}
 
     @contexto
@@ -317,7 +318,7 @@ class Faturamento:
                 msg = f"Erro ao confirmar nota {nunota_nota}"
                 raise Exception(msg)
             else:
-                await crudNota.atualizar(nunota=nunota_nota,dh_confirmacao=datetime.now())
+                await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
 
             # Realiza baixa de estoque do local e-commerce
             ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
