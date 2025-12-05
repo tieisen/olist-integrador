@@ -118,18 +118,15 @@ class Nota:
                 msg = f"Erro ao buscar contas a receber da nota"
                 raise Exception(msg)
             
-            if dados_financeiro.get('dataLiquidacao'):
-                pass
-
             # Atualiza a nota no banco de dados
             ack = await crudNota.atualizar(id_nota=dados_nota.get('id'),
-                                           id_financeiro=dados_financeiro.get('id'),
-                                           dh_baixa_financeiro=dados_financeiro.get('dataLiquidacao',None))
+                                           id_financeiro=dados_financeiro.get('id'))
             if not ack:
                 msg = f"Erro ao atualizar contas a receber da nota"
                 raise Exception(msg)            
             return {"success": True, "dados_financeiro":dados_financeiro, "__exception__": None}
         except Exception as e:
+            logger.error("Erro ao receber conta: %s",str(e))
             return {"success": False, "dados_financeiro": None, "__exception__": str(e)}
 
     @carrega_dados_ecommerce
