@@ -41,11 +41,8 @@ class Estoque:
         filtro_produtos:str=''
         if codprod:
             filtro_produtos = str(codprod)
-        if lista_produtos:
-            if len(lista_produtos) == 1:
-                filtro_produtos = str(lista_produtos[0])
-            else:
-                filtro_produtos = ','.join(map(str,lista_produtos))
+        if lista_produtos:   
+            filtro_produtos = ','.join(map(str,lista_produtos))
 
         # Considera estoque da empresa ecommerce e da unidade física do estado
         cod_empresas_estoque:str = ','.join(map(str,[self.dados_empresa.get('snk_codemp_fornecedor'),self.dados_empresa.get('snk_codemp')]))
