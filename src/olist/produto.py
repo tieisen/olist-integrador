@@ -71,9 +71,13 @@ class Produto:
             return res.json()
         else:
             if id and not sku:
-                logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
+                msg = f"Erro {res.status_code}: {res.text} cod {id}"
+                print(msg)
+                logger.error(msg)
             if sku:
-                logger.error("Erro %s: %s sku %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), sku)
+                msg = f"Erro {res.status_code}: {res.text} sku {sku}"
+                print(msg)
+                logger.error(msg)
             return False
 
     @token_olist
