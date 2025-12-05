@@ -245,45 +245,25 @@ class Faturamento:
             # Cria NF no Olist
             ack_criacao = await integra_nota.gerar(dados_pedido=pedido)
             if not ack_criacao.get('success'):
-                # pass
-                # print(ack_criacao.get('__exception__'))
                 raise Exception(ack_criacao.get('__exception__'))
                             
             # Emite NF
             ack_emissao = await integra_nota.emitir(ack_criacao.get('dados_nota'))
             if not ack_emissao.get('success'):
-                # pass
-                # print(ack_emissao.get('__exception__'))
                 raise Exception(ack_emissao.get('__exception__'))
             
             # Envia pedido pra separação no Olist
-            # print("Enviando pedido para separação no Olist...")
             ack_separacao = await separacao.separar(id=pedido.get('id_separacao'))
             if not ack_separacao:
-                # pass
-                # print(ack_separacao.get('__exception__'))
                 raise Exception(ack_separacao.get('__exception__'))
 
             # Recebe contas a receber do Olist
-            # print("Recebe contas a receber do Olist")
             ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
-            if not ack_conta.get('success'):
-                # pass
-                print(ack_conta.get('__exception__'))                
-                # raise Exception(ack_conta.get('__exception__'))
+            print(ack_conta.get('__exception__')) if not ack_conta.get('success') else None
             
-            # Baixa contas a receber do Olist
-            # print("Baixa contas a receber do Olist")
-            ack_baixa = await integra_nota.baixar_conta(id_nota=ack_criacao['dados_nota'].get('id'),                                                       
-                                                        dados_financeiro=ack_conta.get('dados_financeiro'))
-            if not ack_baixa.get('success'):
-                # pass
-                print(ack_baixa.get('__exception__'))                   
-                # raise Exception(ack_baixa.get('__exception__'))
-            
-            print(f"Faturamento do pedido concluído!")    
             return {"success": True}
         except Exception as e:
+            logger.error(f"Erro ao faturar Olist: {e}")
             return {"success": False, "__exception__": str(e)}
 
     @contexto
