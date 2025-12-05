@@ -59,6 +59,17 @@ class Produto:
                                         obs=obs)                      
                 continue
 
+            if "#K" in str(alteracao.get('sku')):
+                obs = f"Kit cadastrado como produto simples: {alteracao.get('sku')}"
+                logger.warning(obs)
+                print(obs)
+                await crudLogProd.criar(log_id=log_id,
+                                        codprod=alteracao.get('sku'),
+                                        idprod=int(alteracao.get('id')),
+                                        sucesso=False,
+                                        obs=obs)                      
+                continue
+
             # Item de imposto
             if int(alteracao.get('sku')) == 1:
                 continue
