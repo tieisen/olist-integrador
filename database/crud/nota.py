@@ -10,13 +10,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        id_pedido:int,
-        id_nota:int,
-        numero:int,
-        serie:str,
-        **kwargs
-    ) -> bool:
+async def criar(id_pedido:int,id_nota:int,numero:int,serie:str,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Nota,
                                kwargs=kwargs,
@@ -52,14 +46,7 @@ async def criar(
         await session.commit()
     return True
 
-async def buscar(
-        id_nota:int=None,
-        nunota:int=None,
-        numero_ecommerce:dict=None,
-        chave_acesso:str=None,
-        cod_pedido:str=None,
-        tudo:bool=False,
-    ) -> dict:
+async def buscar(id_nota:int=None,nunota:int=None,numero_ecommerce:dict=None,chave_acesso:str=None,cod_pedido:str=None,tudo:bool=False,) -> dict:
     res:dict={}
 
     try:
@@ -114,14 +101,7 @@ async def buscar(
         pass
     return res
 
-async def atualizar(
-        id_nota:int=None,
-        chave_acesso:str=None,
-        nunota_pedido:int=None,
-        nunota_nota:int=None,
-        cod_pedido:int=None,
-        **kwargs
-    ):
+async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=None,nunota_nota:int=None,cod_pedido:int=None,**kwargs):
 
     if not any([id_nota,chave_acesso,nunota_pedido,nunota_nota,cod_pedido]):
         print("Nenhum parâmetro informado")
@@ -230,6 +210,20 @@ async def buscar_financeiro(ecommerce_id:int):
             select(Nota)
             .where(Nota.dh_cancelamento.is_(None),
                    Nota.id_financeiro.is_(None),
+                   Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
+        )
+        notas = result.scalars().all()
+    dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                  retorno=notas)
+    return dados_nota 
+
+async def buscar_financeiro_parcelado(ecommerce_id:int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.is_(None),
+                   Nota.id_financeiro.is_(None),
+                   Nota.parcelado.is_(True),
                    Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
         )
         notas = result.scalars().all()
