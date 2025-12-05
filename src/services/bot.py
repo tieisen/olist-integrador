@@ -22,6 +22,7 @@ class Bot:
         self.link_produto = os.getenv('OLIST_URL_CAD_PRODUTO')
         self.link_relatorio_custos = os.getenv('OLIST_URL_RELATORIO_CUSTOS')
         self.link_contas_receber = os.getenv('OLIST_URL_CONTAS_RECEBER')
+        self.link_gnre = os.getenv('OLIST_URL_GNRE')
         self.link_logout = os.getenv('OLIST_URL_LOGOUT')
         self.time_sleep = float(os.getenv('REQ_TIME_SLEEP'))
         self.username = os.getenv('OLIST_BOT_USERNAME')
@@ -73,6 +74,37 @@ class Bot:
             logger.error("Falha no login. %s",e)
             return False
 
+    async def trocar_empresa(self,empresa_id:int):
+        STORYA = 1032724583
+        OUTBEAUTY = 1124267820
+        ELEMENTO_USUARIO = "//div[@class='sidebar-menu-iniciais-usuario']"        
+        elemento_multiempresa = "//a[@onclick='logarNaEmpresaVinculada(:);']"
+
+        match empresa_id:
+            case 1:
+                elemento_multiempresa = f"//a[@onclick='logarNaEmpresaVinculada({STORYA});']"
+            case 5:
+                elemento_multiempresa = f"//a[@onclick='logarNaEmpresaVinculada({OUTBEAUTY});']"
+            case _:
+                logger.error("Empresa não cadastrada no bot")
+                return False
+
+        if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
+            elementos = self.driver.find_elements(By.XPATH, ELEMENTO_USUARIO)
+            btn_usuario = elementos[1]
+            btn_usuario.click()            
+            time.sleep(1)
+            multiempresa = self.driver.find_element(By.XPATH, elemento_multiempresa)
+            multiempresa.click()               
+            time.sleep(5)
+            if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
+                return True
+            else:
+                return False
+        else:
+            logger.error("Erro no botao usuário")
+            return False
+
     async def logout(self):
         self.driver.get(self.link_logout)
         self.driver.quit()
@@ -122,40 +154,20 @@ class Bot:
         else:
             logger.error("Erro no botao download")
             return False
-
-    async def trocar_empresa(self,empresa_id:int):
-        STORYA = 1032724583
-        OUTBEAUTY = 1124267820
-        ELEMENTO_USUARIO = "//div[@class='sidebar-menu-iniciais-usuario']"        
-        elemento_multiempresa = "//a[@onclick='logarNaEmpresaVinculada(:);']"
-
-        match empresa_id:
-            case 1:
-                elemento_multiempresa = f"//a[@onclick='logarNaEmpresaVinculada({STORYA});']"
-            case 5:
-                elemento_multiempresa = f"//a[@onclick='logarNaEmpresaVinculada({OUTBEAUTY});']"
-            case _:
-                logger.error("Empresa não cadastrada no bot")
-                return False
-
-        if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
-            elementos = self.driver.find_elements(By.XPATH, ELEMENTO_USUARIO)
-            btn_usuario = elementos[1]
-            btn_usuario.click()            
-            time.sleep(1)
-            multiempresa = self.driver.find_element(By.XPATH, elemento_multiempresa)
-            multiempresa.click()               
-            time.sleep(5)
-            if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
-                return True
-            else:
-                return False
-        else:
-            logger.error("Erro no botao usuário")
-            return False
         
     @contexto
     async def rotina_relatorio_custos(self,data:datetime,**kwargs) -> bool:
+        """
+        Docstring for rotina_relatorio_custos
+        
+        :param self: Description
+        :param data: Description
+        :type data: datetime
+        :param kwargs: Description
+        :return: Description
+        :rtype: bool
+        """
+        
         self.log_id = await crudLog.criar(empresa_id=self.empresa_id,
                                           de='olist',
                                           para='sankhya',
@@ -254,73 +266,6 @@ class Bot:
         
         return True
 
-    async def agrupa_titulos(self) -> bool:
-
-        # Aguarda carregamento da tabela
-        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "marcarTodos"))):
-            logger.error("Erro ao aplicar filtro")
-            return False
-        
-        # Clica no checkbox de selecionar todos
-        chk_marcar_todos = self.driver.find_element(By.ID, "marcarTodos")
-        chk_marcar_todos.click()
-
-        # Aguarda carregamento do botão agrupar
-        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@original-title=' Agrupar contas']"))):
-            logger.error("Erro ao buscar botão de agrupar")
-            return False
-        
-        # Clica no botão agrupar títulos
-        btn_agrupar = self.driver.find_element(By.XPATH, "//button[@original-title=' Agrupar contas']")
-        btn_agrupar.click()
-
-        # Aguarda carregamento do modal de confirmação
-        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "pesquisa-mini"))):
-            logger.error("Erro no modal de confirmação")
-            return False       
-        
-        return True
-    
-    async def informa_data_baixa(self,data) -> bool:
-        
-        # Busca pill de filtro por período
-        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "periodoDatas"))):
-            logger.error("Erro no botao intervalo")
-            return False
-        btn_periodo = self.driver.find_element(By.ID, "periodoDatas")
-        btn_periodo.click()
-        
-        # Busca pill de período do dia
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-data"))):
-            logger.error("Erro no botao opção data")
-            return False        
-        btn_opcdata = self.driver.find_element(By.ID, "opc-data")
-        btn_opcdata.click()
-
-        # Busca campo de data
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "p-data"))):
-            logger.error("Erro no campo de data")
-            return False        
-        campo_data = self.driver.find_element(By.ID, "p-data")
-
-        # Informa data no campo
-        campo_data.clear()
-        campo_data.send_keys(data)
-        btn_opcdata.click()
-
-        # Busca e clica no botao aplicar filtro
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-primary filter-apply']"))):
-            logger.error("Erro no botao aplicar filtro")
-            return False        
-        btn_filtrar = self.driver.find_element(By.XPATH, "//button[@class='btn btn-primary filter-apply']")
-        btn_filtrar.click()
-
-        # Aguarda carregamento da tabela
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
-            logger.error("Erro ao aplicar filtro")
-            return False
-        return True    
-
     async def alterna_aba_contas_emitidas(self) -> bool:
         
         # Aguarda carregamento da tela 
@@ -338,28 +283,214 @@ class Bot:
             return False
         return True
 
-    async def pesquisa_lancamentos_nota(self,numero_nota:int) -> bool:
+    async def seleciona_todos_titulos(self) -> bool:
 
-        # Aguarda carregamento da tela
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//button[@class='btn btn-default dropdown-toggle']"))):
-            logger.error("Erro ao acessar tela")
+        # Aguarda carregamento da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "tabelaListagem"))):
+            logger.error("Erro ao aplicar filtro")
             return False
         
-        # Busca aba de contas emitidas
-        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "sit-1"))):
-            logger.error("Erro no botao contas emitidas")
-            return False            
-        btn_aba_emitidas = self.driver.find_element(By.ID, "sit-1")
-        btn_aba_emitidas.click()
-
-        # Aguarda carregamento da tela
-        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
-            logger.error("Erro ao alternar aba contas emitidas")
+        # Clica no checkbox de selecionar todos
+        if not WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//th[@class='checkbox-datatable ignore-config-coluna footable-visible footable-first-column js-check-label']"))):
+            print("Erro ao buscar tabela")
+            logger.error("Erro ao buscar tabela")
             return False
-        tabela = self.driver.find_element(By.ID, "tabelaListagem")
-        tbody = tabela.find_element(By.TAG_NAME, "tbody")
-        rows = tbody.find_elements(By.TAG_NAME, "tr")
+        
+        table_header = self.driver.find_element(By.ID, "tabelaListagem")
+        checkbox_th = table_header.find_element(By.CSS_SELECTOR, "thead tr th span.comp-placeholder")        
+        checkbox_th.click()
+
+        time.sleep(1)
+        
         return True
+    
+    async def clica_btn_agrupar(self) -> bool:
+
+        # Aguarda carregamento do botão agrupar
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@original-title=' Agrupar contas']"))):
+            if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@class='btn btn-menu-acoes dropdown-toggle']"))):
+                logger.error("Erro ao buscar botão de agrupar")
+                return False
+            btn_mais_acoes = self.driver.find_element(By.XPATH, "//button[@class='btn btn-menu-acoes dropdown-toggle']")
+            btn_mais_acoes.click()
+
+            if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[@class='act-agrupar']"))):
+                logger.error("Erro ao buscar botão de agrupar")
+                return False
+            btn_agrupar = self.driver.find_element(By.XPATH, "//a[@class='act-agrupar']")
+            btn_agrupar.click()
+        
+        else:
+            # Clica no botão agrupar títulos
+            btn_agrupar = self.driver.find_element(By.XPATH, "//button[@original-title=' Agrupar contas']")
+            btn_agrupar.click()
+        return True
+    
+    async def confima_agrupamento(self, data_vcto:str=None) -> bool:
+
+        try:
+            # Aguarda carregamento do modal de confirmação
+            modal = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".modal-content")))
+            campo_data_vcto = WebDriverWait(modal, 10).until(EC.element_to_be_clickable((By.XPATH, ".//input[@name='vencimentoAgrupamento']")))
+
+            # Informa data de vencimento
+            if not data_vcto:
+                data_vcto = datetime.now().strftime('%d/%m/%Y')
+            campo_data_vcto.clear()
+            campo_data_vcto.send_keys(data_vcto)
+
+            time.sleep(1)
+
+            # Busca botão de confirmar agrupamento
+            if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "agruparContas"))):
+                logger.error("Erro no botão de confirmar agrupamento")
+                return False
+            
+            btn_confirma_agrupar = self.driver.find_element(By.ID, "agruparContas")
+            btn_confirma_agrupar.click()
+
+            # Aguarda carregamento/atualização da tabela
+            if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
+                logger.error("Erro ao alternar aba contas emitidas")
+                return False
+
+            return True
+        except Exception as e:
+            logger.error("Erro ao confirmar agrupamento. %s",e)
+            return False
+    
+    async def agrupa_titulos(self,data_vcto:str=None) -> bool:
+        
+        # Clica no botão agrupar títulos
+        await self.clica_btn_agrupar()
+        await self.confima_agrupamento(data_vcto=data_vcto)
+        return True
+
+    async def voltar_lista_contas(self) -> bool:
+        # Aguarda carregamento do botão voltar
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//a[@class='btn btn-breadcrumb-voltar']"))):
+            logger.error("Erro ao buscar botão de voltar para lista de contas")
+            return False
+        
+        # Clica no botão voltar para lista de contas
+        btn_voltar = self.driver.find_element(By.XPATH, "//a[@class='btn btn-breadcrumb-voltar']")
+        btn_voltar.click()
+
+        # Aguarda carregamento/atualização da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "tabelaListagem"))):
+            logger.error("Erro ao voltar para lista de contas")
+            return False
+        return True
+
+    async def rotina_agrupar_conta(self,numero_nota:int,data_vcto:str=None) -> bool:
+        try:            
+            await self.informa_historico(numero_nota=numero_nota)
+            await self.alterna_aba_contas_emitidas()
+            await self.seleciona_todos_titulos()
+            await self.agrupa_titulos(data_vcto=data_vcto)
+            return True
+        except Exception as e:
+            logger.error("Erro ao agrupar contas da nota %s. %s",numero_nota,str(e))            
+            return False
+
+    @contexto
+    async def rotina_contas_receber(self,numero_nota:int=None,lista_notas:list[int]=None,data_vcto:str=None,**kwargs) -> bool:
+        self.log_id = await crudLog.criar(empresa_id=self.empresa_id,
+                                          de='olist',
+                                          para='olist',
+                                          contexto=kwargs.get('_contexto'))
+        
+        if not any([numero_nota,lista_notas]):
+            logger.error("Nenhum número de nota informado para agrupar contas a receber")
+            await crudLog.atualizar(id=self.log_id,sucesso=False)
+            return False
+
+        try:
+            await self.login()
+            if self.empresa_id != 1:
+                sucesso_troca = await self.trocar_empresa(empresa_id=self.empresa_id)
+                if not sucesso_troca:
+                    await self.logout()
+                    logger.error("Erro ao trocar de empresa no self")
+                    await crudLog.atualizar(id=self.log_id,sucesso=False)
+                    return False
+
+            await self.acessa_contas_receber()
+            await self.seleciona_filtro_historico()
+            if lista_notas:
+                for nota in lista_notas:
+                    time.sleep(self.time_sleep)
+                    await self.rotina_agrupar_conta(numero_nota=nota,data_vcto=data_vcto)
+                    await self.voltar_lista_contas()
+            else:                
+                await self.rotina_agrupar_conta(numero_nota=numero_nota,data_vcto=data_vcto)
+
+            await crudLog.atualizar(id=self.log_id,sucesso=True)
+            await self.logout()
+            return True
+               
+        except Exception as e:
+            await self.logout()
+            logger.error("Erro ao agrupar contas a receber: %s",str(e))
+            await crudLog.atualizar(id=self.log_id,sucesso=False)
+            return False
+
+    async def acessa_gnre(self) -> bool:
+        try:
+            # Acessa tela do GNRE
+            self.driver.get(self.link_gnre)
+        except Exception as e:
+            logger.error("Erro ao acessar GNRE. %s",e)
+            return False
+        
+        # Aguarda carregamento da tela        
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.NAME, "pesquisa"))):
+            return False
+        return True
+
+    async def alterna_aba_aguardando(self) -> bool:
+        
+        # Aguarda carregamento da tela 
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.XPATH, "//div[@class='icon-led icon-led-yellow icon-menu']"))):
+            logger.error("Erro na aba aguardando")
+            return False
+        
+        # Clica na aba contas emitidas
+        btn_aba_aguardando = self.driver.find_element(By.XPATH, "//div[@class='icon-led icon-led-yellow icon-menu']")
+        btn_aba_aguardando.click()
+
+        # Aguarda carregamento/atualização da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//table[@class='footable table table-hover']"))):
+            logger.error("Erro ao alternar aba aguardando")
+            return False
+        return True
+
+    async def seleciona_todas_guias(self) -> bool:
+        
+        # Aguarda carregamento/atualização da tabela
+        if not WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, "//table[@class='footable table table-hover']"))):
+            logger.error("Erro ao alternar aba aguardando")
+            return False
+        
+        # Localiza checkbox
+        if not WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.XPATH, "//th[@class='small-width text-center']"))):
+            logger.error("Erro no checkbox selecionar todas")
+            return False
+        
+        # Clica na aba contas emitidas
+        checkbox = self.driver.find_element(By.XPATH, "//th[@class='small-width text-center']")
+        checkbox.click()
+
+        return True
+
+    @contexto
+    async def rotina_guias_gnre(self,**kwargs) -> bool:
+        self.log_id = await crudLog.criar(empresa_id=self.empresa_id,
+                                          de='olist',
+                                          para='sankhya',
+                                          contexto=kwargs.get('_contexto'))
+        
+        pass
 
     async def habilita_controle_lotes(self,id_produto):
         self.driver.get(self.link_produto.format(id_produto))
