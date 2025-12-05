@@ -49,12 +49,15 @@ class Nota:
             if dados_nota_olist.get('mensagem'):
                 nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
                 dados_nota_olist = await nota_olist.buscar(cod_pedido=dados_pedido.get('cod_pedido'))
+
+            eh_parcelado:bool = True if len(dados_nota_olist.get('parcelas',[])) > 1 else False
             
             # Atualiza nota
             ack = await crudNota.criar(id_pedido=dados_pedido.get('id_pedido'),
                                        id_nota=dados_nota_olist.get('id'),
                                        numero=int(dados_nota_olist.get('numero')),
-                                       serie=str(dados_nota_olist.get('serie')))
+                                       serie=str(dados_nota_olist.get('serie')),
+                                       parcelado=eh_parcelado)
             if not ack:
                 msg = f"Erro ao atualizar status da nota"
                 raise Exception(msg)            
