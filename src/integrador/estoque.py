@@ -131,32 +131,42 @@ class Estoque:
         # Extrai lista dos produtos
         print("-> Extraindo lista dos produtos...")
         lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
-
         print(f"{len(lista_codprod)} produtos com alteracoes de estoque")
+        produtos_buscar:list[int]=[]
+        limite_lista:int=300
+        if len(lista_codprod) > limite_lista:
+            produtos_buscar = lista_codprod[:limite_lista]
+            logger.warning("A lista de produtos excedeu o limite de %s itens. Apenas os %s primeiros serão considerados na consulta.",limite_lista,limite_lista)
+        else:
+            produtos_buscar = lista_codprod
 
         try:
             # Busca estoque dos produtos no Sankhya e no Olist
             print("-> Buscando estoque dos produtos no Sankhya...")
-            lista_dados_estoque_snk = await estoque_snk.buscar(lista_produtos=lista_codprod)
+            lista_dados_estoque_snk = await estoque_snk.buscar(lista_produtos=produtos_buscar)
             if not lista_dados_estoque_snk:
-                msg = f"Erro ao buscar estoque no Sankhya. Parametro: {lista_codprod}"
+                msg = f"Erro ao buscar estoque no Sankhya. Parametro: {produtos_buscar}"
                 raise Exception(msg)
 
             # Compara os estoques e calcula as variações
             print("Integrando...")
+            alteracoes_pendentes = alteracoes_pendentes[:limite_lista]
             #for i, produto in enumerate(tqdm(alteracoes_pendentes,desc="Processando...")):
             for i, produto in enumerate(alteracoes_pendentes):
                 dados_update:dict = {}
                 res_estoque:dict = {}
                 time.sleep(self.req_time_sleep)
-                # print(f"\nProduto {i + 1}/{len(alteracoes_pendentes)}: {produto.get('codprod')}")
+                print(f"\nProduto {i + 1}/{len(alteracoes_pendentes)}: {produto.get('codprod')}")
                 
                 # Busca estoque dos produtos no Olist        
                 # print("Buscando estoque dos produtos no Olist...")
                 dados_estoque_olist = await estoque_olist.buscar(id=produto.get('idprod'))
                 if not dados_estoque_olist:
                     msg = f"Erro ao buscar estoque no Olist. Parametro: {produto.get('idprod')}"
-                    raise Exception(msg)
+                    logger.error(msg)
+                    ack = await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))                  
+                    continue
+
                 if isinstance(dados_estoque_olist,list):
                     dados_estoque_olist = dados_estoque_olist[0]
 
