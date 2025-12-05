@@ -264,6 +264,8 @@ class Pedido:
 
         produto_olist = ProdutoOlist(codemp=self.codemp)
         dados_produto:dict = await produto_olist.buscar(id=dados_item['produto'].get('id'))
+        if not dados_produto:
+            return False        
         dados_item['unidade'] = dados_produto.get('unidade')
         return dados_item        
 
@@ -277,6 +279,7 @@ class Pedido:
 
         itens_validados:list=[]        
         for item in itens:
+            time.sleep(self.req_time_sleep) # Evita rate limit            
             # Kits não tem vínculo por SKU, ou estão marcados com #K no final do código
             if item['produto'].get('sku') and '#K' not in item['produto'].get('sku'):
                 item = await self.validar_unidade(dados_item=item)
@@ -284,7 +287,6 @@ class Pedido:
             else:
                 try:
                     ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
-                    time.sleep(self.req_time_sleep)  # Evita rate limit
                     if ack:
                         itens_validados+=kit_desmembrado
                 except Exception as e:
