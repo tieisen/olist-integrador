@@ -46,16 +46,21 @@ class Nota:
             
             if dados_nota_olist.get('mensagem'):
                 print(dados_nota_olist.get('mensagem'))
-                nota_olist = NotaOlist(id_loja=self.id_loja)
+                nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
                 dados_nota_olist = await nota_olist.buscar(cod_pedido=dados_pedido.get('cod_pedido'))
                 print(f"#{int(dados_nota_olist.get('numero'))}")                
-            
+
+            eh_parcelado:bool = True if len(dados_nota_olist.get('parcelas',[])) > 1 else False
+            status_estoque:bool = True if self.dados_ecommerce.get('empresa_id') == 1 else False
+
             # Atualiza nota
             # print("Atualizando status da nota...")
             ack = await crudNota.criar(id_pedido=dados_pedido.get('id_pedido'),
                                        id_nota=dados_nota_olist.get('id'),
                                        numero=int(dados_nota_olist.get('numero')),
-                                       serie=str(dados_nota_olist.get('serie')))
+                                       serie=str(dados_nota_olist.get('serie')),
+                                       parcelado=eh_parcelado,
+                                       baixa_estoque_ecommerce=status_estoque)
             if not ack:
                 msg = f"Erro ao atualizar status da nota"
                 print(msg)
@@ -78,7 +83,7 @@ class Nota:
                                               para='olist',
                                               contexto=kwargs.get('_contexto'))  
 
-        nota_olist = NotaOlist(id_loja=self.id_loja)
+        nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
         try:
             # Emite a nota
             # print("Emitindo nota...")
@@ -117,7 +122,7 @@ class Nota:
         try:            
             # Busca contas a receber no Olist
             # print("Buscando contas a receber no Olist...")
-            nota_olist = NotaOlist(id_loja=self.id_loja)
+            nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
             dados_financeiro = await nota_olist.buscar_financeiro(serie=str(dados_nota.get('serie')),                                                                  
                                                                   numero=str(dados_nota.get('numero')).zfill(6))
             if not dados_financeiro:
@@ -154,7 +159,7 @@ class Nota:
                                               para='olist',
                                               contexto=kwargs.get('_contexto'))
         try:
-            nota_olist = NotaOlist(id_loja=self.id_loja)
+            nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
             if not dados_financeiro:
                 # Busca dados do contas a receber no Olist
                 # print("Buscando dados do contas a receber no Olist...")
