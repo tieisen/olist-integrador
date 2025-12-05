@@ -33,7 +33,7 @@ async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
                         continue
                     for j, ecom in enumerate(ecommerces):
                         print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
-                        pedido = Pedido(id_loja=ecom.get('id_loja'))
+                        pedido = Pedido(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
                         separacao = Separacao(id_loja=ecom.get('id_loja'))
                         await pedido.receber_novos()
                         await separacao.receber()
@@ -107,7 +107,7 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
-                    pedido = Pedido(id_loja=ecom.get('id_loja'))
+                    pedido = Pedido(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
                     await pedido.integrar_novos()
                     await pedido.integrar_confirmacao()
             retorno = {
