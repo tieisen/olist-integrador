@@ -21,7 +21,7 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
-                    faturamento = Faturamento(id_loja=ecom.get('id_loja'))
+                    faturamento = Faturamento(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
                     await faturamento.integrar_olist()
                     await faturamento.integrar_snk()
             retorno = {
@@ -109,7 +109,6 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
             }
         finally:
             return retorno
-
 
 async def integrar_faturamento_snk(codemp:int=None) -> dict:
 
