@@ -19,7 +19,7 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
             raise Exception(f"Data inválida. Use o formato YYYY-MM-DD. Data informada: {data}")
 
 
-    print(":::::::::::::::::::: FATURAMENTO DE PEDIDOS ::::::::::::::::::::")    
+    print(":::::::::::::::::::: CONTAS A RECEBER ::::::::::::::::::::")    
 
     empresas = await empresa.buscar(codemp=codemp)
     try:
