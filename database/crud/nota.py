@@ -187,7 +187,8 @@ async def buscar_criar(ecommerce_id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido)
-            .where(Pedido.dh_faturamento.isnot(None),
+            .where(Pedido.nunota.isnot(None),
+                   Pedido.dh_faturamento.isnot(None),
                    Pedido.ecommerce_id == ecommerce_id,
                    ~Pedido.nota_.any())
             .order_by(Pedido.num_pedido)
