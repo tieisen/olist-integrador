@@ -142,6 +142,7 @@ class Pedido:
             print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
             return {"success": True, "id": id}
         except Exception as e:
+            logger.error("Erro ao receber pedido %s. %s",num_pedido or id_pedido,e)
             return {"success": False, "id": None, "__exception__": str(e)}
 
     @interno
@@ -239,7 +240,7 @@ class Pedido:
                 for i, pedido in tqdm(enumerate(pedidos_novos),desc="Processando..."):
                     time.sleep(self.req_time_sleep)
                     # print(f"-> Pedido {i + 1}/{len(pedidos_novos)}: {pedido.get("numeroPedido")}")            
-                    #ack = await self.receber(dados_pedido=pedido)
+                    # ack = await self.receber(dados_pedido=pedido)
                     ack = await self.receber(id_pedido=pedido.get('id'))
                     # Registra sucesso no log
                     await crudLogPed.criar(log_id=self.log_id,
@@ -261,12 +262,16 @@ class Pedido:
     async def validar_unidade(self, dados_item:dict):        
         produto_olist = ProdutoOlist(codemp=self.codemp)
         dados_produto:dict = await produto_olist.buscar(id=dados_item['produto'].get('id'))
+        if not dados_produto:
+            return False
         dados_item['unidade'] = dados_produto.get('unidade')
         return dados_item        
 
     async def validar_item_desmembrar_kit(self, itens:list[dict], olist:PedidoOlist):
-        itens_validados:list=[]        
+        itens_validados:list=[]
+
         for item in itens:
+            time.sleep(self.req_time_sleep)  # Evita rate limit
             # Kits não tem vínculo por SKU, ou estão marcados com #K no final do código
             if item['produto'].get('sku') and '#K' not in item['produto'].get('sku'):
                 item = await self.validar_unidade(dados_item=item)
@@ -508,7 +513,7 @@ class Pedido:
                                                                         lista_itens=itens_agrupados)
             if not all([dados_cabecalho, dados_itens]):
                 msg = "Erro ao converter dados dos pedidos para o formato da API do Sankhya"
-                raise Exception(msg)            
+                raise Exception(msg)
 
             # Insere os dados do pedido
             print("-> Inserindo o pedido no Sankhya...")
@@ -519,14 +524,14 @@ class Pedido:
                 raise Exception(msg)
             
             print(f"-> Pedidos importados no código {pedido_incluido}!")
-            
+
             # Atualiza log / Envia nunota para os pedidos nos Olist
             print("-> Finalizando...")
             lista_retornos:list[dict]=[]
             for pedido in lista_pedidos:
                 time.sleep(self.req_time_sleep)
                 retorno = {
-                    "pedido_id": pedido.get('id'),
+                    "id": pedido.get('id'),
                     "numero": pedido.get('num_pedido'),
                     "success": None,
                     "__exception__": None
@@ -556,6 +561,7 @@ class Pedido:
                 
             return lista_retornos
         except Exception as e:
+            logger.error("Erro ao importar pedidos em lote. %s",e)
             return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}]
 
     @interno
