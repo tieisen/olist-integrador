@@ -166,16 +166,21 @@ async def atualizar(
                     .where(Nota.nunota == nunota_nota)
                 )            
             else:
+                logger.error("Nenhum parâmetro informado")
                 return False
 
         notas = result.scalars().all()
         if not notas:
-            print(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido or nunota_nota or cod_pedido}")
+            logger.error(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido or nunota_nota or cod_pedido}")
             return False
         
-        for nota in notas:
-            for key, value in kwargs.items():
-                setattr(nota, key, value)            
+        try:
+            for nota in notas:
+                for key, value in kwargs.items():
+                    setattr(nota, key, value)
+        except Exception as e:
+            logger.error(f"Erro ao atualizar nota: {e}")
+            return False
             
         await session.commit()
         return True  
