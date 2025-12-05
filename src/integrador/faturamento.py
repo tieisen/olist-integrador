@@ -9,6 +9,7 @@ from src.sankhya.pedido import Pedido as PedidoSnk
 from src.sankhya.nota import Nota as NotaSnk
 from src.integrador.nota import Nota as IntegradorNota
 from src.integrador.pedido import Pedido as IntegradorPedido
+from src.integrador.financeiro import Financeiro as IntegradorFinanceiro
 from src.parser.transferencia import Transferencia as ParserTransferencia
 from src.parser.pedido import Pedido as ParserPedido
 from src.olist.separacao import Separacao as SeparacaoOlist
@@ -506,6 +507,8 @@ class Faturamento:
             await crudLog.atualizar(id=self.log_id)
             return True
 
+        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'))
+
         for i, pedido in enumerate(pedidos_faturar):
             time.sleep(self.req_time_sleep)
             # Fatura pedido no Olist
@@ -514,7 +517,11 @@ class Faturamento:
                                    pedido_id=pedido.get('id'),
                                    evento='F',
                                    sucesso=ack_pedido.get('success'),
-                                   obs=ack_pedido.get('__exception__',None))           
+                                   obs=ack_pedido.get('__exception__',None))
+            
+            # Agrupa títulos dos pedidos parcelados            
+            if ack_pedido.get('success'):
+                await integra_fin.agrupar_titulos_parcelados()            
         
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
