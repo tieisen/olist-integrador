@@ -145,6 +145,7 @@ class Nota(Base):
     serie = Column(String, nullable=False)
     chave_acesso = Column(String, nullable=True)
     id_financeiro = Column(Integer, nullable=True)
+    parcelado = Column(Boolean, default=False)
     dh_baixa_financeiro = Column(DateTime(timezone=True), nullable=True)
     nunota = Column(Integer, nullable=True)
     dh_confirmacao = Column(DateTime(timezone=True), nullable=True)
