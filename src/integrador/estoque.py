@@ -130,7 +130,7 @@ class Estoque:
         # Extrai lista dos produtos
         lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
         produtos_buscar:list[int]=[]
-        limite_lista:int=500        
+        limite_lista:int=300        
         if len(lista_codprod) > limite_lista:
             produtos_buscar = lista_codprod[:limite_lista]
             logger.warning("A lista de produtos excedeu o limite de %s itens. Apenas os %s primeiros serão considerados na consulta.",limite_lista,limite_lista)
@@ -155,7 +155,10 @@ class Estoque:
                 dados_estoque_olist = await estoque_olist.buscar(id=produto.get('idprod'))
                 if not dados_estoque_olist:
                     msg = f"Erro ao buscar estoque no Olist. Parametro: {produto.get('idprod')}"
-                    raise Exception(msg)
+                    logger.error(msg)                                     
+                    ack = await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))                  
+                    continue
+                
                 if isinstance(dados_estoque_olist,list):
                     dados_estoque_olist = dados_estoque_olist[0]
 
