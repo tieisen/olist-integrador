@@ -248,7 +248,7 @@ class Faturamento:
             if not ack_conta.get('success'):
                 raise Exception(ack_conta.get('__exception__'))
             
-            return {"success": True, "__exception__": str(e)}
+            return {"success": True, "__exception__": None}
         except Exception as e:
             logger.error("Erro ao faturar pedido no Olist: %s",str(e))
             return {"success": False, "__exception__": str(e)}
@@ -395,7 +395,7 @@ class Faturamento:
                 
                 while qtd_pendente > 0:
                     # Percorrer os lotes verificando se o lote tem saldo para baixar a quantidade total do item
-                    saldo_produto = next((b for b in estoque_atual if int(b['codprod']) == int(item['codprod'])),None)
+                    saldo_produto = next((b for b in estoque_atual if int(b['codprod']) == int(item['codprod']) and int(b['estoque']) > 0),None)
                     if not saldo_produto:
                         qtd_pendente = -1
                     else:
