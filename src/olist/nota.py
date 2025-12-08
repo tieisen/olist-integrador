@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_ecommerce
@@ -29,10 +30,13 @@ class Nota:
             :param numero: número da NF (Olist)
             :param cod_pedido: Código do pedido (E-commerce)
             :return dict: dicionários com os dados da NF
-        """        
+        """
+
+        nota = None
 
         if not any([id, cod_pedido, numero]):
             logger.error("Nota não informada.")
+            print("Nota não informada.")
             return False
 
         if id:
@@ -58,12 +62,12 @@ class Nota:
 
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
+            print("Erro %s: %s", res.status_code, res.text)
             return False
-        
-        if res.status_code == 200 and id:
-            return res.json()
-        
-        if res.status_code == 200 and not id and res.json().get('itens'):
+        elif res.status_code == 200 and id:
+            nota = res.json()        
+        elif res.status_code == 200 and not id and res.json().get('itens'):
+            time.sleep(1)
             url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
             res = requests.get(
                 url = url_id,
@@ -75,11 +79,29 @@ class Nota:
             )
             if res.status_code == 200 and url_id:
                 nota = res.json()
+        else:
+            return False
                 
         if nota:
+            time.sleep(1)
+            url = self.endpoint+f"/{nota.get('id')}/xml"
+            res = requests.get(
+                url = url,
+                headers = {
+                    "Authorization":f"Bearer {self.token}",
+                    "Content-Type":"application/json",
+                    "Accept":"application/json"
+                }
+            )
+            if res.status_code != 200:
+                logger.error("Erro %s ao buscar XML da nota: %s url %s", res.status_code, res.text, url)            
+                print(f"Erro {res.status_code} ao buscar XML da nota: {res.text} url {url}")
+                return False            
+            nota['xml'] = res.json().get('xmlNfe')
             return nota
         else:
             logger.error("Nota cancelada")
+            print("Nota cancelada")
             return False
     
     @carrega_dados_ecommerce
