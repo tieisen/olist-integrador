@@ -175,7 +175,7 @@ class Pedido:
                 dados_item['NUNOTA'] = {}
                 dados_item['CODPROD'] = {"$":item.get('codprod')}
                 dados_item['QTDNEG'] = {"$":item.get('quantidade')}
-                dados_item['VLRUNIT'] = {"$":item.get('valor') if item.get('valor') > 0 else 0.01}
+                dados_item['VLRUNIT'] = {"$":item.get('valor',0) if item.get('valor',0) > 0 else 1}
                 dados_item['PERCDESC'] = {"$":'0'}
                 dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
                 dados_item['CODVOL'] = {"$":item.get('unidade')}
