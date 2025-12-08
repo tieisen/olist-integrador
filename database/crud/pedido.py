@@ -261,6 +261,7 @@ async def buscar_faturar(ecommerce_id:int):
         result = await session.execute(
             select(Pedido).where(Pedido.dh_confirmacao.isnot(None),
                                  Pedido.dh_faturamento.is_(None),
+                                 Pedido.dh_cancelamento.is_(None),
                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
         )
         pedidos = result.scalars().all()
