@@ -31,6 +31,8 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     financeiro = Financeiro(id_loja=ecom.get('id_loja'))
+                    # Agrupa títulos dos pedidos parcelados
+                    await financeiro.agrupar_titulos_parcelados()                    
                     lista_status.append(await financeiro.executar_baixa(data=data))
                 retorno = {
                     "status": all(lista_status),

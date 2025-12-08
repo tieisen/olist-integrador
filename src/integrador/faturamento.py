@@ -507,8 +507,6 @@ class Faturamento:
             await crudLog.atualizar(id=self.log_id)
             return True
 
-        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'))
-
         for i, pedido in enumerate(pedidos_faturar):
             time.sleep(self.req_time_sleep)
             # Fatura pedido no Olist
@@ -518,11 +516,7 @@ class Faturamento:
                                    evento='F',
                                    sucesso=ack_pedido.get('success'),
                                    obs=ack_pedido.get('__exception__',None))
-            
-            # Agrupa títulos dos pedidos parcelados            
-            if ack_pedido.get('success'):
-                await integra_fin.agrupar_titulos_parcelados()            
-        
+                    
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         return status_log
