@@ -31,7 +31,7 @@ class Financeiro:
                                           de='olist',
                                           para='olist',
                                           contexto=kwargs.get('_contexto'))
-        dados_notas_parceladas:list[dict] = await crudNota.buscar_financeiro_parcelado(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        dados_notas_parceladas:list[dict] = await crudNota.buscar_financeiro_parcelado(ecommerce_id=self.dados_ecommerce.get('id'))
         try:
             if dados_notas_parceladas:        
                 notas_parceladas:list[int] = [n.get('numero') for n in dados_notas_parceladas]
