@@ -222,7 +222,7 @@ async def buscar_financeiro_parcelado(ecommerce_id:int):
         result = await session.execute(
             select(Nota)
             .where(Nota.dh_cancelamento.is_(None),
-                   Nota.id_financeiro.is_(None),
+                   Nota.dh_baixa_financeiro.is_(None),
                    Nota.parcelado.is_(True),
                    Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
         )
