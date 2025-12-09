@@ -121,6 +121,11 @@ async def atualizar(
             result = await session.execute(
                 select(Pedido).where(Pedido.nunota == nunota)
             )
+        elif nunota == -1 and kwargs['dh_faturamento']:
+            result = await session.execute(
+                select(Pedido).where(Pedido.nunota == nunota,
+                                     Pedido.dh_faturamento.is_(None))
+            )        
         else:
             kwargs['nunota'] = nunota
             if id_pedido:
