@@ -1,11 +1,13 @@
 import os
 import time
 import requests
+from src.olist.produto import Produto
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_empresa
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import busca_paginada
 load_env()
 logger = set_logger(__name__)
 
@@ -20,13 +22,7 @@ class Pedido:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
     @token_olist
-    async def buscar(
-            self,
-            id:int=None,
-            codigo:str=None,
-            numero:int=None,
-            cancelados:bool=False
-        ) -> dict | list[dict]:
+    async def buscar(self,id:int=None,codigo:str=None,numero:int=None,cancelados:bool=False) -> dict | list[dict]:
         """
         Busca os dados do pedido.
             :param id: ID do pedido (Olist)
@@ -94,12 +90,7 @@ class Pedido:
             return False
 
     @token_olist
-    async def atualizar_nunota(
-            self,
-            id:int,
-            nunota:int,
-            observacao:str=None
-        ) -> bool:
+    async def atualizar_nunota(self,id:int,nunota:int,observacao:str=None) -> bool:
         """
         Envia número único do pedido de venda do Sankhya para os pedidos no Olist.
             :param id: ID do pedido (Olist)
@@ -139,11 +130,7 @@ class Pedido:
         return True
 
     @token_olist
-    async def remover_nunota(
-            self,
-            id:int,
-            nunota:int=None
-        ) -> bool:
+    async def remover_nunota(self,id:int,nunota:int=None) -> bool:
         """
         Remove número único do pedido de venda do Sankhya dos pedidos no Olist.
             :param id: ID do pedido (Olist)
@@ -206,10 +193,7 @@ class Pedido:
         return True
 
     @token_olist
-    async def gerar_nf(
-            self,
-            id:int
-        ) -> dict:
+    async def gerar_nf(self,id:int) -> dict:
         """
         Gera a NF do pedido de venda.
             :param id: ID do pedido (Olist)
@@ -238,11 +222,7 @@ class Pedido:
         return res.json()
 
     @token_olist
-    async def validar_kit(
-            self,
-            id:int,
-            item_no_pedido:dict
-        ) -> tuple[bool,dict]:
+    async def validar_kit(self,id:int,item_no_pedido:dict) -> tuple[bool,dict]:
         """
         Valida se o item do pedido é um kit ou um SKU e faz o desmembramento.
             :param id: ID do item
@@ -258,63 +238,45 @@ class Pedido:
             logger.error("Item do pedido precisa ser um dicionário.")
             return False, {}
         
-        url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PRODUTOS')+f"/{id}"
-        if not url:
-            logger.error("Erro relacionado à url. %s",url)
+        produto = Produto(codemp=self.codemp, empresa_id=self.empresa_id)
+
+        dados_kit = await produto.buscar(id=id)
+
+        if dados_kit.get('tipo') == 'K':
+            qtd_kit = item_no_pedido["quantidade"]
+            vlt_kit = item_no_pedido["valorUnitario"]
+            res_item = []
+            for k in dados_kit.get('kit'):
+
+                dados_produto = await produto.buscar(id=k['produto'].get('id'))
+                if not dados_produto:
+                    logger.error("Produto %s ID %s não encontrado.", dados_kit.get('descricao'), id)
+                    return False, {}
+
+                kit_item = {
+                    "produto": {
+                        "id": k['produto'].get('id'),
+                        "sku": k['produto'].get('sku'),
+                        "descricao": k['produto'].get('descricao')
+                    },
+                    "unidade": dados_produto.get('unidade'),
+                    "quantidade": k.get('quantidade') * qtd_kit,
+                    "valorUnitario": round(vlt_kit / len(dados_kit.get('kit')),4),
+                    "infoAdicional": ""                                    
+                }
+
+                res_item.append(kit_item)                            
+            return True, res_item
+        elif dados_kit.get('tipo') == 'V':
+            logger.error("Produto %s ID %s é uma variação. Ajuste o pedido no Olist", dados_kit.get('descricao'), id)
             return False, {}
-             
-        res = requests.get(
-            url=url,
-            headers={
-                "Authorization":f"Bearer {self.token}",
-                "Content-Type":"application/json",
-                "Accept":"application/json"
-            }
-        )
-
-        if res.status_code == 200:
-            if res.json().get('tipo') == 'K':
-                qtd_kit = item_no_pedido["quantidade"]
-                vlt_kit = item_no_pedido["valorUnitario"]
-                res_item = []
-                for k in res.json().get('kit'):
-
-                    dados_produto = self.buscar(id=k['produto'].get('id'))
-                    if not dados_produto:
-                        logger.error("Produto %s ID %s não encontrado.", res.json().get('descricao'), id)
-                        return False, {}
-
-                    kit_item = {
-                        "produto": {
-                            "id": k['produto'].get('id'),
-                            "sku": k['produto'].get('sku'),
-                            "descricao": k['produto'].get('descricao')
-                        },
-                        "unidade": dados_produto.get('unidade'),
-                        "quantidade": k.get('quantidade') * qtd_kit,
-                        "valorUnitario": round(vlt_kit / len(res.json().get('kit')),4),
-                        "infoAdicional": ""                                    
-                    }
-
-                    res_item.append(kit_item)                            
-                return True, res_item
-            elif res.json().get('tipo') == 'V':
-                logger.error("Produto %s ID %s é uma variação. Ajuste o pedido no Olist", res.json().get('descricao'), id)
-                return False, {}
-            else:
-                logger.error("Produto %s ID %s não é kit nem variação.", res.json().get('descricao'), id)
-                return False, {}
-        else:                      
-            print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} cod {id}")
-            logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
+        else:
+            logger.error("Produto %s ID %s não é kit nem variação.", dados_kit.get('descricao'), id)
             return False, {}
         
     @token_olist
     @carrega_dados_empresa
-    async def buscar_novos(
-            self,
-            atual:bool = True
-        ) -> tuple[bool, list[dict]]:
+    async def buscar_novos(self,atual:bool = True) -> tuple[bool, list[dict]]:
         """
         Busca pedidos novos.
             :param atual: Se True, busca pedidos a partir da última data registrada. Se False, busca pedidos a partir de uma data fixa.
@@ -343,46 +305,10 @@ class Pedido:
         if not url:
             logger.error("Erro relacionado à url. %s",url)
             return False, []
-
-        status = 200
-        paginacao = {}
-        itens = []  
-
-        while status == 200:
-            # Verifica se há paginação
-            if paginacao:        
-                if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
-                    offset = paginacao["limit"] + paginacao["offset"]
-                    url+=f"&offset={offset}"
-                else:
-                    url = None
-
-            if url:
-                res = requests.get(url=url,
-                                   headers={
-                                       "Authorization":f"Bearer {self.token}",
-                                       "Content-Type":"application/json",
-                                       "Accept":"application/json"
-                                   })
-                status=res.status_code
-                itens += res.json().get("itens",[])
-                paginacao = res.json().get("paginacao",{})
-                time.sleep(self.req_time_sleep)
-            else:
-                status = 0
-
-        if not itens:
-            return True, []
-
-        # Ordena os itens por ID        
-        self.ordena_por_id(itens)
-        return True, itens
-    
-    def ordena_por_id(self,lista_itens:list[dict]) -> bool:
-        """
-        Ordenação crescente dos pedidos por ID.
-            :param lista_itens: lista de dicionários com as dados dos pedidos
-            :return bool: status da operação
-        """
-        lista_itens.sort(key=lambda i: i['id'])
-        return True
+        
+        try:
+            lista_novos_pedidos = await busca_paginada(token=self.token,url=url)
+            return True, lista_novos_pedidos
+        except Exception as e:
+            logger.error(f"{e}")
+            return False, lista_novos_pedidos
