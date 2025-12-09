@@ -383,8 +383,9 @@ class Pedido:
                 if not ack:
                     msg = f"Erro ao atualizar situação do pedido {dados_pedido.get('num_pedido')} para importado"
                     raise Exception(msg)                
-            return {"success": True}
+            return {"success": True, "__exception__": None}
         except Exception as e:
+            logger.error(str(e))
             return {"success": False, "__exception__": str(e)}
     
     def unificar(self,lista_pedidos:list[dict]) -> tuple[list[dict],list[dict]]:
@@ -509,14 +510,22 @@ class Pedido:
                 time.sleep(self.req_time_sleep)                
                 # Valida situação e remove se cancelado
                 if not await self.validar_situacao(pedido):
-                    msg = "Pedido cancelado ou com dados incompletos"
+                    msg = f"Pedido {pedido.get('num_pedido')} cancelado ou com dados incompletos"
+                    logger.warning(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
-                    continue                
+                    continue
+                if not pedido['dados_pedido'].get('itens'):
+                    msg = f"Erro ao buscar itens do pedido {pedido.get('num_pedido')}"
+                    logger.error(msg)
+                    lista_pedidos.pop(lista_pedidos.index(pedido))
+                    continue                  
                 dados_pedidos_olist.append(pedido.get('dados_pedido'))
 
             if not dados_pedidos_olist:
                 msg = "Nenhum pedido válido para importar"
-                raise Exception(msg)            
+                raise Exception(msg)
+            
+            logger.info(f"{len(dados_pedidos_olist)} pedidos validados para importar")
 
             # Unifica os itens dos pedidos
             pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos_olist)
@@ -534,7 +543,8 @@ class Pedido:
             # Compara quantidade conferida com estoque disponível
             itens_venda_interna = self.compara_saldos(saldo_estoque=saldo_estoque,
                                                       saldo_pedidos=itens_agrupados)
-
+            
+            lista_retornos:list[dict]=[]
             if itens_venda_interna:
                 # Busca valor de tranferência dos itens
                 item_transf = ItemTransfSnk(codemp=self.codemp)
@@ -566,7 +576,6 @@ class Pedido:
                     raise Exception(msg)
 
                 pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
-                lista_retornos:list[dict]=[]
                 for pedido in aux_lista_pedidos:
                     time.sleep(self.req_time_sleep)
                     retorno = {
@@ -580,6 +589,7 @@ class Pedido:
                                                      dh_importacao=datetime.now())
                     if not ack:
                         msg = f"Erro ao atualizar situação do pedido {pedido.get('num_pedido')} para importado"
+                        logger.error(msg)
                         retorno['success'] = False
                         retorno['__exception__'] = msg
                         lista_retornos.append(retorno)
