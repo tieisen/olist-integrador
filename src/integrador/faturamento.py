@@ -231,22 +231,22 @@ class Faturamento:
             # Cria NF no Olist
             ack_criacao = await integra_nota.gerar(dados_pedido=pedido)
             if not ack_criacao.get('success'):
-                raise Exception(ack_criacao.get('__exception__'))
+                raise Exception(f"Erro na criação da NF: {ack_criacao.get('__exception__')}")
                             
             # Emite NF
             ack_emissao = await integra_nota.emitir(ack_criacao.get('dados_nota'))
             if not ack_emissao.get('success'):
-                raise Exception(ack_emissao.get('__exception__'))
+                raise Exception(f"Erro na emissão da NF: {ack_emissao.get('__exception__')}")
             
             # Envia pedido pra separação no Olist
             ack_separacao = await separacao.separar(id=pedido.get('id_separacao'))
             if not ack_separacao:
-                raise Exception(ack_separacao.get('__exception__'))
+                raise Exception(f"Erro na separação do pedido: {ack_separacao.get('__exception__')}")
 
             # Recebe contas a receber do Olist
             ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
             if not ack_conta.get('success'):
-                raise Exception(ack_conta.get('__exception__'))
+                raise Exception(f"Erro ao receber conta: {ack_conta.get('__exception__')}")
             
             return {"success": True, "__exception__": None}
         except Exception as e:
@@ -274,52 +274,60 @@ class Faturamento:
                                               para='sankhya',
                                               contexto=kwargs.get('_contexto'))
         try:
-            # Verifica se o pedido foi faturado ou trancou
-            status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
-            if status_faturamento:
-                nunota_nota = status_faturamento[0].get('nunota')
+            if nunota != -1:
+                # Verifica se o pedido foi faturado ou trancou
+                status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
+                if status_faturamento:
+                    nunota_nota = status_faturamento[0].get('nunota')
+                    # Atualiza base de dados
+                    await crudPedido.atualizar(nunota=nunota,
+                                            dh_faturamento=datetime.now())
+                    await crudNota.atualizar(nunota_pedido=nunota,
+                                            nunota=nunota_nota)
+                else:
+                    # Se o pedido não foi faturado...
+                    # Fatura no Sankhya
+                    ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
+                    if not ack:
+                        msg = f"Erro ao faturar pedido {nunota}"
+                        raise Exception(msg)
+                    
+                    # Atualiza local
+                    dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
+                    if not dados_nota:
+                        msg = f"Erro ao buscar dados da nota {nunota_nota}"
+                        raise Exception(msg)                
+                    sequencias:list = [int(item.get('sequencia')) for item in dados_nota.get('itens')]
+                    payload:list[dict] = await parser_pedido.to_sankhya_atualiza_local(nunota=nunota_nota,
+                                                                                    lista_sequencias=sequencias)
+                    if not payload:
+                        msg = f"Erro ao preparar dados da nota {nunota_nota}"
+                        raise Exception(msg)                
+                    ack = await pedido_snk.atualizar_local(nunota=nunota_nota,payload=payload)
+                    if not ack:
+                        msg = f"Erro ao atualizar local de destino dos itens da nota {nunota_nota}"
+                        raise Exception(msg)
+
+                    # Atualiza base de dados
+                    await crudPedido.atualizar(nunota=nunota,
+                                               dh_faturamento=datetime.now())                
+                    await crudNota.atualizar(nunota_pedido=nunota,
+                                             nunota=nunota_nota)
+
+                # Confirma nota no Sankhya
+                ack = await nota_snk.confirmar(nunota=nunota_nota)
+                if ack is False:
+                    msg = f"Erro ao confirmar nota {nunota_nota}"
+                    raise Exception(msg)
+                else:
+                    await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
+            else:
                 # Atualiza base de dados
                 await crudPedido.atualizar(nunota=nunota,
                                            dh_faturamento=datetime.now())
                 await crudNota.atualizar(nunota_pedido=nunota,
-                                         nunota=nunota_nota)
-            else:
-                # Se o pedido não foi faturado...
-                # Fatura no Sankhya
-                ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
-                if not ack:
-                    msg = f"Erro ao faturar pedido {nunota}"
-                    raise Exception(msg)
-                
-                # Atualiza local
-                dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
-                if not dados_nota:
-                    msg = f"Erro ao buscar dados da nota {nunota_nota}"
-                    raise Exception(msg)                
-                sequencias:list = [int(item.get('sequencia')) for item in dados_nota.get('itens')]
-                payload:list[dict] = await parser_pedido.to_sankhya_atualiza_local(nunota=nunota_nota,
-                                                                                   lista_sequencias=sequencias)
-                if not payload:
-                    msg = f"Erro ao preparar dados da nota {nunota_nota}"
-                    raise Exception(msg)                
-                ack = await pedido_snk.atualizar_local(nunota=nunota_nota,payload=payload)
-                if not ack:
-                    msg = f"Erro ao atualizar local de destino dos itens da nota {nunota_nota}"
-                    raise Exception(msg)
-
-                # Atualiza base de dados
-                await crudPedido.atualizar(nunota=nunota,
-                                           dh_faturamento=datetime.now())                
-                await crudNota.atualizar(nunota_pedido=nunota,
-                                         nunota=nunota_nota)
-
-            # Confirma nota no Sankhya
-            ack = await nota_snk.confirmar(nunota=nunota_nota)
-            if ack is False:
-                msg = f"Erro ao confirmar nota {nunota_nota}"
-                raise Exception(msg)
-            else:
-                await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
+                                         dh_confirmacao=datetime.now())
+                nunota_nota = nunota
 
             # Realiza baixa de estoque do local e-commerce
             ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
@@ -342,27 +350,29 @@ class Faturamento:
         # Unifica itens da nota
         aux_nota:list[dict] = []
         try:
-            for item_nota in itens_nota:
-                if not next((b for b in aux_nota if int(b['codprod']) == int(item_nota['codprod'])),None):
-                    aux_nota.append({
-                        'codprod':int(item_nota.get('codprod')),
-                        'qtdneg':int(item_nota.get('qtdneg'))
-                    })
-                else:
-                    for item in aux_nota:
-                        if item.get('codprod') == item_nota.get('codprod'):
-                            item['qtdneg']+=int(item_nota.get('qtdneg'))
+            if itens_nota:
+                for item_nota in itens_nota:
+                    if not next((b for b in aux_nota if int(b['codprod']) == int(item_nota['codprod'])),None):
+                        aux_nota.append({
+                            'codprod':int(item_nota.get('codprod')),
+                            'qtdneg':int(item_nota.get('qtdneg'))
+                        })
+                    else:
+                        for item in aux_nota:
+                            if item.get('codprod') == item_nota.get('codprod'):
+                                item['qtdneg']+=int(item_nota.get('qtdneg'))
 
             for item_pedido in itens_pedidos:
                 lista_produtos_baixa.append(item_pedido)
-                match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
-                # print(f"Validando produto {item_pedido.get('codprod')} - Qtd pedido: {item_pedido.get('qtdneg')} x Qtd nota: {match.get('qtdneg') if match else '0'}")
-                if not match:
-                    pass
-                elif int(item_pedido.get('qtdneg')) > int(match.get('qtdneg')):
-                    lista_produtos_baixa[lista_produtos_baixa.index(item_pedido)]['qtdneg'] = int(item_nota.get('qtdneg')) - int(item_pedido.get('qtdneg'))
-                else:
-                    pass
+                if itens_nota:
+                    match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
+                    # print(f"Validando produto {item_pedido.get('codprod')} - Qtd pedido: {item_pedido.get('qtdneg')} x Qtd nota: {match.get('qtdneg') if match else '0'}")
+                    if not match:
+                        pass
+                    elif int(item_pedido.get('qtdneg')) > int(match.get('qtdneg')):
+                        lista_produtos_baixa[lista_produtos_baixa.index(item_pedido)]['qtdneg'] = int(item_nota.get('qtdneg')) - int(item_pedido.get('qtdneg'))
+                    else:
+                        pass
         except Exception as e:
             logger.error("Erro ao validar baixa de estoque: %s",str(e))
         finally:
@@ -439,11 +449,13 @@ class Faturamento:
                 msg = "Erro ao unificar pedidos"
                 raise Exception(msg)
 
-            # Busca dados da nota
-            dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
-            if not dados_nota:
-                msg = "Erro ao buscar dados da nota"
-                raise Exception(msg)
+            dados_nota:dict={}
+            if nunota_nota != -1:
+                # Busca dados da nota
+                dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
+                if not dados_nota:
+                    msg = "Erro ao buscar dados da nota"
+                    raise Exception(msg)
 
             # Validando saldos
             lista_produtos_baixa:list[dict] = self.validar_quantidades_baixa_ecommerce(itens_pedidos=itens_agrupados, itens_nota=dados_nota.get('itens'))
