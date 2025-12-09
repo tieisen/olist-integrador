@@ -23,11 +23,7 @@ class Pedido:
     
     @carrega_dados_ecommerce
     @carrega_dados_empresa
-    async def to_sankhya(
-            self,
-            dados_olist:dict,
-            dados_cidade:list
-        ) -> tuple[dict,list[dict]]:
+    async def to_sankhya(self,dados_olist:dict,dados_cidade:list) -> tuple[dict,list[dict]]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya.
             :param data_olist: dados do pedido da API do Olist
@@ -81,11 +77,7 @@ class Pedido:
     
     @carrega_dados_ecommerce
     @carrega_dados_empresa
-    async def to_sankhya_lote(
-            self,
-            lista_pedidos:list[dict],
-            lista_itens:list[dict]
-        ) -> tuple[dict,list[dict]]:
+    async def to_sankhya_lote(self,lista_pedidos:list[dict],lista_itens:list[dict]) -> tuple[dict,list[dict]]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya.
             :param lista_pedidos: lista de pedidos da API do Olist
@@ -138,10 +130,7 @@ class Pedido:
     
     @carrega_dados_ecommerce
     @carrega_dados_empresa
-    async def to_sankhya_pedido_venda(
-            self,
-            lista_itens:list[dict]
-        ) -> tuple[dict,list[dict]]:
+    async def to_sankhya_pedido_venda(self,lista_itens:list[dict]) -> tuple[dict,list[dict]]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya. Versão para pedido de transferência.
             :param lista_itens: lista de itens dos pedidos da API do Olist            
@@ -188,11 +177,7 @@ class Pedido:
         return dados_cabecalho, dados_itens
     
     @carrega_dados_empresa
-    async def to_sankhya_atualiza_local(
-            self,
-            nunota:int,
-            lista_sequencias:list
-        ) -> list[dict]:
+    async def to_sankhya_atualiza_local(self,nunota:int,lista_sequencias:list) -> list[dict]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya. Versão para atualizar o local de destino da nota de transferência.
             :param nunota: número da nota de transferência
@@ -220,10 +205,7 @@ class Pedido:
     
     @carrega_dados_ecommerce
     @carrega_dados_empresa
-    async def to_sankhya_baixa_estoque_ecommerce(
-            self,
-            lista_itens:list
-        ) -> tuple[dict,list[dict]]:
+    async def to_sankhya_baixa_estoque_ecommerce(self,lista_itens:list) -> tuple[dict,list[dict]]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya. Versão para realizar a baixa de estoque do ecommerce.
             :param lista_itens: lista de itens para baixa de estoque

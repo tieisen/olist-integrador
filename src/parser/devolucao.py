@@ -8,11 +8,7 @@ class Devolucao:
     def __init__(self):
         pass
            
-    def to_sankhya(
-            self,
-            itens_olist:list[dict],
-            itens_snk:list[dict]
-        ) -> list[dict]:
+    def to_sankhya(self,itens_olist:list[dict],itens_snk:list[dict]) -> list[dict]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya para realizar a devolução por NFD.
             :param itens_olist: dados da nota de devolução no Olist

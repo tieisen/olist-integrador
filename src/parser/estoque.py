@@ -10,10 +10,7 @@ class Estoque:
     def __init__(self):
         pass
 
-    def to_olist(
-            self,
-            dados_estoque:dict
-        ) -> tuple[int,dict]:
+    def to_olist(self,dados_estoque:dict) -> tuple[int,dict]:
         """
         Converte os dados da movimentação de estoque no formato da API do Olist.
             :param dados_estoque: dados da movimentação de estoque

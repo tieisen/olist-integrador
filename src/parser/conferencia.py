@@ -10,11 +10,7 @@ class Conferencia:
     def __init__(self, codemp:int):
         self.codemp = codemp
         
-    def to_sankhya_itens(
-            self,
-            nuconf:int,
-            dados_olist:list
-        ) -> list[dict]:
+    def to_sankhya_itens(self,nuconf:int,dados_olist:list) -> list[dict]:
         """
         Converte os dados dos pedidos no formato da API do Sankhya.
             :param nuconf: número da conferência

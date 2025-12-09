@@ -12,10 +12,7 @@ class Produto:
     def __init__(self):
         self.formatter = Formatter()        
 
-    def parse_ncm(
-            self,
-            ncm:str
-        ) -> str:
+    def parse_ncm(self,ncm:str) -> str:
         """
         Adiciona máscara no NCM
             :param ncm: código do NCM
@@ -29,10 +26,7 @@ class Produto:
             return None
         return ncm
 
-    def parse_cest(
-            self,
-            cest:str
-        ) -> str:
+    def parse_cest(self,cest:str) -> str:
         """
         Adiciona máscara no CEST
             :param cest: código do CEST
@@ -46,12 +40,7 @@ class Produto:
             return None
         return cest
 
-    def to_sankhya(
-            self,
-            data_olist:dict=None,
-            data_sankhya:dict=None,
-            type:str='update'
-        ) -> tuple[list,dict]:
+    def to_sankhya(self,data_olist:dict=None,data_sankhya:dict=None,type:str='update') -> tuple[list,dict]:
         """
         Valida alterações nos dados do produto e cria dicionário no formato da API do Sankhya.
             :param data_olist: dados do produto da API do Olist
@@ -116,12 +105,7 @@ class Produto:
 
         return updates, new_data
 
-    def to_olist(
-            self,
-            data_sankhya:dict,
-            data_olist:dict=None,
-            dados_empresa:dict=None
-        ) -> tuple[list,dict]:
+    def to_olist(self,data_sankhya:dict,data_olist:dict=None,dados_empresa:dict=None) -> tuple[list,dict]:
         """
         Valida alterações nos dados do produto e cria dicionário no formato da API do Olist.
             :param data_sankhya: dados do produto da API do Sankhya
