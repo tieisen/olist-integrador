@@ -2,6 +2,7 @@ import os
 import time
 import requests
 from datetime import datetime, timedelta
+from src.olist.produto import Produto
 from src.utils.decorador import carrega_dados_empresa
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
@@ -227,6 +228,8 @@ class Pedido:
             item_no_pedido
         ) -> tuple[bool,dict]:
 
+        produto = Produto(codemp=self.codemp, empresa_id=self.empresa_id)
+
         if isinstance(item_no_pedido, list):
             item_no_pedido = item_no_pedido[0]
         
@@ -235,6 +238,8 @@ class Pedido:
             print("Item do pedido precisa ser um dicionário.")
             return False, {}
         
+
+        # dados_kit = await produto.buscar(id=id)
         url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PRODUTOS')+f"/{id}"
         if not url:
             print(f"Erro relacionado à url. {url}")
@@ -257,10 +262,10 @@ class Pedido:
                 res_item = []
                 for k in res.json().get('kit'):
 
-                    dados_produto = self.buscar(id=k['produto'].get('id'))
+                    dados_produto = await produto.buscar(id=k['produto'].get('id'))
                     if not dados_produto:
-                        logger.error("Produto %s ID %s não encontrado.", res.json().get('descricao'), id)
-                        print(f"Produto {res.json().get('descricao')} ID {id} não encontrado.")
+                        logger.error("Produto %s ID %s não encontrado.", k['produto'].get('descricao'), k['produto'].get('id'))
+                        print(f"Produto {k['produto'].get('descricao')} ID {k['produto'].get('id')} não encontrado.")
                         return False, {}
 
                     kit_item = {
