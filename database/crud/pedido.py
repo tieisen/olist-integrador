@@ -212,6 +212,7 @@ async def cancelar(nunota:int):
             return True
         except Exception as e:
             print(f"Erro ao cancelar pedido {nunota}: {e}")
+            logger.error(f"Erro ao cancelar pedido {nunota}: {e}")
             return False
 
 async def buscar_importar(ecommerce_id:int):
