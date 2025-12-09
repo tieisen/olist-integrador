@@ -19,39 +19,45 @@ class Separacao:
     @token_olist
     async def listar(self) -> list:
         
-        url = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
+        urls = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
                 self.endpoint+"/?situacao=4" ] # Em Separacao
         
-        if not url:
+        if not urls:
             print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False        
 
         status = True
         lista = []
-        for u in url:
-            time.sleep(self.req_time_sleep)
-            res = requests.get(
-                url = u,
-                headers = {
-                    "Authorization":f"Bearer {self.token}",
-                    "Content-Type":"application/json",
-                    "Accept":"application/json"
-                }
-            )
+        for u in urls:
 
-            if res.status_code != 200:
-                status == False
-                logger.error("Erro %s: %s", res.status_code, res.text)
-                print(f"Erro {res.status_code}: {res.text}")
-                continue
+            status = 200
+            paginacao = {}            
+            while status == 200:
+                if paginacao:        
+                    if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
+                        offset = paginacao["limit"] + paginacao["offset"]
+                        url = u+f"?offset={offset}"
+                    else:
+                        url = None
+                else:
+                    url = u
 
-            if res.status_code == 200 and not res.json().get('itens'):
-                continue
-            
-            lista+=res.json().get('itens',[])
-
-        return lista if status else status        
+                if url:
+                    res = requests.get(url=url,
+                                    headers={
+                                        "Authorization":f"Bearer {self.token}",
+                                        "Content-Type":"application/json",
+                                        "Accept":"application/json"
+                                        })
+                    status = res.status_code
+                    if status == 200:                    
+                        lista += res.json()["itens"]
+                        paginacao = res.json()["paginacao"]
+                        time.sleep(self.req_time_sleep)
+                else:
+                    status=0
+        return lista
 
     @token_olist
     async def buscar(
