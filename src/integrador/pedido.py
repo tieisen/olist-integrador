@@ -606,8 +606,41 @@ class Pedido:
                         continue
 
                 retorno['success'] = True
-                lista_retornos.append(retorno)                    
-                
+                lista_retornos.append(retorno)
+            else:
+                # Se todos os itens já tem saldo no estoque do E-commerce
+                pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
+                for pedido in aux_lista_pedidos:
+                    time.sleep(self.req_time_sleep)
+                    retorno = {
+                        "id": pedido.get('id'),
+                        "numero": pedido.get('num_pedido'),
+                        "success": None,
+                        "__exception__": None
+                    }
+                    ack = await crudPedido.atualizar(id_pedido=pedido.get('id_pedido'),
+                                                     nunota=-1,
+                                                     dh_importacao=datetime.now())
+                    if not ack:
+                        msg = f"Erro ao atualizar situação do pedido {pedido.get('num_pedido')} para importado"
+                        logger.error(msg)
+                        retorno['success'] = False
+                        retorno['__exception__'] = msg
+                        lista_retornos.append(retorno)
+                        continue
+
+                    ack = await self.atualizar_nunota(id_pedido=pedido.get('id_pedido'),
+                                                      nunota='N/A',
+                                                      olist=pedido_olist)
+                    if not ack:
+                        msg = f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist"
+                        retorno['success'] = False
+                        retorno['__exception__'] = msg
+                        lista_retornos.append(retorno)
+                        continue
+
+                retorno['success'] = True
+                lista_retornos.append(retorno)                
             return lista_retornos
         except Exception as e:
             return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}]
