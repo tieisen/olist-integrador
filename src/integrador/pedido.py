@@ -125,7 +125,7 @@ class Pedido:
                                                                      olist=pedido_olist)
             if not itens_validados:
                 msg = "Erro ao validar itens/desmembrar kits"                    
-                print(msg)
+                raise Exception(msg)
             
             dados_pedido['itens'] = itens_validados
 
@@ -343,6 +343,7 @@ class Pedido:
                 if not itens_validados:
                     msg = "Erro ao validar itens/desmembrar kits"
                     raise Exception(msg)
+                
                 dados_pedido_olist['itens'] = itens_validados            
                 
                 # Converte para o formato da API do Sankhya
@@ -471,24 +472,34 @@ class Pedido:
                 # dados_pedido_olist = await pedido_olist.buscar(id=pedido.get('id_pedido'))
                 dados_pedido_olist = await crudPedido.buscar(id_pedido=pedido.get('id_pedido'))
                 if not dados_pedido_olist:
-                    msg = "Erro ao buscar dados do pedido"
+                    msg = f"Erro ao buscar dados do pedido {pedido.get('num_pedido')}"
                     print(msg)
+                    logger.error(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
             
                 try:
                     dados_pedido_olist = dados_pedido_olist[0].get('dados_pedido')
                 except Exception as e:
-                    msg = "Erro ao buscar dados do pedido"
+                    msg = f"Erro ao buscar dados do pedido {pedido.get('num_pedido')}"
                     print(msg)
+                    logger.error(msg)
+                    lista_pedidos.pop(lista_pedidos.index(pedido))
+                    continue
+
+                if not dados_pedido_olist.get('itens'):
+                    msg = f"Erro ao buscar itens do pedido {pedido.get('num_pedido')}"
+                    print(msg)
+                    logger.error(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
                 
                 # Valida situação e remove se cancelado
                 print("Validando situação do pedido...")
                 if not await self.validar_situacao(dados_pedido_olist):
-                    msg = "Pedido cancelado ou com dados incompletos"
+                    msg = f"Pedido {pedido.get('num_pedido')} cancelado ou com dados incompletos"
                     print(msg)
+                    logger.error(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
                 
@@ -498,6 +509,7 @@ class Pedido:
                 msg = "Nenhum pedido válido para importar"
                 raise Exception(msg)            
             print(f"--> {len(dados_pedidos_olist)} pedidos validados para importar")
+            logger.info(f"{len(dados_pedidos_olist)} pedidos validados para importar")
 
             # Unifica os itens dos pedidos
             print("-> Unificando os pedidos...")
@@ -541,6 +553,7 @@ class Pedido:
                                                  dh_importacao=datetime.now())
                 if not ack:
                     msg = f"Erro ao atualizar situação do pedido {pedido.get('num_pedido')} para importado"
+                    logger.error(msg)
                     retorno['success'] = False
                     retorno['__exception__'] = msg
                     lista_retornos.append(retorno)
@@ -551,6 +564,7 @@ class Pedido:
                                                   olist=pedido_olist)
                 if not ack:
                     msg = f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist"
+                    logger.error(msg)
                     retorno['success'] = False
                     retorno['__exception__'] = msg
                     lista_retornos.append(retorno)
@@ -607,6 +621,7 @@ class Pedido:
             await crudLog.atualizar(id=self.log_id)
             return True        
         print(f"{len(pedidos_importar)} pedidos para importar")
+        logger.info(f"{len(pedidos_importar)} pedidos para importar")
         
         # Verifica o tipo de importação do ecommerce
         if self.dados_ecommerce.get('importa_pedido_lote'):
@@ -858,14 +873,14 @@ class Pedido:
                 ack = await olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota)
                 if not ack:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('pedido_id'),
+                                           pedido_id=pedido.get('id'),
                                            evento='N',
                                            sucesso=False,
                                            obs="Não foi possível remover nunota")
                     lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
                 else:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('pedido_id'),
+                                           pedido_id=pedido.get('id'),
                                            evento='N')
             if len(lista_pedidos_com_erro) == len(lista_pedidos):
                 msg = "Erro ao remover número dos pedidos no Olist"
@@ -885,6 +900,7 @@ class Pedido:
                 pass
             erro = f'ERRO: {e}'
             print(erro)
+            logger.error(erro)
             status = False            
         finally:        
             # Atualiza log
