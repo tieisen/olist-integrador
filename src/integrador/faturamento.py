@@ -267,7 +267,7 @@ class Faturamento:
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         parser_pedido = ParserPedido(id_loja=self.dados_ecommerce.get('id_loja'))
-        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'))
+        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
 
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
@@ -449,8 +449,6 @@ class Faturamento:
             estoque_baixar:list[dict] = await crudPedido.buscar_baixar_estoque(ecommerce_id=self.dados_ecommerce.get('id'))
             if not estoque_baixar:
                 return True
-            
-            print(f"{len(estoque_baixar)} pedidos para baixar estoque")
 
             # Unifica os itens dos pedidos
             dados_pedidos_olist:list[dict] = [pedido.get('dados_pedido') for pedido in estoque_baixar]
