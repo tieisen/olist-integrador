@@ -31,10 +31,7 @@ class Nota:
             ]
 
     @interno
-    def extrai_nunota(
-            self,
-            payload:dict=None
-        ) -> int:
+    def extrai_nunota(self,payload:dict=None) -> int:
         """
         Extrai o número único da nota de venda.
             :param payload: retorno da API do Sankhya em JSON
@@ -43,15 +40,7 @@ class Nota:
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int=None,
-            id_olist:int=None,
-            codpedido:str=None,
-            pendentes:bool=False,
-            offset:int=0,
-            itens:bool=False
-        ) -> dict:
+    async def buscar(self,nunota:int=None,id_olist:int=None,codpedido:str=None,pendentes:bool=False,offset:int=0,itens:bool=False) -> dict:
         """
         Busca uma nota de venda.
             :param nunota: número único da nota de venda (Sankhya)
@@ -169,10 +158,7 @@ class Nota:
             return False
 
     @token_snk
-    async def confirmar(
-            self,
-            nunota:int
-        ) -> bool:
+    async def confirmar(self,nunota:int) -> bool:
         """
         Confirma uma nota de venda.
             :param nunota: número único da nota de venda
@@ -209,13 +195,7 @@ class Nota:
             return False
 
     @token_snk
-    async def informar_numero_e_chavenfe(
-            self,
-            nunota:int=None,
-            chavenfe:str=None,
-            numero:str=None,
-            id_nota:int=None
-        ) -> bool:
+    async def informar_numero_e_chavenfe(self,nunota:int=None,chavenfe:str=None,numero:str=None,id_nota:int=None) -> bool:
         """
         Informa dados da NFe na nota de venda do Sankhya.
             :param nunota: número único da nota de venda
@@ -272,11 +252,7 @@ class Nota:
 
     @token_snk
     @carrega_dados_empresa
-    async def devolver(
-            self,
-            nunota:int,
-            itens:list
-        ) -> int:
+    async def devolver(self,nunota:int,itens:list) -> int:
         """
         Devolve um pedido de venda.
             :param nunota: número único da nota de venda
@@ -323,11 +299,7 @@ class Nota:
             return False
 
     @token_snk
-    async def alterar_observacao(
-            self,
-            nunota:int,
-            observacao:str
-        ) -> bool:
+    async def alterar_observacao(self,nunota:int,observacao:str) -> bool:
         """
         Altera a observação de uma nota de devolução.
             :param nunota: número único da nota de devolução
@@ -363,7 +335,8 @@ class Nota:
         res = requests.post(
             url=url,
             headers={ 'Authorization':f"Bearer {self.token}" },
-            json=body)
+            json=body
+        )
         
         if res.status_code == 200 and res.json().get('status') == '1':
             return True
@@ -372,10 +345,7 @@ class Nota:
             return False
 
     @token_snk
-    async def excluir(
-            self,
-            nunota:int
-        ) -> bool:
+    async def excluir(self,nunota:int) -> bool:
         """
         Exclui uma nota de venda.
             :param nunota: número único da nota de venda
@@ -422,10 +392,7 @@ class Itens(Nota):
         ]            
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int
-        ) -> dict:
+    async def buscar(self,nunota:int) -> dict:
         """
         Busca os itens da nota de venda.
             :param nunota: número único da nota de venda
