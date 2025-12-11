@@ -283,6 +283,7 @@ async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
             result = await session.execute(
                 select(Pedido)
                 .where(Pedido.ecommerce_id == ecommerce_id,
+                       Pedido.nota_.any(Nota.dh_cancelamento.is_(None)),
                        Pedido.nota_.any(Nota.baixa_estoque_ecommerce.is_(False)))
                 .order_by(Pedido.num_pedido)
             )
@@ -291,6 +292,7 @@ async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
             result = await session.execute(
                 select(Pedido)
                 .where(Pedido.nota_.any(Nota.nunota == nunota_nota),
+                       Pedido.nota_.any(Nota.dh_cancelamento.is_(None)),
                        Pedido.nota_.any(Nota.baixa_estoque_ecommerce.is_(False)))
                 .order_by(Pedido.num_pedido)
             )
