@@ -147,7 +147,7 @@ async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=Non
                     select(Nota)
                     .where(Nota.pedido_.has(Pedido.nunota == nunota_pedido))
                 )            
-            elif nunota_nota and kwargs['baixa_estoque_ecommerce']:
+            elif nunota_nota and kwargs.get('baixa_estoque_ecommerce'):
                 result = await session.execute(
                     select(Nota)
                     .where(Nota.nunota == nunota_nota,
