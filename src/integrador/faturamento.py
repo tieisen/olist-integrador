@@ -267,6 +267,7 @@ class Faturamento:
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         parser_pedido = ParserPedido(id_loja=self.dados_ecommerce.get('id_loja'))
+        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'))
 
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
@@ -314,13 +315,19 @@ class Faturamento:
                     await crudNota.atualizar(nunota_pedido=nunota,
                                              nunota=nunota_nota)
 
+                    # Cria o contas a pagar no Olist
+                    ack = await integra_fin.lancar_conta_pagar_olist(nunota_nota=nunota_nota)
+                    if not ack:
+                        msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
+                        raise Exception(msg)
+
                 # Confirma nota no Sankhya
                 ack = await nota_snk.confirmar(nunota=nunota_nota)
                 if ack is False:
                     msg = f"Erro ao confirmar nota {nunota_nota}"
                     raise Exception(msg)
-                else:
-                    await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
+                await crudNota.atualizar(nunota_nota=nunota_nota,
+                                         dh_confirmacao=datetime.now())
             else:
                 # Atualiza base de dados
                 await crudPedido.atualizar(nunota=nunota,
@@ -336,6 +343,7 @@ class Faturamento:
             return {"success": True, "__exception__": None}
         
         except Exception as e:
+            logger.error(f"Erro ao faturar no sankhya: {e}")
             return {"success": False, "__exception__": str(e)}
 
     def validar_quantidades_baixa_ecommerce(self,itens_pedidos:list[dict],itens_nota:list[dict]) -> list[dict]:
@@ -442,13 +450,15 @@ class Faturamento:
             if not estoque_baixar:
                 return True
             
+            print(f"{len(estoque_baixar)} pedidos para baixar estoque")
+
             # Unifica os itens dos pedidos
             dados_pedidos_olist:list[dict] = [pedido.get('dados_pedido') for pedido in estoque_baixar]
             pedidos_agrupados, itens_agrupados = integrador_pedido.unificar(lista_pedidos=dados_pedidos_olist)
             if not all([pedidos_agrupados, itens_agrupados]):
                 msg = "Erro ao unificar pedidos"
                 raise Exception(msg)
-
+            
             dados_nota:dict={}
             if nunota_nota != -1:
                 # Busca dados da nota
