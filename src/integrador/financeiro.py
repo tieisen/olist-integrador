@@ -6,9 +6,8 @@ from database.crud import nota as crudNota
 from src.services.bot import Bot
 from src.olist.financeiro import Financeiro as FinOlist
 from src.sankhya.nota import Nota as NotaSnk
-from src.parser.conta_receber import ContaReceber
 from src.parser.financeiro import Financeiro as ParseFin
-from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao
+from src.utils.decorador import contexto, carrega_dados_ecommerce, carrega_dados_empresa, log_execucao
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.buscar_arquivo import buscar_relatorio_custos
@@ -17,11 +16,13 @@ logger = set_logger(__name__)
 
 class Financeiro:
 
-    def __init__(self, id_loja:int):
+    def __init__(self, id_loja:int, empresa_id:int):
         self.id_loja = id_loja
+        self.empresa_id = empresa_id
         self.log_id = None
         self.contexto = 'financeiro'
         self.dados_ecommerce:dict = None
+        self.dados_empresa:dict = None
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     @carrega_dados_ecommerce
@@ -80,13 +81,13 @@ class Financeiro:
                                               para='olist',
                                               contexto=kwargs.get('_contexto'))
         try:
-            cr = ContaReceber()
+            parse = ParseFin()
             finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
             payload = {}
-            payload = cr.recebimento(dados_ecommerce=self.dados_ecommerce,
-                                     dados_conta=dados_conta,
-                                     dados_custo=dados_custo,
-                                     data=data_baixa.strftime('%d/%m/%Y'))
+            payload = parse.olist_receber(dados_ecommerce=self.dados_ecommerce,
+                                          dados_conta=dados_conta,
+                                          dados_custo=dados_custo,
+                                          data=data_baixa.strftime('%d/%m/%Y'))
             if not payload:
                 msg = f"Erro montar payload"
                 raise Exception(msg)
@@ -105,6 +106,7 @@ class Financeiro:
             return {"success": False, "__exception__": str(e)}  
 
     @carrega_dados_ecommerce
+    @carrega_dados_empresa
     async def lancar_conta_pagar_olist(self, nunota_nota:int) -> bool:
 
         def calcula_vcto(dtNeg:str):
@@ -119,7 +121,7 @@ class Financeiro:
 
         notaSnk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-        parseFin = ParseFin(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+        parseFin = ParseFin()
         dtVcto:str=''
 
         try:
@@ -130,11 +132,12 @@ class Financeiro:
             calcula_vcto(dados_nota_transferencia.get('dtneg'))
             payload:dict={}
             try:
-                payload = await parseFin.olist(dtNeg=formata_data(dados_nota_transferencia.get('dtneg')),
-                                            dtVcto=formata_data(dtVcto),
-                                            valor=dados_nota_transferencia.get('vlrnota'),
-                                            numDocumento=dados_nota_transferencia.get('numnota'),
-                                            historico=f"Ref. NF nº {dados_nota_transferencia.get('numnota')}. {dados_nota_transferencia.get('observacao')}")
+                payload = parseFin.olist_pagar(dtNeg=formata_data(dados_nota_transferencia.get('dtneg')),
+                                               dtVcto=formata_data(dtVcto),
+                                               valor=dados_nota_transferencia.get('vlrnota'),
+                                               numDocumento=dados_nota_transferencia.get('numnota'),
+                                               historico=f"Ref. NF nº {dados_nota_transferencia.get('numnota')}. {dados_nota_transferencia.get('observacao')}",
+                                               dados_empresa=self.dados_empresa)
             except Exception as e:
                 print(f"Erro no parser: {e}")
             finally:
@@ -217,7 +220,7 @@ class Financeiro:
     
     @log_execucao
     async def executar_baixa(self,data:datetime) -> bool:
-        parser = ContaReceber()
+        parser = ParseFin()
         relatorio_custos:list[dict] = buscar_relatorio_custos()
         if not relatorio_custos:
             logger.error("Relatório de custos não encontrado ou vazio.")
