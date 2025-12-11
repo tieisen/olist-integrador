@@ -401,7 +401,7 @@ class Pedido:
 
         for pedido in lista_pedidos:
             status_itens:bool=True
-            itens_pedido = pedido.get('itens')            
+            itens_pedido = pedido.get('itens')
             for item_pedido in itens_pedido:
                 # Valida o formato do código do produto
                 try:
@@ -420,16 +420,23 @@ class Pedido:
                     'vlrunit': item_pedido.get('valorUnitario')
                 }
 
-                # Verifica se o item é novo ou soma se já estiver na lista
-                aux = None                
-                for item in itens:
-                    if dados_item.get('codprod') == item.get('codprod'):
-                        aux = item
-                        break                
-                if not aux:
-                    itens.append(dados_item)
+                try:
+                    # Verifica se o item é novo ou soma se já estiver na lista
+                    aux = None                
+                    for item in itens:
+                        if dados_item.get('codprod') == item.get('codprod'):
+                            aux = item
+                            break                
+                    if not aux:
+                        itens.append(dados_item)
+                        continue
+                    aux['qtdneg']+=dados_item.get('qtdneg')
+                except Exception as e:
+                    msg = f"Erro ao verificar existencia do item na lista: {e}"
+                    print(msg)
+                    logger.error(msg)
+                    status_itens = False
                     continue
-                aux['qtdneg']+=dados_item.get('qtdneg')
             
             if status_itens:
                 pedidos.append({
@@ -438,6 +445,7 @@ class Pedido:
                 })
             else:
                 msg = f"Não foi possível unificar o pedido {pedido.get('numeroPedido')}. Itens inválidos."
+                print(msg)
                 logger.error(msg)
                 continue
 
@@ -514,11 +522,13 @@ class Pedido:
                     logger.warning(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
+
                 if not pedido['dados_pedido'].get('itens'):
                     msg = f"Erro ao buscar itens do pedido {pedido.get('num_pedido')}"
                     logger.error(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
-                    continue                  
+                    continue   
+
                 dados_pedidos_olist.append(pedido.get('dados_pedido'))
 
             if not dados_pedidos_olist:
@@ -526,6 +536,7 @@ class Pedido:
                 raise Exception(msg)
             
             logger.info(f"{len(dados_pedidos_olist)} pedidos validados para importar")
+            print(f"{len(dados_pedidos_olist)} pedidos validados para importar")
 
             # Unifica os itens dos pedidos
             pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos_olist)
@@ -543,7 +554,7 @@ class Pedido:
             # Compara quantidade conferida com estoque disponível
             itens_venda_interna = self.compara_saldos(saldo_estoque=saldo_estoque,
                                                       saldo_pedidos=itens_agrupados)
-            
+
             lista_retornos:list[dict]=[]
             if itens_venda_interna:
                 # Busca valor de tranferência dos itens
@@ -688,7 +699,9 @@ class Pedido:
         pedidos_importar = await crudPedido.buscar_importar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not pedidos_importar:
             await crudLog.atualizar(id=self.log_id)
-            return True        
+            return True
+        
+        print(f"{len(pedidos_importar)} pedidos para importar")
         
         # Verifica o tipo de importação do ecommerce
         if self.dados_ecommerce.get('importa_pedido_lote'):
