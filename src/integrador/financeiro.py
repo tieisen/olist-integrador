@@ -96,7 +96,7 @@ class Financeiro:
                 msg = f"Erro ao baixar contas a receber da nota"
                 raise Exception(msg)
             
-            if not await crudNota.atualizar(cod_pedido=dados_custo.get('n_pedido_ecommerce'),dh_baixa_financeiro=datetime.now()):
+            if not await crudNota.atualizar(cod_pedido=dados_custo.get('n_pedido_ecommerce'),dh_baixa_financeiro=datetime.now(),parcelado=False):
                 msg = f"Erro ao atualizar contas a receber da nota"
                 raise Exception(msg)
             
