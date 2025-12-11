@@ -1,10 +1,9 @@
 import os
-import re
 from datetime import datetime
 from src.olist.nota import Nota as NotaOlist
+from src.olist.financeiro import Financeiro as FinOlist
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.nota import Nota as NotaSnk
-from src.parser.conta_receber import ContaReceber
 from database.crud import nota as crudNota
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPed
@@ -115,9 +114,9 @@ class Nota:
 
         try:            
             # Busca contas a receber no Olist
-            nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-            dados_financeiro = await nota_olist.buscar_financeiro(serie=str(dados_nota.get('serie')),                                                                  
-                                                                  numero=str(dados_nota.get('numero')).zfill(6))
+            finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+            dados_financeiro = await finOlist.buscar_receber(serieNf=str(dados_nota.get('serie')),                                                                  
+                                                             numeroNf=str(dados_nota.get('numero')).zfill(6))
             if not dados_financeiro:
                 msg = f"Erro ao buscar contas a receber da nota"
                 raise Exception(msg)
@@ -132,86 +131,6 @@ class Nota:
         except Exception as e:
             logger.error("Erro ao receber conta: %s",str(e))
             return {"success": False, "dados_financeiro": None, "__exception__": str(e)}
-
-    @carrega_dados_ecommerce
-    async def baixar_conta(self,id_nota:int,dados_financeiro:dict=None,**kwargs) -> dict:
-        """
-        Faz a baixa do contas a receber referente à NF no Olist
-            :param id_nota: ID da NF no Olist
-            :param dados_financeiro: dicionário com os dados do lançamento do contas a receber
-            :return dict: dicionário com status e erro
-        """
-        if not self.log_id:
-            self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                              de='olist',
-                                              para='olist',
-                                              contexto=kwargs.get('_contexto'))
-        try:
-            nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-            if not dados_financeiro:
-                # Busca dados do contas a receber no Olist
-                dados_nota = await crudNota.buscar(id_nota=id_nota)
-                if not dados_nota:
-                    msg = f"Erro ao buscar dados da nota"
-                    raise Exception(msg)                
-                dados_financeiro = await nota_olist.buscar_financeiro(numero=str(dados_nota.get('numero')).zfill(6),serie=str(dados_nota.get('serie')))
-                if not dados_financeiro:
-                    msg = f"Erro ao buscar contas a receber da nota"
-                    raise Exception(msg)            
-            # Lança recebimento do contas a receber
-            ack = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),valor=dados_financeiro.get('valor'))
-            if not ack:
-                msg = f"Erro ao baixar contas a receber da nota"
-                raise Exception(msg)            
-            # Atualiza a nota no banco de dados
-            ack = await crudNota.atualizar(id_nota=id_nota,dh_baixa_financeiro=datetime.now())
-            if not ack:
-                msg = f"Erro ao atualizar contas a receber da nota"
-                raise Exception(msg)            
-            return {"success": True, "__exception__": None}
-        except Exception as e:
-            return {"success": False, "__exception__": str(e)}
-
-    @contexto
-    @carrega_dados_ecommerce
-    async def baixar_conta_liquido(self,data_baixa:datetime,dados_conta:dict,dados_custo:dict,**kwargs) -> dict:
-        """
-        Faz a baixa do contas a receber referente à NF no Olist com base no relatório de custos
-            :param data_baixa: data da baixa
-            :param dados_conta: dicionário com os dados do lançamento do contas a receber
-            :param dados_custo: dicionário com os dados da planilha de custos do e-commerce
-            :return dict: dicionário com status e erro
-        """
-
-        if not self.log_id:
-            self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                              de='olist',
-                                              para='olist',
-                                              contexto=kwargs.get('_contexto'))
-        try:
-            cr = ContaReceber()
-            nota = NotaOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
-            payload = {}
-            payload = cr.recebimento(dados_ecommerce=self.dados_ecommerce,
-                                     dados_conta=dados_conta,
-                                     dados_custo=dados_custo,
-                                     data=data_baixa.strftime('%d/%m/%Y'))
-            if not payload:
-                msg = f"Erro montar payload"
-                raise Exception(msg)
-            
-            if not await nota.baixar_financeiro(id=dados_conta.get('id'),payload=payload):
-                msg = f"Erro ao baixar contas a receber da nota"
-                raise Exception(msg)
-            
-            if not await crudNota.atualizar(cod_pedido=dados_custo.get('n_pedido_ecommerce'),dh_baixa_financeiro=datetime.now()):
-                msg = f"Erro ao atualizar contas a receber da nota"
-                raise Exception(msg)
-            
-            return {"success": True, "__exception__": None}
-        except Exception as e:
-            logger.error("Erro ao baixar conta: %s",str(e))
-            return {"success": False, "__exception__": str(e)}  
     
     async def registrar_cancelamento(self,dados_nota:dict) -> dict:
         """
