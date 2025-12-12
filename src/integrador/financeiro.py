@@ -140,11 +140,15 @@ class Financeiro:
                                                historico=f"Ref. NF nº {dados_nota_transferencia.get('numnota')}. {dados_nota_transferencia.get('observacao')}",
                                                dados_empresa=self.dados_empresa)
             except Exception as e:
+                logger.error(f"Erro no parser: {e}")
                 print(f"Erro no parser: {e}")
             finally:
                 pass
             if not payload:
                 raise Exception(f"Erro ao montar payload")
+
+            logger.info("Payload do financeiro:")
+            logger.info(payload)
 
             ack = await finOlist.lancar_pagar(payload=payload)
             if not ack:
