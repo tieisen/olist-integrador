@@ -12,6 +12,7 @@ vscode
 *.ipynb
 *.csv
 *.sql
+*.pgsql
 *.test.*
 */versions/*
 .pytest_cache
