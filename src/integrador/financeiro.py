@@ -19,6 +19,7 @@ class Financeiro:
     def __init__(self, id_loja:int, empresa_id:int):
         self.id_loja = id_loja
         self.empresa_id = empresa_id
+        self.codemp = None
         self.log_id = None
         self.contexto = 'financeiro'
         self.dados_ecommerce:dict = None
