@@ -568,15 +568,21 @@ class Pedido:
             itens_venda_interna = self.compara_saldos(saldo_estoque=saldo_estoque,
                                                       saldo_pedidos=itens_agrupados)
 
+            print(f"Itens a transferir: {itens_venda_interna}")
+
             lista_retornos:list[dict]=[]
             if itens_venda_interna:
                 # Busca valor de tranferência dos itens
                 item_transf = ItemTransfSnk(codemp=self.codemp)
                 codigos_produtos = [item.get('codprod') for item in itens_venda_interna]
                 valores_produtos = await item_transf.busca_valor_transferencia(lista_itens=codigos_produtos)
-                if not valores_produtos:
+                if not valores_produtos and len(codigos_produtos)==1:
+                    valores_produtos = [{'codprod': codigos_produtos[0], 'valor': 0.1}]
+                elif not valores_produtos:
                     msg = "Erro ao buscar valores de transferência."
                     raise Exception(msg)
+                else:
+                    pass                    
 
                 # Vincula o valor de transferência o respectivo produto
                 for item in itens_venda_interna:
