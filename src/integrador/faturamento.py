@@ -370,17 +370,19 @@ class Faturamento:
                             if item.get('codprod') == item_nota.get('codprod'):
                                 item['qtdneg']+=int(item_nota.get('qtdneg'))
 
-            for item_pedido in itens_pedidos:
-                lista_produtos_baixa.append(item_pedido)
-                if itens_nota:
-                    match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
-                    # print(f"Validando produto {item_pedido.get('codprod')} - Qtd pedido: {item_pedido.get('qtdneg')} x Qtd nota: {match.get('qtdneg') if match else '0'}")
-                    if not match:
-                        pass
-                    elif int(item_pedido.get('qtdneg')) > int(match.get('qtdneg')):
-                        lista_produtos_baixa[lista_produtos_baixa.index(item_pedido)]['qtdneg'] = int(item_nota.get('qtdneg')) - int(item_pedido.get('qtdneg'))
-                    else:
-                        pass
+            # for item_pedido in itens_pedidos:
+            #     lista_produtos_baixa.append(item_pedido)
+            #     if itens_nota:
+            #         match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
+            #         print(f"Validando produto {item_pedido.get('codprod')} - Qtd pedido: {item_pedido.get('qtdneg')} x Qtd nota: {match.get('qtdneg') if match else '0'}")
+            #         if not match:
+            #             pass
+            #         elif int(item_pedido.get('qtdneg')) > int(match.get('qtdneg')):
+            #             lista_produtos_baixa[lista_produtos_baixa.index(item_pedido)]['qtdneg'] = int(item_nota.get('qtdneg')) - int(item_pedido.get('qtdneg'))                    
+            #         else:
+            #             pass
+
+            lista_produtos_baixa = itens_pedidos
         except Exception as e:
             logger.error("Erro ao validar baixa de estoque: %s",str(e))
         finally:
@@ -446,7 +448,7 @@ class Faturamento:
         integrador_pedido = IntegradorPedido(id_loja=self.dados_ecommerce.get('id_loja'))
         
         try:
-            estoque_baixar:list[dict] = await crudPedido.buscar_baixar_estoque(ecommerce_id=self.dados_ecommerce.get('id'))
+            estoque_baixar:list[dict] = await crudPedido.buscar_baixar_estoque(nunota_nota=nunota_nota)
             if not estoque_baixar:
                 return True
 
