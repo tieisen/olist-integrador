@@ -166,7 +166,7 @@ class Estoque:
             filter = [
                 {
                     "CODPROD": f"{codprod}",
-                    "CODPARC": f"{self.dados_empresa.get('snk_codparc')}"
+                    "CODEMP": f"{self.dados_empresa.get('snk_codemp_fornecedor')}"
                 }
             ]
 
@@ -176,7 +176,7 @@ class Estoque:
                 if produto.get('sucesso'):
                     filter.append({
                         "CODPROD": f"{produto['ajuste_estoque'].get('codprod')}",
-                        "CODPARC": f"{self.dados_empresa.get('snk_codparc')}"
+                        "CODEMP": f"{self.dados_empresa.get('snk_codemp_fornecedor')}"
                     })
         
         payload = {
