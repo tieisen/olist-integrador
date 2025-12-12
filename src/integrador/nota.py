@@ -50,7 +50,8 @@ class Nota:
                 dados_nota_olist = await nota_olist.buscar(cod_pedido=dados_pedido.get('cod_pedido'))
                 print(f"#{int(dados_nota_olist.get('numero'))}")                
 
-            eh_parcelado:bool = True if len(dados_nota_olist.get('parcelas',[])) > 1 else False
+            # eh_parcelado:bool = True if len(dados_nota_olist.get('parcelas',[])) > 1 else False
+            eh_parcelado:bool = True if len(dados_pedido['dados_pedido']['pagamento'].get('parcelas',[])) > 1 else False
             status_estoque:bool = True if self.dados_ecommerce.get('empresa_id') == 1 else False
 
             # Atualiza nota
