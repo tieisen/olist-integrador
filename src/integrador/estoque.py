@@ -210,6 +210,7 @@ class Estoque:
         except Exception as e:
             obs = f"{e}"
             print(obs)
+            logger.error("Erro ao atualizar estoque no Olist: %s",obs)            
             await crudLogEst.criar(log_id=log_id,
                                    codprod=0,
                                    idprod=0,
