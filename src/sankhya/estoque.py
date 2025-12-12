@@ -46,7 +46,7 @@ class Estoque:
 
         parametero = 'SANKHYA_PATH_SCRIPT_SALDO_ESTOQUE'
         script = buscar_script(parametro=parametero)
-        query = script.format_map({"codlocais": self.dados_empresa.get('snk_codlocal_estoque'),
+        query = script.format_map({"codlocais": self.dados_empresa.get('snk_codlocal_estoque')+','+str(self.dados_empresa.get('snk_codlocal_ecommerce')),
                                    "codparc": self.dados_empresa.get('snk_codparc'),
                                    "codemp_fornecedor": self.dados_empresa.get('snk_codemp_fornecedor'),
                                    "lista_produtos": filtro_produtos
