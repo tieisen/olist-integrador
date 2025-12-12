@@ -275,7 +275,14 @@ class Pedido:
             # Kits não tem vínculo por SKU, ou estão marcados com #K no final do código
             if item['produto'].get('sku') and '#K' not in item['produto'].get('sku'):
                 item = await self.validar_unidade(dados_item=item)
-                itens_validados.append(item)
+                if item:
+                    itens_validados.append(item)
+                else:
+                    logger.error(f"Erro ao validar unidade do produto ID {item['produto'].get('id')}")
+                    return False
+            elif item['produto'].get('sku') and '-' in item['produto'].get('sku'):
+                logger.error(f"Erro ao validar kit. Cadastro no padrão errado {item['produto'].get('sku')}")
+                return False            
             else:
                 try:
                     ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
@@ -401,6 +408,11 @@ class Pedido:
         for pedido in lista_pedidos:
             status_itens:bool=True
             itens_pedido = pedido.get('itens')
+            if not itens_pedido:
+                msg = f"Não foi possível unificar o pedido {pedido.get('numeroPedido')}. Sem itens."
+                logger.error(msg)
+                print(msg)
+                continue
             for item_pedido in itens_pedido:
                 # Valida o formato do código do produto
                 try:
