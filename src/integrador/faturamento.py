@@ -372,19 +372,16 @@ class Faturamento:
                             if item.get('codprod') == item_nota.get('codprod'):
                                 item['qtdneg']+=int(item_nota.get('qtdneg'))
 
-            # for item_pedido in itens_pedidos:
-            #     lista_produtos_baixa.append(item_pedido)
-            #     if itens_nota:
-            #         match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
-            #         print(f"Validando produto {item_pedido.get('codprod')} - Qtd pedido: {item_pedido.get('qtdneg')} x Qtd nota: {match.get('qtdneg') if match else '0'}")
-            #         if not match:
-            #             pass
-            #         elif int(item_pedido.get('qtdneg')) > int(match.get('qtdneg')):
-            #             lista_produtos_baixa[lista_produtos_baixa.index(item_pedido)]['qtdneg'] = int(item_nota.get('qtdneg')) - int(item_pedido.get('qtdneg'))                    
-            #         else:
-            #             pass
-
-            lista_produtos_baixa = aux_nota
+            for item_pedido in itens_pedidos:
+                if item_pedido.get('vlrunit',0) == 0:
+                    match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
+                    if match:
+                        item_pedido['vlrunit'] = match.get('vlrunit')
+                    else:
+                        item_pedido['vlrunit'] = 1
+                
+                lista_produtos_baixa.append(item_pedido)
+                
         except Exception as e:
             logger.error("Erro ao validar baixa de estoque: %s",str(e))
         finally:
