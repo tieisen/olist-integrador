@@ -107,7 +107,8 @@ class Bot:
 
     async def logout(self):
         self.driver.get(self.link_logout)
-        self.driver.quit()
+        if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "username"))):
+            self.driver.quit()
 
     async def acessa_relatorio_custos(self):
         try:
