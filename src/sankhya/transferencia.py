@@ -7,6 +7,7 @@ from src.utils.autenticador import token_snk
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_snk
 load_env()
 logger = set_logger(__name__)
 
@@ -296,10 +297,7 @@ class Itens(Transferencia):
             ]
         }
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+        payload={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
@@ -314,13 +312,10 @@ class Itens(Transferencia):
                         }
                     }
                 }
-            })
-        
-        if res.status_code in (200,201) and res.json().get('status')=='1':            
-            return self.formatter.return_format(res.json())
-        else:
-            logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
-            return False
+            }
+
+        res = await paginar_snk(token=self.token, url=url, payload=payload)
+        return res
 
     @token_snk
     @carrega_dados_empresa

@@ -8,6 +8,7 @@ from src.utils.formatter import Formatter
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_snk
 load_env()
 logger = set_logger(__name__)
 
@@ -474,7 +475,7 @@ class Itens(Pedido):
     def __init__(self, pedido_instance: 'Pedido'=None, codemp:int=None):
         self.token = pedido_instance.token if pedido_instance else None
         self.codemp = codemp or pedido_instance.codemp
-        self.formatter = Formatter()
+        self.empresa_id = None
         self.campos_item = [
             "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG",
             "CODPROD", "CODTRIB","CODVEND", "CODVOL", "CONTROLE",
@@ -524,12 +525,9 @@ class Itens(Pedido):
                         "type": "S"
                     }
                 ]
-            }  
-            
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+            }
+
+        payload={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
@@ -544,13 +542,7 @@ class Itens(Pedido):
                         }
                     }
                 }
-            })
-        
-        if res.status_code in (200,201) and res.json().get('status')=='1':
-            return self.formatter.return_format(res.json())
-        else:
-            if nunota:
-                logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.text)      
-            if pedido_ecommerce:
-                logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.text)      
-            return False
+            }            
+
+        res = await paginar_snk(token=self.token, url=url, payload=payload)
+        return res

@@ -5,6 +5,7 @@ from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_snk
 load_env()
 logger = set_logger(__name__)
 
@@ -117,16 +118,13 @@ class Nota:
             }
             fieldset_list = 'AD_MKP_CODPED, NUNOTA, NUMNOTA, AD_MKP_IDNFE'
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+        payload:dict = {
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
                         "rootEntity": "CabecalhoNota",
                         "includePresentationFields": "N",
-                        "offsetPage": f"{offset}",
+                        "offsetPage": "0",
                         "criteria": criteria,
                         "entity": {
                             "fieldset": {
@@ -135,26 +133,31 @@ class Nota:
                         }
                     }
                 }
-            })
-        
-        if res.status_code in (200,201) and res.json().get('status')=='1':
-            retorno_formatado = self.formatter.return_format(res.json())
-            if isinstance(retorno_formatado, list):
-                dados_nota = retorno_formatado[0]            
-            if itens:
-                itens_handler = Itens(self)
-                dados_itens = await itens_handler.buscar(nunota=int(dados_nota.get('nunota')))
-                dados_nota['itens'] = dados_itens
-            return dados_nota  
-        else:
+            }
+
+        dados_nota = await paginar_snk(token=self.token,url=url,payload=payload)
+        if not dados_nota:
             if nunota:
-                logger.error("Erro ao buscar nota. Nunota %s. %s",nunota,res.json())
-            if id_olist:
-                logger.error("Erro ao buscar nota. ID %s. %s",id_olist,res.json())
-            if codpedido:
-                logger.error("Erro ao buscar nota. Pedido %s. %s",codpedido,res.json())
-            if pendentes:
-                logger.error("Erro ao buscar notas pendentes. %s",res.json())
+                logger.error("Erro ao buscar nota. Nunota %s. %s",nunota)
+            elif id_olist:
+                logger.error("Erro ao buscar nota. ID %s. %s",id_olist)
+            elif codpedido:
+                logger.error("Erro ao buscar nota. Pedido %s. %s",codpedido)
+            elif pendentes:
+                logger.error("Erro ao buscar notas pendentes. %s")
+            else:
+                pass
+            return False            
+        elif not itens:
+            return dados_nota
+        elif itens:
+            if isinstance(dados_nota,list):
+                dados_nota = dados_nota[0]
+            itens_handler = Itens(self)
+            dados_itens = await itens_handler.buscar(nunota=int(dados_nota.get('nunota')))
+            dados_nota['itens'] = dados_itens
+            return dados_nota
+        else:
             return False
 
     @token_snk
@@ -414,12 +417,9 @@ class Itens(Nota):
                     "type": "I"
                 }
             ]
-        }        
+        }
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+        payload:dict = {
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
@@ -434,10 +434,7 @@ class Itens(Nota):
                         }
                     }
                 }
-            })
+            }
         
-        if res.status_code in (200,201) and res.json().get('status')=='1':            
-            return self.formatter.return_format(res.json())
-        else:
-            logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
-            return False
+        res = await paginar_snk(token=self.token,url=url,payload=payload)
+        return res

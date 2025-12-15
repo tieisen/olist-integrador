@@ -1,5 +1,4 @@
 import os
-import time
 import requests
 from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.autenticador import token_snk
@@ -7,6 +6,7 @@ from src.utils.formatter import Formatter
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_snk
 load_env()
 logger = set_logger(__name__)
 
@@ -68,11 +68,11 @@ class Estoque:
             logger.error("Erro ao buscar saldo de estoque do item %s. %s",codprod,res.json())
             return False
     
+    @carrega_dados_empresa
     @token_snk
-    async def buscar_alteracoes(self,codemp:int) -> list[dict]:
+    async def buscar_alteracoes(self) -> list[dict]:
         """
         Busca a lista de produtos com movimentação de estoque.
-            :param codemp: Código da empresa no Sankhya.
             :return list[dict]: lista de alterações
         """
 
@@ -86,27 +86,21 @@ class Estoque:
             erro = f"Parâmetro da tabela de rastro de estoque não encontrado"
             logger.error(erro)
             return False
-
-        offset = 0
-        limite_alcancado = False
-        todos_resultados = []
-
-        while not limite_alcancado:
-            time.sleep(self.req_time_sleep)
-            payload = {
+        
+        payload = {
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
                         "rootEntity": tabela,
                         "includePresentationFields": "N",
-                        "offsetPage": offset,
+                        "offsetPage": "0",
                         "criteria": {
                             "expression": {
                                 "$": "this.CODEMP = ?"
                             },
                             "parameter": [
                                 {
-                                    "$": f"{codemp}",
+                                    "$": f"{self.dados_empresa.get('snk_codemp_fornecedor')}",
                                     "type": "I"
                                 }
                             ]
@@ -119,26 +113,12 @@ class Estoque:
                     }
                 }
             }
-            res = requests.get(
-                url=url,
-                headers={ 'Authorization':f"Bearer {self.token}" },
-                json=payload
-            )
-            if res.status_code != 200:
-                logger.error("Erro ao buscar alterações pendentes. %s",res.text)
-                return False
-            
-            if res.json().get('status') == '1':
-                todos_resultados.extend(self.formatter.return_format(res.json()))
-                if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
-                    offset += 1
-                else:   
-                    limite_alcancado = True
 
-        return todos_resultados
+        res = await paginar_snk(token=self.token,url=url,payload=payload)
+        return res
     
-    @token_snk
     @carrega_dados_empresa
+    @token_snk
     async def remover_alteracoes(self,codprod:int=None,lista_produtos:list=None) -> bool:
         """
         Remove os produtos atualizados da fila de atualização.
