@@ -127,8 +127,10 @@ class Financeiro:
 
         try:
             dados_nota_transferencia:dict = await notaSnk.buscar(nunota=nunota_nota)
+            if isinstance(dados_nota_transferencia,list):
+                dados_nota_transferencia = dados_nota_transferencia[0]
             if not dados_nota_transferencia:
-                raise Exception(f"Erro ao buscar dados da nota de transferência {nunota_nota}")
+                raise Exception(f"Erro ao buscar dados da nota de transferência {nunota_nota}")                
             
             calcula_vcto(dados_nota_transferencia.get('dtneg'))
             payload:dict={}
