@@ -123,7 +123,7 @@ class Estoque:
         
         # Busca lista de produtos com alterações de estoque no Sankhya
         print("Busca lista de produtos com alterações de estoque no Sankhya")
-        alteracoes_pendentes = await estoque_snk.buscar_alteracoes(codemp=self.dados_empresa.get('snk_codemp_fornecedor'))
+        alteracoes_pendentes = await estoque_snk.buscar_alteracoes()
         if not alteracoes_pendentes:
             await crudLog.atualizar(id=log_id,sucesso=True)
             return True
