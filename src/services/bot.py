@@ -38,7 +38,6 @@ class Bot:
             self.driver = webdriver.Firefox()
             self.driver.maximize_window() 
             self.driver.get(self.link_erp)
-            # self.wait = WebDriverWait(self.driver, 10)
             WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
             login_input = self.driver.find_element(By.ID, "username")
             next_button = self.driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
@@ -104,11 +103,24 @@ class Bot:
         else:
             logger.error("Erro no botao usuário")
             return False
-
+        
     async def logout(self):
-        self.driver.get(self.link_logout)
-        if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "username"))):
-            self.driver.quit()
+
+        ELEMENTO_USUARIO = "//div[@class='sidebar-menu-iniciais-usuario']"
+        ELEMENTO_BOTAO_SAIR = "//a[@aria-label='Sair']"
+
+        if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, ELEMENTO_USUARIO))):
+            elementos = self.driver.find_elements(By.XPATH, ELEMENTO_USUARIO)
+            btn_usuario = elementos[1]
+            btn_usuario.click()            
+            time.sleep(1)
+            btn_sair = self.driver.find_element(By.XPATH, ELEMENTO_BOTAO_SAIR)
+            btn_sair.click()
+            if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "username"))):
+                self.driver.quit()            
+        else:
+            logger.error("Erro no botao usuário")
+            return False
 
     async def acessa_relatorio_custos(self):
         try:
