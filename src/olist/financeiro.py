@@ -5,7 +5,7 @@ from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
-from src.utils.busca_paginada import busca_paginada
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -107,7 +107,7 @@ class Financeiro:
         if not dt_emissao:
             dt_emissao = datetime.today().strftime('%Y-%m-%d')
         url = self.endpoint_receber+f"/?situacao=aberto&dataInicialEmissao={dt_emissao}&dataFinalEmissao={dt_emissao}"
-        return await busca_paginada(token=self.token,url=url)
+        return await paginar_olist(token=self.token,url=url)
 
     @carrega_dados_ecommerce
     @token_olist

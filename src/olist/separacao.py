@@ -3,7 +3,7 @@ import requests
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
-from src.utils.busca_paginada import busca_paginada
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -28,7 +28,7 @@ class Separacao:
         status = True
         lista = []
         for url in urls:
-            lista+= await busca_paginada(token=self.token,url=url)
+            lista+= await paginar_olist(token=self.token,url=url)
 
         return lista if status else status        
 

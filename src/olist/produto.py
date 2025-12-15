@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
-from src.utils.busca_paginada import busca_paginada
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -163,7 +163,7 @@ class Produto:
         Busca os dados de todos os produtos no Olist.
             :return list[dict]: lista de dicionários com os dados dos produtos
         """
-        return await busca_paginada(token=self.token,url=self.endpoint)
+        return await paginar_olist(token=self.token,url=self.endpoint)
     
     @token_olist
     async def buscar_alteracoes(self,todo_historico:bool=False) -> list[dict]:
@@ -176,7 +176,7 @@ class Produto:
         data_alteracao = (datetime.now()-timedelta(minutes=self.tempo_busca_alter_prod)).strftime("%Y-%m-%d %H:%M:00")
         url = self.endpoint if todo_historico else self.endpoint+f"?dataAlteracao={data_alteracao}"
 
-        itens = await busca_paginada(token=self.token,url=url)
+        itens = await paginar_olist(token=self.token,url=url)
       
         if itens:
             itens.sort(key=lambda i: i['dataAlteracao'])

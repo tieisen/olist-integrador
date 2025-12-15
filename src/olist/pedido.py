@@ -7,7 +7,7 @@ from src.utils.decorador import carrega_dados_empresa
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
-from src.utils.busca_paginada import busca_paginada
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -307,7 +307,7 @@ class Pedido:
             return False, []
         
         try:
-            lista_novos_pedidos = await busca_paginada(token=self.token,url=url)
+            lista_novos_pedidos = await paginar_olist(token=self.token,url=url)
             return True, lista_novos_pedidos
         except Exception as e:
             logger.error(f"{e}")

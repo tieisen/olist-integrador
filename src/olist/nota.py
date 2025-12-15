@@ -6,7 +6,7 @@ from src.utils.decorador import carrega_dados_ecommerce
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
-from src.utils.busca_paginada import busca_paginada
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -120,7 +120,7 @@ class Nota:
             
         url = self.endpoint+f"/?tipo={tipo}&situacao=3&dataInicial={data}&dataFinal={data}"
 
-        return await busca_paginada(token=self.token,url=url)
+        return await paginar_olist(token=self.token,url=url)
     
     @carrega_dados_ecommerce
     @token_olist
@@ -138,7 +138,7 @@ class Nota:
             
         url = self.endpoint+f"/?tipo=E&dataInicial={data}&dataFinal={data}"
 
-        return await busca_paginada(token=self.token,url=url)
+        return await paginar_olist(token=self.token,url=url)
     
     @carrega_dados_ecommerce
     @token_olist
