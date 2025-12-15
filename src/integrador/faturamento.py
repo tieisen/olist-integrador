@@ -300,7 +300,7 @@ class Faturamento:
                         raise Exception(msg)                
                     sequencias:list = [int(item.get('sequencia')) for item in dados_nota.get('itens')]
                     payload:list[dict] = await parser_pedido.to_sankhya_atualiza_local(nunota=nunota_nota,
-                                                                                    lista_sequencias=sequencias)
+                                                                                       lista_sequencias=sequencias)
                     if not payload:
                         msg = f"Erro ao preparar dados da nota {nunota_nota}"
                         raise Exception(msg)                
@@ -326,14 +326,14 @@ class Faturamento:
                 if ack is False:
                     msg = f"Erro ao confirmar nota {nunota_nota}"
                     raise Exception(msg)
-                await crudNota.atualizar(nunota_nota=nunota_nota,
-                                         dh_confirmacao=datetime.now())
+                ack = await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
+                if ack is False:
+                    msg = f"Erro ao atualizar hora da confirmação na base. {nunota_nota}"
+                    raise Exception(msg)
             else:
                 # Atualiza base de dados
-                await crudPedido.atualizar(nunota=nunota,
-                                           dh_faturamento=datetime.now())
-                await crudNota.atualizar(nunota_pedido=nunota,
-                                         dh_confirmacao=datetime.now())
+                await crudPedido.atualizar(nunota=nunota,dh_faturamento=datetime.now())
+                await crudNota.atualizar(nunota_pedido=nunota,dh_confirmacao=datetime.now())
                 nunota_nota = nunota
 
             # Realiza baixa de estoque do local e-commerce
@@ -363,7 +363,9 @@ class Faturamento:
                     if not next((b for b in aux_nota if int(b['codprod']) == int(item_nota['codprod'])),None):
                         aux_nota.append({
                             'codprod':int(item_nota.get('codprod')),
-                            'qtdneg':int(item_nota.get('qtdneg'))
+                            'qtdneg':int(item_nota.get('qtdneg')),
+                            'unidade': item_nota.get('codvol'),
+                            'vlrunit':float(item_nota.get('vlrunit')),
                         })
                     else:
                         for item in aux_nota:
@@ -382,7 +384,7 @@ class Faturamento:
             #         else:
             #             pass
 
-            lista_produtos_baixa = itens_pedidos
+            lista_produtos_baixa = aux_nota
         except Exception as e:
             logger.error("Erro ao validar baixa de estoque: %s",str(e))
         finally:
