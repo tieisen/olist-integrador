@@ -102,10 +102,11 @@ async def atualizar(
         id_pedido:int=None,
         num_pedido:int=None,
         nunota:int=None,
+        lista_ids:list[int]=None,
         **kwargs
     ):
 
-    if not any([id_pedido, num_pedido, nunota]):
+    if not any([id_pedido, num_pedido, nunota, lista_ids]):
         print("Nenhum parâmetro informado")
         return False
 
@@ -117,7 +118,7 @@ async def atualizar(
             return False
             
     async with AsyncSessionLocal() as session:
-        if nunota and not any([id_pedido, num_pedido]):
+        if nunota and not any([id_pedido, num_pedido, lista_ids]):
             result = await session.execute(
                 select(Pedido).where(Pedido.nunota == nunota)
             )
@@ -125,21 +126,27 @@ async def atualizar(
             result = await session.execute(
                 select(Pedido).where(Pedido.nunota == nunota,
                                      Pedido.dh_faturamento.is_(None))
-            )        
+            )
         else:
             kwargs['nunota'] = nunota
             if id_pedido:
                 result = await session.execute(
                     select(Pedido).where(Pedido.id_pedido == id_pedido)
                 )
-            if num_pedido:
+            elif num_pedido:
                 result = await session.execute(
                     select(Pedido).where(Pedido.num_pedido == num_pedido)
                 )
+            elif lista_ids:
+                result = await session.execute(
+                    select(Pedido).where(Pedido.id_pedido.in_(lista_ids))
+                )
+            else:
+                return False
                 
         pedidos = result.scalars().all()
         if not pedidos:
-            print(f"Pedido não encontrado. Parâmetro: {id_pedido or num_pedido or nunota}")
+            print(f"Pedido não encontrado. Parâmetro: {id_pedido or num_pedido or nunota or lista_ids}")
             return False
         
         for pedido in pedidos:                
