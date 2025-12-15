@@ -3,10 +3,11 @@ import time
 import requests
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.formatter import Formatter
 load_env()
 logger = set_logger(__name__)
 
-async def busca_paginada(token:str,url:str) -> list[dict]:
+async def paginar_olist(token:str,url:str) -> list[dict]:
 
     def ordena_por_id(lista_itens:list[dict]) -> list[dict]:
         """
@@ -54,3 +55,36 @@ async def busca_paginada(token:str,url:str) -> list[dict]:
         pass
 
     return itens
+
+async def paginar_snk(token:str,url:str,payload:dict) -> list[dict]:
+
+    offset = 0
+    limite_alcancado = False
+    todos_resultados = []
+    req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP',1.5))
+    formatter = Formatter()
+
+    try:
+        while not limite_alcancado:
+            time.sleep(req_time_sleep)
+            payload['requestBody']['dataSet']['offsetPage'] = offset
+            res = requests.get(
+                url=url,
+                headers={ 'Authorization':f"Bearer {token}" },
+                json=payload
+            )
+            if res.status_code != 200:
+                logger.error(f"Erro {res.status_code} na busca paginada. Resposta: {res.text}")
+            elif res.json().get('status') == '1':
+                todos_resultados.extend(formatter.return_format(res.json()))
+                if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
+                    offset += 1
+                else:   
+                    limite_alcancado = True
+    except Exception as e:
+        logger.error(f"Erro ao realizar busca paginada: {e}")
+        todos_resultados = []
+    finally:
+        pass
+
+    return todos_resultados
