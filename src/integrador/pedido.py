@@ -605,6 +605,15 @@ class Pedido:
                     msg = f"Erro ao inserir pedido no Sankhya."
                     raise Exception(msg)
 
+                # Atualiza base
+                lista_ids_pedidos:list[int] = [p.get('id_pedido') for p in aux_lista_pedidos]
+                ack = await crudPedido.atualizar(lista_ids=lista_ids_pedidos,
+                                                 nunota=pedido_incluido,
+                                                 dh_importacao=datetime.now())
+                if not ack:
+                    msg = f"Erro ao atualizar situação dos pedidos para importado. IDs: {lista_ids_pedidos}"
+                    raise Exception(msg)
+
                 pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
                 for pedido in aux_lista_pedidos:
                     time.sleep(self.req_time_sleep)
@@ -614,16 +623,6 @@ class Pedido:
                         "success": None,
                         "__exception__": None
                     }
-                    ack = await crudPedido.atualizar(id_pedido=pedido.get('id_pedido'),
-                                                     nunota=pedido_incluido,
-                                                     dh_importacao=datetime.now())
-                    if not ack:
-                        msg = f"Erro ao atualizar situação do pedido {pedido.get('num_pedido')} para importado"
-                        logger.error(msg)
-                        retorno['success'] = False
-                        retorno['__exception__'] = msg
-                        lista_retornos.append(retorno)
-                        continue
 
                     ack = await self.atualizar_nunota(id_pedido=pedido.get('id_pedido'),
                                                       nunota=pedido_incluido,
@@ -638,7 +637,16 @@ class Pedido:
                 retorno['success'] = True
                 lista_retornos.append(retorno)
             else:
-                # Se todos os itens já tem saldo no estoque do E-commerce
+                # Se todos os itens já tem saldo no estoque do E-commerce                
+                # Atualiza base
+                lista_ids_pedidos:list[int] = [p.get('id_pedido') for p in aux_lista_pedidos]
+                ack = await crudPedido.atualizar(lista_ids=lista_ids_pedidos,
+                                                 nunota=-1,
+                                                 dh_importacao=datetime.now())
+                if not ack:
+                    msg = f"Erro ao atualizar situação dos pedidos para importado. IDs: {lista_ids_pedidos}"
+                    raise Exception(msg)                                
+
                 pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
                 for pedido in aux_lista_pedidos:
                     time.sleep(self.req_time_sleep)
@@ -648,17 +656,6 @@ class Pedido:
                         "success": None,
                         "__exception__": None
                     }
-                    ack = await crudPedido.atualizar(id_pedido=pedido.get('id_pedido'),
-                                                     nunota=-1,
-                                                     dh_importacao=datetime.now())
-                    if not ack:
-                        msg = f"Erro ao atualizar situação do pedido {pedido.get('num_pedido')} para importado"
-                        logger.error(msg)
-                        retorno['success'] = False
-                        retorno['__exception__'] = msg
-                        lista_retornos.append(retorno)
-                        continue
-
                     ack = await self.atualizar_nunota(id_pedido=pedido.get('id_pedido'),
                                                       nunota='N/A',
                                                       olist=pedido_olist)
@@ -673,6 +670,7 @@ class Pedido:
                 lista_retornos.append(retorno)                
             return lista_retornos
         except Exception as e:
+            logger.error(str(e))
             return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}]
 
     @interno
