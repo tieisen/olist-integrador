@@ -315,17 +315,18 @@ class Faturamento:
                     await crudNota.atualizar(nunota_pedido=nunota,
                                              nunota=nunota_nota)
 
-                    # Cria o contas a pagar no Olist
-                    ack = await integra_fin.lancar_conta_pagar_olist(nunota_nota=nunota_nota)
-                    if not ack:
-                        msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
-                        raise Exception(msg)
-
                 # Confirma nota no Sankhya
                 ack = await nota_snk.confirmar(nunota=nunota_nota)
                 if ack is False:
                     msg = f"Erro ao confirmar nota {nunota_nota}"
                     raise Exception(msg)
+                
+                # Cria o contas a pagar no Olist
+                ack = await integra_fin.lancar_conta_pagar_olist(nunota_nota=nunota_nota)
+                if not ack:
+                    msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
+                    raise Exception(msg)
+
                 ack = await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
                 if ack is False:
                     msg = f"Erro ao atualizar hora da confirmação na base. {nunota_nota}"
