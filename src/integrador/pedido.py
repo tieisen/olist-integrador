@@ -650,11 +650,7 @@ class Pedido:
                                                       nunota=pedido_incluido,
                                                       olist=pedido_olist)
                     if not ack:
-                        msg = f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist"
-                        retorno['success'] = False
-                        retorno['__exception__'] = msg
-                        lista_retornos.append(retorno)
-                        continue
+                        logger.warning(f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist")
 
                 retorno['success'] = True
                 lista_retornos.append(retorno)
