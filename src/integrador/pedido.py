@@ -428,6 +428,7 @@ class Pedido:
 
                 dados_item = {
                     'codprod': item_pedido['produto'].get('sku'),
+                    'descricao': item_pedido['produto'].get('descricao'),
                     'qtdneg': item_pedido.get('quantidade'),
                     'unidade': item_pedido.get('unidade'),
                     'vlrunit': item_pedido.get('valorUnitario')
@@ -464,26 +465,42 @@ class Pedido:
 
         return pedidos, itens
 
-    def compara_saldos(self,saldo_estoque:list[dict],saldo_pedidos:list[dict]) -> list[dict]:
+    def compara_saldos(self,saldo_estoque:list[dict],saldo_pedidos:list[dict]) -> tuple[list[dict],list[dict]]:
         """
         Compara as quantidades dos itens no pedido com seus respectivos saldos em estoque e calcula a quantidade a ser transferida validando o agrupamento mínimo.
             :param saldo_estoque: lista de dicionários com os dados do saldo de estoque dos itens no pedido
             :param saldo_pedidos: lista de dicionários com os dados dos itens no pedido
             :return list[dict]: lista de dicionários com os dados dos itens a transferir
+            :return list[dict]: lista de dicionários com os dados dos itens no e-commerce
         """          
         lista_transferir:list[dict] = []
+        lista_ecommerce:list[dict] = []
 
         for pedido in saldo_pedidos:
+            qtd_solicitada:int = None
             qtd_transferir:int = None
+            qtd_ecommerce:int = None
 
             # Busca o saldo do produto em cada local
             for i, estoque in enumerate(saldo_estoque):
                 if int(estoque.get('codprod')) == int(pedido.get('codprod')):
                     break
 
+            qtd_ecommerce = int(estoque.get('saldo_ecommerce',0))
+            qtd_solicitada = int(pedido.get('qtdneg',0))
+
+            if qtd_ecommerce != 0:
+                lista_ecommerce.append({
+                    "Produto": int(pedido.get('codprod')),
+                    "Descrição": pedido.get('descricao'),
+                    "Unidade": pedido.get('unidade'),
+                    "Saldo no E-commerce": qtd_ecommerce,
+                    "Qtd. solicitada": qtd_solicitada,
+                })
+
             # Verifica se precisa transferência
-            if int(estoque.get('saldo_ecommerce')) < int(pedido.get('qtdneg')):            
-                qtd_transferir = int(pedido.get('qtdneg')) - int(estoque.get('saldo_ecommerce'))
+            if qtd_ecommerce < qtd_solicitada:            
+                qtd_transferir = qtd_solicitada - qtd_ecommerce
 
             # Valida agrupamento mínimo
             if qtd_transferir:
@@ -506,11 +523,11 @@ class Pedido:
                     "quantidade": int(qtd_transferir)
                 })
 
-        return lista_transferir
+        return lista_transferir, lista_ecommerce
 
     @contexto
     @carrega_dados_ecommerce
-    async def importar_agrupado(self,lista_pedidos:list[dict],**kwargs) -> list[dict]:
+    async def importar_agrupado(self,lista_pedidos:list[dict]=None,**kwargs) -> tuple[list[dict],list[dict]]:
         """
         Rotina de importação de pedido unificado.
             :param lista_pedidos: lista de dicionários com os dados dos pedidos
@@ -525,6 +542,10 @@ class Pedido:
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         estoque_snk = EstoqueSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         dados_pedidos_olist:list[dict]=[]
+
+        if not lista_pedidos:
+            lista_pedidos = await crudPedido.buscar_importar(ecommerce_id=self.dados_ecommerce.get('id'))            
+
         try:
             aux_lista_pedidos = lista_pedidos.copy()
             for i, pedido in enumerate(aux_lista_pedidos):
@@ -565,10 +586,11 @@ class Pedido:
                 raise Exception(msg)
 
             # Compara quantidade conferida com estoque disponível
-            itens_venda_interna = self.compara_saldos(saldo_estoque=saldo_estoque,
-                                                      saldo_pedidos=itens_agrupados)
+            itens_venda_interna, itens_ecommerce = self.compara_saldos(saldo_estoque=saldo_estoque,
+                                                                       saldo_pedidos=itens_agrupados)
 
-            print(f"Itens a transferir: {itens_venda_interna}")
+            # print(f"Itens a transferir: {itens_venda_interna}")
+            # print(f"Itens no estoque e-commerce: {itens_ecommerce}")
 
             lista_retornos:list[dict]=[]
             if itens_venda_interna:
@@ -668,10 +690,10 @@ class Pedido:
 
                 retorno['success'] = True
                 lista_retornos.append(retorno)                
-            return lista_retornos
+            return lista_retornos, itens_ecommerce
         except Exception as e:
             logger.error(str(e))
-            return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}]
+            return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}], []
 
     @interno
     async def atualizar_nunota(self,id_pedido:int,nunota:int,olist:PedidoOlist) -> bool:
@@ -696,7 +718,7 @@ class Pedido:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce        
-    async def integrar_novos(self,**kwargs) -> bool:
+    async def integrar_novos(self,**kwargs) -> tuple[bool,list[dict]]:
         """
         Rotina de integração dos novos pedidos.
             :return bool: status da operação
@@ -710,19 +732,19 @@ class Pedido:
         if not await self.consultar_cancelamentos():
             logger.error("Erro ao validar cancelamentos")
             await crudLog.atualizar(id=self.log_id,sucesso=False)
-            return False
+            return False, []
 
         # Busca pedidos para importar
         pedidos_importar = await crudPedido.buscar_importar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not pedidos_importar:
             await crudLog.atualizar(id=self.log_id)
-            return True
+            return True, []
         
         print(f"{len(pedidos_importar)} pedidos para importar")
         
         # Verifica o tipo de importação do ecommerce
         if self.dados_ecommerce.get('importa_pedido_lote'):
-            ack_importacao = await self.importar_agrupado(lista_pedidos=pedidos_importar)
+            ack_importacao, retorno_itens = await self.importar_agrupado(lista_pedidos=pedidos_importar)
             # Registra no log
             for pedido in ack_importacao:
                 if not pedido.get('success'):
@@ -736,6 +758,7 @@ class Pedido:
             for i, pedido in enumerate(pedidos_importar):
                 time.sleep(self.req_time_sleep)
                 ack_importacao = await self.importar_unico(dados_pedido=pedido)
+                retorno_itens = []
                 # Registra sucesso no log
                 await crudLogPed.criar(log_id=self.log_id,
                                        pedido_id=pedido.get('id'),
@@ -746,7 +769,7 @@ class Pedido:
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        return status_log
+        return status_log, retorno_itens
 
     @contexto
     @carrega_dados_ecommerce
