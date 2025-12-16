@@ -367,7 +367,7 @@ class Produto:
                         # Registro no log
                         await crudLogProd.criar(log_id=log_id,
                                                 codprod=int(produto.get('codprod',0)),
-                                                idprod=int(produto.get('idprod',0)),
+                                                idprod=0,
                                                 sucesso=produto.get('sucesso'),
                                                 obs=produto.get('obs'))
             elif produto.get('evento') == 'A':
