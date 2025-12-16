@@ -5,7 +5,7 @@ class Validador:
     def __init__(self):
         pass
 
-    def gtin(gtin: str) -> bool:
+    def gtin(self, gtin: str) -> bool:
         # Remove espaços e valida se é numérico
         gtin = gtin.strip()
         if not gtin.isdigit():
