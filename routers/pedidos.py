@@ -21,7 +21,7 @@ class PedidoAnular(BaseModel):
     nunota:int
 
 @router.post("/integrar-lote")
-async def integrar(body:PedidoEmpresa) -> bool:
+async def integrar(body:PedidoEmpresa) -> list[dict]:
     """
     Busca os pedidos novos do Olist que estão com status Preparando Envio.
     Importa os pedidos pendentes do Olist.
@@ -33,9 +33,10 @@ async def integrar(body:PedidoEmpresa) -> bool:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     
     res = await integrar_pedidos(codemp=body.codemp)
-    if not res.get('status'):
+    if not res.get('status') and not res.get('data'):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
-    return True
+    elif not res.get('status') and res.get('data'):
+        return res.get('data')
 
 @router.post("/integrar-loja")
 async def integrar_loja(body:PedidoLoja) -> bool:
