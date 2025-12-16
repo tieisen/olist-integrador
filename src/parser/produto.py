@@ -192,10 +192,11 @@ class Produto:
                 pass
 
             if str(new_data['tributacao'].get('gtinEmbalagem')) != str(data_sankhya.get('referencia')):
-                updates.append({'campo':'tributacao_gtinEmbalagem',
-                                'valorOld':new_data['tributacao'].get('gtinEmbalagem'),
-                                'valorNew':data_sankhya.get('referencia')})                   
-                new_data['tributacao']['gtinEmbalagem'] = str(data_sankhya.get('referencia'))
+                if self.validar.gtin(str(data_sankhya.get('referencia'))):
+                    new_data['tributacao']['gtinEmbalagem'] = str(data_sankhya.get('referencia'))                                    
+                    updates.append({'campo':'tributacao_gtinEmbalagem',
+                                    'valorOld':new_data['tributacao'].get('gtinEmbalagem'),
+                                    'valorNew':data_sankhya.get('referencia')})
 
             with open(os.getenv('OBJECT_PRODUTO',"src/json/produto.json"), "r", encoding="utf-8") as f:
                 modelo_api = json.load(f)
@@ -234,7 +235,7 @@ class Produto:
                                         'diametro': None,
                                         'pesoLiquido': float(data_sankhya.get('pesoliq')) if data_sankhya.get('pesoliq') else None,
                                         'pesoBruto': float(data_sankhya.get('pesobruto')) if data_sankhya.get('pesobruto') else None}
-            new_data['tributacao'] = {'gtinEmbalagem': str(data_sankhya.get('referencia')) if data_sankhya.get('referencia') else None,
+            new_data['tributacao'] = {'gtinEmbalagem': str(data_sankhya.get('referencia')) if self.validar.gtin(str(data_sankhya.get('referencia'))) else None,
                                        'valorIPIFixo': 0,
                                        'classeIPI': None}
             new_data['seo'] = {'titulo': None,
