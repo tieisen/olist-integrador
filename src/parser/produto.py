@@ -4,41 +4,15 @@ import json
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.validador import Validador
 load_env()
 logger = set_logger(__name__)
 
 class Produto:
 
     def __init__(self):
-        self.formatter = Formatter()        
-
-    def parse_ncm(self,ncm:str) -> str:
-        """
-        Adiciona máscara no NCM
-            :param ncm: código do NCM
-            :return str: código do NCM com máscara
-        """
-        if not ncm:
-            return None
-        ncm = re.sub(r"(\d{4})(\d{2})(\d{2})", r"\1.\2.\3", str(ncm))
-        if len(ncm) != 10:
-            logger.error(f"NCM inválido: {ncm}")
-            return None
-        return ncm
-
-    def parse_cest(self,cest:str) -> str:
-        """
-        Adiciona máscara no CEST
-            :param cest: código do CEST
-            :return str: código do CEST com máscara
-        """        
-        if not cest:
-            return None
-        cest = re.sub(r"(\d{2})(\d{3})(\d{2})", r"\1.\2.\3", str(cest))
-        if len(cest) != 9:
-            logger.error(f"CEST inválido: {cest}")
-            return None
-        return cest
+        self.formatter = Formatter()
+        self.validar = Validador()
 
     def to_sankhya(self,data_olist:dict=None,data_sankhya:dict=None,type:str='update') -> tuple[list,dict]:
         """
@@ -125,16 +99,16 @@ class Produto:
                                 'valorNew':data_sankhya.get('codvol')})                      
                 new_data['unidade'] = data_sankhya.get('codvol')
 
-            if str(new_data.get('ncm')) != self.parse_ncm(data_sankhya.get('ncm')):
-                ncm = self.parse_ncm(data_sankhya.get('ncm'))
+            if str(new_data.get('ncm')) != self.validar.ncm(data_sankhya.get('ncm')):
+                ncm = self.validar.ncm(data_sankhya.get('ncm'))
                 if ncm:
                     updates.append({'campo':'ncm',
                                     'valorOld':new_data.get('ncm'),
                                     'valorNew':data_sankhya.get('ncm')})                     
                     new_data['ncm'] = ncm
 
-            if str(new_data.get('codigoEspecificadorSubstituicaoTributaria')) != self.parse_cest(data_sankhya.get('codespecst')):
-                cest = self.parse_cest(data_sankhya.get('codespecst'))
+            if str(new_data.get('codigoEspecificadorSubstituicaoTributaria')) != self.validar.cest(data_sankhya.get('codespecst')):
+                cest = self.validar.cest(data_sankhya.get('codespecst'))
                 if cest:
                     updates.append({'campo':'cest',
                                     'valorOld':new_data.get('codigoEspecificadorSubstituicaoTributaria'),
@@ -148,10 +122,11 @@ class Produto:
                 new_data['origem'] = int(data_sankhya.get('origprod'))
 
             if str(new_data.get('gtin')) != str(data_sankhya.get('referencia')):
-                updates.append({'campo':'gtin',
-                                'valorOld':new_data.get('gtin'),
-                                'valorNew':data_sankhya.get('referencia')})                      
-                new_data['gtin'] = str(data_sankhya.get('referencia'))
+                if self.validar.gtin(str(data_sankhya.get('referencia'))):
+                    new_data['gtin'] = str(data_sankhya.get('referencia'))
+                    updates.append({'campo':'gtin',
+                                    'valorOld':new_data.get('gtin'),
+                                    'valorNew':data_sankhya.get('referencia')})
 
             try:
                 if float(new_data['dimensoes'].get('largura')) != float(data_sankhya.get('largura')):
@@ -240,10 +215,10 @@ class Produto:
             new_data['descricaoComplementar'] = ''
             new_data['unidade'] = str(data_sankhya.get('codvol'))
             new_data['unidadePorCaixa'] = 1
-            new_data['ncm'] = self.parse_ncm(str(data_sankhya.get('ncm')))
-            new_data['gtin'] = str(data_sankhya.get('referencia')) if data_sankhya.get('referencia') else None
+            new_data['ncm'] = self.validar.ncm(str(data_sankhya.get('ncm')))
+            new_data['gtin'] = str(data_sankhya.get('referencia')) if self.validar.gtin(str(data_sankhya.get('referencia'))) else None
             new_data['origem'] = int(data_sankhya.get('origprod'))
-            new_data['codigoEspecificadorSubstituicaoTributaria'] = self.parse_cest(str(data_sankhya.get('codespecst')))
+            new_data['codigoEspecificadorSubstituicaoTributaria'] = self.validar.cest(str(data_sankhya.get('codespecst')))
             new_data['garantia'] = ''
             new_data['observacoes'] = ''
             new_data['marca'] = {'id': dados_empresa.get('olist_id_marca_padrao')}
