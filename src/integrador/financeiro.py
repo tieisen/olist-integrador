@@ -26,45 +26,6 @@ class Financeiro:
         self.dados_empresa:dict = None
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
-    @carrega_dados_ecommerce
-    async def baixar_conta(self,id_nota:int,dados_financeiro:dict=None,**kwargs) -> dict:
-        """
-        Faz a baixa do contas a receber referente à NF no Olist
-            :param id_nota: ID da NF no Olist
-            :param dados_financeiro: dicionário com os dados do lançamento do contas a receber
-            :return dict: dicionário com status e erro
-        """
-        if not self.log_id:
-            self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                              de='olist',
-                                              para='olist',
-                                              contexto=kwargs.get('_contexto'))
-        try:
-            finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-            if not dados_financeiro:
-                # Busca dados do contas a receber no Olist
-                dados_nota = await crudNota.buscar(id_nota=id_nota)
-                if not dados_nota:
-                    msg = f"Erro ao buscar dados da nota"
-                    raise Exception(msg)                
-                dados_financeiro = await finOlist.buscar_receber(numeroNf=str(dados_nota.get('numero')).zfill(6),serieNf=str(dados_nota.get('serie')))
-                if not dados_financeiro:
-                    msg = f"Erro ao buscar contas a receber da nota"
-                    raise Exception(msg)            
-            # Lança recebimento do contas a receber
-            ack = await finOlist.baixar_receber(id=dados_financeiro.get('id'),valor=dados_financeiro.get('valor'))
-            if not ack:
-                msg = f"Erro ao baixar contas a receber da nota"
-                raise Exception(msg)            
-            # Atualiza a nota no banco de dados
-            ack = await crudNota.atualizar(id_nota=id_nota,dh_baixa_financeiro=datetime.now())
-            if not ack:
-                msg = f"Erro ao atualizar contas a receber da nota"
-                raise Exception(msg)            
-            return {"success": True, "__exception__": None}
-        except Exception as e:
-            return {"success": False, "__exception__": str(e)}
-
     @contexto
     @carrega_dados_ecommerce
     async def baixar_conta_liquido(self,data_baixa:datetime,dados_conta:dict,dados_custo:dict,**kwargs) -> dict:
@@ -149,9 +110,6 @@ class Financeiro:
             if not payload:
                 raise Exception(f"Erro ao montar payload")
 
-            logger.info("Payload do financeiro:")
-            logger.info(payload)
-
             ack = await finOlist.lancar_pagar(payload=payload)
             if not ack:
                 raise Exception(f"Erro ao lançar conta a pagar")
@@ -171,7 +129,7 @@ class Financeiro:
         dados_notas_parceladas:list[dict] = await crudNota.buscar_financeiro_parcelado(ecommerce_id=self.dados_ecommerce.get('id'))
         try:
             if dados_notas_parceladas:        
-                notas_parceladas:list[int] = [n.get('numero') for n in dados_notas_parceladas]
+                notas_parceladas:list[dict] = [{"numero":n.get('numero'),"id":n.get('id_nota')} for n in dados_notas_parceladas]
                 if not notas_parceladas:
                     raise Exception("Nenhuma nota parcelada encontrada para agrupar títulos.")
                 bot = Bot(empresa_id=self.dados_ecommerce.get('empresa_id'))
@@ -224,6 +182,68 @@ class Financeiro:
                 time.sleep(self.req_time_sleep)
         await crudLog.atualizar(id=self.log_id,sucesso=all(status_log))
         return all(status_log)
+
+    @contexto
+    @carrega_dados_ecommerce
+    async def baixar_contas_receber_shopee(self,relatorio_recebimentos:list[dict],**kwargs) -> bool:
+
+        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                          de='olist',
+                                          para='olist',
+                                          contexto=kwargs.get('_contexto'))          
+        
+        fin_olist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+        parse = ParseFin()
+        res:list[bool] = []
+        dados_nota:dict={}
+        dados_conta:dict={}
+        payload:dict={}
+
+        for i, recebimento in enumerate(relatorio_recebimentos):
+            print(f"{i+1}/{len(relatorio_recebimentos)}: Pedido {recebimento.get('id_do_pedido')}")
+            try:
+                print("Buscando dados da nota...")
+                dados_nota = await crudNota.buscar(cod_pedido=recebimento.get('id_do_pedido'))
+                if not dados_nota:
+                    msg = f"Erro ao buscar dados da nota"
+                    raise ValueError(msg)
+                print("Buscando dados da conta...")
+                dados_conta = await fin_olist.buscar_receber(id=dados_nota.get('id_financeiro'))
+                if not dados_conta:
+                    msg = f"Erro ao buscar dados da conta"
+                    raise ValueError(msg)
+                if dados_conta.get('situacao') == 'pago':
+                    print("Conta já foi paga.")
+                    res.append(True)
+                    continue
+                print("Montando payload...")
+                payload = parse.olist_receber_shopee(dados_ecommerce=self.dados_ecommerce,dados_conta=dados_conta,dados_recebimento=recebimento)
+                if not payload:
+                    msg = f"Erro ao montar payload"
+                    raise ValueError(msg)
+                print("Baixando contas a receber...")
+                time.sleep(self.req_time_sleep)
+                if not await fin_olist.baixar_receber(id=dados_conta.get('id'),payload=payload):
+                    msg = f"Erro ao baixar contas a receber"
+                    raise Exception(msg)
+                print("Atualizando base...")
+                if not await crudNota.atualizar(cod_pedido=recebimento.get('id_do_pedido'),parcelado=False,
+                                                dh_baixa_financeiro=datetime.strptime(recebimento.get('data'),'%Y-%m-%d %H:%M:%S')):
+                    msg = f"Erro ao atualizar contas a receber da nota"
+                    raise Exception(msg)
+                res.append(True)
+            except Exception as e:
+                dados_nota={}
+                dados_conta={}
+                payload={}                
+                res.append(False)
+                msg = f"Erro ao baixar contas a receber do pedido {recebimento.get('id_do_pedido')}: {str(e)}"
+                logger.error(msg)
+            finally:
+                print("")
+                time.sleep(self.req_time_sleep)
+        
+        return all(res)
     
     @log_execucao
     async def executar_baixa(self,data:datetime) -> bool:
@@ -232,7 +252,7 @@ class Financeiro:
         if not relatorio_custos:
             logger.error("Relatório de custos não encontrado ou vazio.")
             return False
-        relatorio_custos = parser.carregar_relatorio(lista=relatorio_custos)
+        relatorio_custos = parser.carregar_relatorio_olist(lista=relatorio_custos)
         if not relatorio_custos:
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             return True        
