@@ -18,6 +18,7 @@ class Nota:
         self.empresa_id = empresa_id        
         self.dados_ecommerce:dict = None
         self.token = None
+        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
 
     @carrega_dados_ecommerce
@@ -66,7 +67,7 @@ class Nota:
         elif res.status_code == 200 and id:
             nota = res.json()        
         elif res.status_code == 200 and not id and res.json().get('itens'):
-            time.sleep(1)
+            time.sleep(self.req_time_sleep)
             url_id = self.endpoint+f"/{res.json().get('itens')[0].get('id')}"
             res = requests.get(
                 url = url_id,
@@ -82,7 +83,7 @@ class Nota:
             return False
                 
         if nota:
-            time.sleep(1)
+            time.sleep(self.req_time_sleep)
             url = self.endpoint+f"/{nota.get('id')}/xml"
             res = requests.get(
                 url = url,
