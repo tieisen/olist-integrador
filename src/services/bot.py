@@ -8,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from database.crud import log as crudLog
+from database.crud import nota as crudNota
 from src.utils.decorador import contexto
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -407,7 +408,7 @@ class Bot:
             return False
 
     @contexto
-    async def rotina_contas_receber(self,numero_nota:int=None,lista_notas:list[int]=None,data_vcto:str=None,**kwargs) -> bool:
+    async def rotina_contas_receber(self,numero_nota:int=None,lista_notas:list[dict]=None,data_vcto:str=None,**kwargs) -> bool:
         self.log_id = await crudLog.criar(empresa_id=self.empresa_id,
                                           de='olist',
                                           para='olist',
@@ -433,8 +434,9 @@ class Bot:
             if lista_notas:
                 for nota in lista_notas:
                     time.sleep(self.time_sleep)
-                    await self.rotina_agrupar_conta(numero_nota=nota,data_vcto=data_vcto)
+                    await self.rotina_agrupar_conta(numero_nota=nota.get('numero'),data_vcto=data_vcto)
                     await self.voltar_lista_contas()
+                    await crudNota.atualizar(id_nota=nota.get('id'),parcelado=False)                
             else:                
                 await self.rotina_agrupar_conta(numero_nota=numero_nota,data_vcto=data_vcto)
 
