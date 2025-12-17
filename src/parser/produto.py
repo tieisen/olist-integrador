@@ -198,6 +198,9 @@ class Produto:
                                     'valorOld':new_data['tributacao'].get('gtinEmbalagem'),
                                     'valorNew':data_sankhya.get('referencia')})
 
+            if not updates:
+                return [0], {}
+
             with open(os.getenv('OBJECT_PRODUTO',"src/json/produto.json"), "r", encoding="utf-8") as f:
                 modelo_api = json.load(f)
             new_data = self.formatter.limpar_json(new_data,modelo_api.get('put'))
@@ -205,10 +208,7 @@ class Produto:
                 new_data['fornecedores'][0]['id'] = dados_empresa.get('olist_id_fornecedor_padrao')
             new_data['fornecedores'][0]['padrao'] = True
             new_data['seo']['keywords']=['produto']
-
-            if not updates:
-                return [0], {}
-
+            
         if data_sankhya and not new_data:
             updates.append(-1)
             new_data = {}
