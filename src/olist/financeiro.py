@@ -22,7 +22,7 @@ class Financeiro:
         self.endpoint_pagar = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO_PAGAR')
 
     @token_olist
-    async def buscar_receber(self,id:int=None,serieNf:str=None,numeroNf:str=None) -> dict:
+    async def buscar_receber(self,id:int=None,serieNf:str=None,numeroNf:str=None,id_nota:int=None) -> dict:
         """
         Busca o registro de contas a receber
             :param id: ID do lançamento
@@ -33,6 +33,8 @@ class Financeiro:
 
         if id:
             url = self.endpoint_receber+f"/{id}"
+        elif id_nota:
+            url = self.endpoint_receber+f"?idNota={id_nota}"
         elif all([serieNf, numeroNf]):
             url = self.endpoint_receber+f"?numeroDocumento={serieNf}{numeroNf}/01"
         else:
@@ -54,6 +56,8 @@ class Financeiro:
         
         if id:
             return res.json()
+        elif id_nota:
+            return res.json().get('itens')[0]        
         elif all([serieNf, numeroNf]):
             return res.json().get('itens')[0]
         else:
