@@ -3,6 +3,39 @@ from database.crud import empresa, ecommerce
 from src.integrador.financeiro import Financeiro
 from src.services.bot import Bot
 
+async def baixar_shopee(codemp:int,data:dict) -> dict:
+
+    retorno:dict={}
+    empresas:list[dict]=[]
+    ecommerces:list[dict]=[]
+    emp:dict={}
+    ecom:dict={}
+
+    print(":::::::::::::::::::: BAIXA DE TÍTULOS A RECEBER ::::::::::::::::::::")    
+
+    empresas = await empresa.buscar(codemp=codemp)
+    try:
+        for i, emp in enumerate(empresas):
+            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
+            ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+            for j, ecom in enumerate(ecommerces):
+                if 'SHOPEE' in ecom.get('nome').upper():
+                    financeiro = Financeiro(id_loja=ecom.get('id_loja'),empresa_id=ecom.get('empresa_id'))
+                    ack = await financeiro.baixar_contas_receber_shopee(relatorio_recebimentos=data)
+
+        retorno = {
+            "status": ack,
+            "exception": "Ocorreu um erro ao baixar contas a receber. Verifique as contas pendentes no Olist" if not ack else None                    
+        }                
+    except Exception as e:
+        print(f"{e}")
+        retorno = {
+            "status": False,
+            "exception": f"{e}"
+        }
+    finally:
+        return retorno
+
 async def integrar_financeiro(data:str,codemp:int=None) -> dict:
 
     retorno:dict={}
