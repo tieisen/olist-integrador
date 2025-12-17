@@ -237,15 +237,15 @@ class Produto:
         log_atualizacoes_olist, dados_formato_olist = self.parse.to_olist(data_olist=dados_produto_olist,
                                                                           data_sankhya=dados_produto_sankhya,
                                                                           dados_empresa=self.dados_empresa)
-        if not log_atualizacoes_olist:
+        if not log_atualizacoes_olist or not dados_formato_olist:
             produto['obs'] = f'Erro ao converter dados do produto {produto.get('codprod')}/{produto.get('idprod')}'
             produto['sucesso'] = False
             logger.error(produto['obs'])
             return False
-        if log_atualizacoes_olist == 0:
+        if log_atualizacoes_olist[0] == 0:
             produto['obs'] = f'Sem dados divergentes para atualizar no produto {produto.get('codprod')}/{produto.get('idprod')}'
             produto['sucesso'] = True
-            return True
+            return log_atualizacoes_olist
         # Envia dados para o Olist
         ack_atualizacao = await self.olist.atualizar(id=int(produto.get('idprod')),
                                                      idprodpai=dados_produto_sankhya.get('idprodpai'),
@@ -372,7 +372,7 @@ class Produto:
                                                 obs=produto.get('obs'))
             elif produto.get('evento') == 'A':
                 log_atualizacoes = await self.atualizar_olist(produto=produto)
-                if isinstance(log_atualizacoes,list):
+                if isinstance(log_atualizacoes,list) and log_atualizacoes[0] != 0:
                     # Registro no log
                     for atualizacao in log_atualizacoes:
                         await crudLogProd.criar(log_id=log_id,
