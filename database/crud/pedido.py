@@ -102,10 +102,11 @@ async def atualizar(
         id_pedido:int=None,
         num_pedido:int=None,
         nunota:int=None,
+        lista_ids:list[int]=None,
         **kwargs
     ):
 
-    if not any([id_pedido, num_pedido, nunota]):
+    if not any([id_pedido, num_pedido, nunota, lista_ids]):
         print("Nenhum parâmetro informado")
         return False
 
@@ -117,9 +118,14 @@ async def atualizar(
             return False
             
     async with AsyncSessionLocal() as session:
-        if nunota and not any([id_pedido, num_pedido]):
+        if nunota and not any([id_pedido, num_pedido, lista_ids]):
             result = await session.execute(
                 select(Pedido).where(Pedido.nunota == nunota)
+            )
+        elif nunota == -1 and kwargs['dh_faturamento']:
+            result = await session.execute(
+                select(Pedido).where(Pedido.nunota == nunota,
+                                     Pedido.dh_faturamento.is_(None))
             )
         else:
             kwargs['nunota'] = nunota
@@ -127,14 +133,20 @@ async def atualizar(
                 result = await session.execute(
                     select(Pedido).where(Pedido.id_pedido == id_pedido)
                 )
-            if num_pedido:
+            elif num_pedido:
                 result = await session.execute(
                     select(Pedido).where(Pedido.num_pedido == num_pedido)
                 )
+            elif lista_ids:
+                result = await session.execute(
+                    select(Pedido).where(Pedido.id_pedido.in_(lista_ids))
+                )
+            else:
+                return False
                 
         pedidos = result.scalars().all()
         if not pedidos:
-            print(f"Pedido não encontrado. Parâmetro: {id_pedido or num_pedido or nunota}")
+            print(f"Pedido não encontrado. Parâmetro: {id_pedido or num_pedido or nunota or lista_ids}")
             return False
         
         for pedido in pedidos:                
@@ -262,6 +274,7 @@ async def buscar_faturar(ecommerce_id:int):
         result = await session.execute(
             select(Pedido).where(Pedido.dh_confirmacao.isnot(None),
                                  Pedido.dh_faturamento.is_(None),
+                                 Pedido.dh_cancelamento.is_(None),
                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
         )
         pedidos = result.scalars().all()
@@ -276,15 +289,20 @@ async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
     async with AsyncSessionLocal() as session:
         if ecommerce_id:
             result = await session.execute(
-                select(Pedido).where(Pedido.ecommerce_id == ecommerce_id,
-                                     Pedido.nota_.has(Nota.baixa_estoque_ecommerce.is_(False))).order_by(Pedido.num_pedido)
+                select(Pedido)
+                .where(Pedido.ecommerce_id == ecommerce_id,
+                       Pedido.nota_.any(Nota.dh_cancelamento.is_(None)),
+                       Pedido.nota_.any(Nota.baixa_estoque_ecommerce.is_(False)))
+                .order_by(Pedido.num_pedido)
             )
         
         if nunota_nota:
             result = await session.execute(
-                select(Pedido).where(Pedido.ecommerce_id == ecommerce_id,
-                                     Pedido.nota_.has(Nota.nunota == nunota_nota,
-                                                      Nota.baixa_estoque_ecommerce.is_(False))).order_by(Pedido.num_pedido)
+                select(Pedido)
+                .where(Pedido.nota_.any(Nota.nunota == nunota_nota),
+                       Pedido.nota_.any(Nota.dh_cancelamento.is_(None)),
+                       Pedido.nota_.any(Nota.baixa_estoque_ecommerce.is_(False)))
+                .order_by(Pedido.num_pedido)
             )
             
         pedidos = result.scalars().all()

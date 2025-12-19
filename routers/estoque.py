@@ -8,7 +8,7 @@ class EstoqueModel(BaseModel):
     codemp:int
 
 @router.post("/integrar")
-async def integrar(estoque:EstoqueModel):
+async def integrar(estoque:EstoqueModel) -> bool:
     """
     Atualiza o saldo de estoque no Olist dos produtos que tiveram alteração no saldo de estoque do Sankhya.
     """

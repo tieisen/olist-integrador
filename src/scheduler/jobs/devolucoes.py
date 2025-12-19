@@ -2,8 +2,6 @@ import asyncio
 from database.crud import empresa, ecommerce
 from src.integrador.devolucao import Devolucao
 
-# ROTINA A SER EXECUTADA DIARIAMENTE, ÀS 19H
-
 async def integrar_devolucoes(codemp:int=None):
     empresas:list[dict]=[]
     ecommerces:list[dict]=[]

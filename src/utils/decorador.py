@@ -7,6 +7,10 @@ from database.crud import empresa
 
 # EXTRAI CONTEXTO 
 def contexto(func):
+    """
+    Extrai o nome da função do contexto que está em execução.
+        :param func: função que recebe o decorador
+    """
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         # injeta o nome da função em kwargs
@@ -26,6 +30,10 @@ async def buscar_dados_ecommerce(self):
     self.dados_ecommerce = res[0]
 
 def carrega_dados_ecommerce(func):
+    """
+    Carrega os dados do ecommerce na memória.
+        :param func: função que recebe o decorador
+    """
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
         # Garante que os dados da empresa estão carregados
@@ -40,6 +48,10 @@ async def buscar_dados_empresa(self):
     self.dados_empresa = res[0]
 
 def carrega_dados_empresa(func):
+    """
+    Carrega os dados da empresa na memória.
+        :param func: função que recebe o decorador
+    """
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
         # Garante que os dados da empresa estão carregados
@@ -50,6 +62,10 @@ def carrega_dados_empresa(func):
 
 # BLOQUEIA CHAMADA DIRETA DA FUNCAO
 def interno(func):
+    """
+    Bloqueia chamada direta da função.
+        :param func: função que recebe o decorador
+    """
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         # Pega a pilha de chamadas
@@ -72,6 +88,10 @@ def interno(func):
 
 # IMPRIME LOG DE EXECUCAO
 def log_execucao(func):
+    """
+    Imprime a função que está sendo executada.
+        :param func: função que recebe o decorador
+    """
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
         nome_funcao = func.__name__.replace("_", " ").upper()

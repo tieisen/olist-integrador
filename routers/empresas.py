@@ -7,7 +7,7 @@ router = APIRouter()
 empresa = Empresa()
 
 @router.get("/buscar")
-async def buscar_todas():
+async def buscar_todas() -> list[dict]:
     """
     Busca todas as empresas
     """
@@ -17,7 +17,7 @@ async def buscar_todas():
     return dados
 
 @router.get("/buscar/{codemp}")
-async def buscar_codemp(codemp:int):
+async def buscar_codemp(codemp:int) -> dict:
     """
     Busca empresa
     """
@@ -27,7 +27,7 @@ async def buscar_codemp(codemp:int):
     return dados
 
 @router.post("")
-async def criar(empresa: EmpresaCreate):
+async def criar(empresa: EmpresaCreate) -> bool:
     """
     Cadastra empresa
     """

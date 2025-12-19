@@ -1,12 +1,14 @@
 import os
 import time
 import requests
+from src.olist.produto import Produto
 from datetime import datetime, timedelta
 from src.olist.produto import Produto
 from src.utils.decorador import carrega_dados_empresa
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -21,17 +23,19 @@ class Pedido:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
     @token_olist
-    async def buscar(
-            self,
-            id:int=None,
-            codigo:str=None,
-            numero:int=None,
-            cancelados:bool=False
-        ):
+    async def buscar(self,id:int=None,codigo:str=None,numero:int=None,cancelados:bool=False) -> dict | list[dict]:
+        """
+        Busca os dados do pedido.
+            :param id: ID do pedido (Olist)
+            :param codigo: Código do pedido (E-commerce)
+            :param numero: Número do pedido (Olist)
+            :param cancelado: se a busca é dos pedidos dos últimos 5 dias com status Cancelado
+            :return dict: dicionário com os dados do pedido
+            :return list[dict]: lista de dicionários com os dados dos pedidos cancelados
+        """        
 
         if not cancelados and not any([id, codigo, numero]):
             logger.error("Pedido não informado.")
-            print("Pedido não informado.")
             return False
 
         if id:
@@ -44,7 +48,6 @@ class Pedido:
             url = self.endpoint+f"/?situacao=2&dataInicial={(datetime.today()-timedelta(days=5)).strftime('%Y-%m-%d')}"            
 
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
@@ -76,31 +79,29 @@ class Pedido:
                 except:
                     return False
             if not cancelados and res.json().get('situacao') == 8:
-                print(f"Pedido {res.json().get('numeroPedido')} dados incompletos")
                 logger.warning("Pedido %s dados incompletos", res.json().get('numeroPedido'))
                 return False
             if cancelados:
                 return res.json().get('itens')
         else:
             if id:
-                print(f"Erro {res.status_code}: {res.text} pedido {id}")
                 logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
             if codigo:
-                print(f"Erro {res.status_code}: {res.text} pedido {codigo}")
                 logger.error("Erro %s: %s pedido %s", res.status_code, res.text, codigo)
             return False
 
     @token_olist
-    async def atualizar_nunota(
-            self,
-            id:int,
-            nunota:int,
-            observacao:str=None
-        ):
+    async def atualizar_nunota(self,id:int,nunota:int,observacao:str=None) -> bool:
+        """
+        Envia número único do pedido de venda do Sankhya para os pedidos no Olist.
+            :param id: ID do pedido (Olist)
+            :param nunota: número único do pedido de venda (Sankhya)
+            :param observacao: observação atualizada do pedido
+            :return bool: status da operação
+        """
         
         url = self.endpoint+f"/{id}"
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -125,23 +126,23 @@ class Pedido:
         )
 
         if res_put.status_code != 204:
-            print(f"Erro {res_put.status_code}: {res_put.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
             return False        
         return True
 
     @token_olist
-    async def remover_nunota(
-            self,
-            id:int,
-            nunota:int=None
-        ):
+    async def remover_nunota(self,id:int,nunota:int=None) -> bool:
+        """
+        Remove número único do pedido de venda do Sankhya dos pedidos no Olist.
+            :param id: ID do pedido (Olist)
+            :param nunota: número único do pedido de venda (Sankhya)
+            :return bool: status da operação
+        """        
 
         import re
         
         url = self.endpoint+f"/{id}"
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
@@ -153,10 +154,11 @@ class Pedido:
                 "Accept":"application/json"
             }
         )
+
         if res_get.status_code != 200:
-            print(f"Erro {res_get.status_code}: {res_get.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
             return False
+        
         observacao:str = res_get.json().get('observacoes')
         nova_observacao:str = ''
         if nunota:
@@ -186,22 +188,22 @@ class Pedido:
         )
 
         if res_put.status_code != 204:
-            print(f"Erro {res_put.status_code}: {res_put.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
             return False
         
         return True
 
     @token_olist
-    async def gerar_nf(
-            self,
-            id:int
-        ):
+    async def gerar_nf(self,id:int) -> dict:
+        """
+        Gera a NF do pedido de venda.
+            :param id: ID do pedido (Olist)
+            :return dict: dicionário com os dados de confirmação da geração da NF
+        """        
         
         url = self.endpoint+f"/{id}/gerar-nota-fiscal"
 
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
@@ -215,18 +217,20 @@ class Pedido:
         )
 
         if res.status_code not in [200,409]:
-            print(f"Erro {res.status_code}: {res.text} pedido {id}")
             logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)            
             return False
 
         return res.json()
 
     @token_olist
-    async def validar_kit(
-            self,
-            id:int,
-            item_no_pedido
-        ) -> tuple[bool,dict]:
+    async def validar_kit(self,id:int,item_no_pedido:dict) -> tuple[bool,dict]:
+        """
+        Valida se o item do pedido é um kit ou um SKU e faz o desmembramento.
+            :param id: ID do item
+            :param item_no_pedido: dicionário com os dados do item no pedido
+            :return bool: status da operação
+            :return dict: dicionário com os dados do item ou kit desmembrado
+        """          
 
         produto = Produto(codemp=self.codemp, empresa_id=self.empresa_id)
 
@@ -235,7 +239,6 @@ class Pedido:
         
         if not isinstance(item_no_pedido, dict):
             logger.error("Item do pedido precisa ser um dicionário.")
-            print("Item do pedido precisa ser um dicionário.")
             return False, {}
         
 
@@ -297,15 +300,12 @@ class Pedido:
         
     @token_olist
     @carrega_dados_empresa
-    async def buscar_novos(
-            self,
-            atual:bool = True
-        ) -> tuple[bool, list]:
-        """ Busca pedidos do Olist a partir de uma data inicial.
-        Args:
-            atual (bool): Se True, busca pedidos a partir da última data registrada. Se False, busca pedidos a partir de uma data fixa.
-        Returns:
-            tuple: (bool, list) - Retorna True e a lista de IDs de pedidos encontrados ou False e uma lista vazia em caso de erro.
+    async def buscar_novos(self,atual:bool = True) -> tuple[bool, list[dict]]:
+        """
+        Busca pedidos novos.
+            :param atual: Se True, busca pedidos a partir da última data registrada. Se False, busca pedidos a partir de uma data fixa.
+            :return bool: status da operação
+            :return list[dict]: lista de dicionários com as dados resumidos dos pedidos
         """
 
         dataInicial = None
@@ -322,53 +322,17 @@ class Pedido:
             else:                
                 dataInicial = '2025-08-08'  # Data fixa para buscar pedidos            
             if not dataInicial:
-                print("Erro ao definir data inicial para busca de pedidos.")
                 logger.error("Erro ao definir data inicial para busca de pedidos.")
                 return False, []            
             url = self.endpoint+f"?dataInicial={dataInicial}"            
 
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, []
-
-        status = 200
-        paginacao = {}
-        itens = []  
-
-        while status == 200:
-            # Verifica se há paginação
-            if paginacao:        
-                if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
-                    offset = paginacao["limit"] + paginacao["offset"]
-                    url+=f"&offset={offset}"
-                else:
-                    url = None
-
-            if url:
-                res = requests.get(url=url,
-                                   headers={
-                                       "Authorization":f"Bearer {self.token}",
-                                       "Content-Type":"application/json",
-                                       "Accept":"application/json"
-                                   })
-                status=res.status_code
-                itens += res.json().get("itens",[])
-                paginacao = res.json().get("paginacao",{})
-                time.sleep(self.req_time_sleep)
-            else:
-                status = 0
-
-        if not itens:
-            print("Nenhum pedido encontrado.")
-            logger.info("Nenhum pedido encontrado.")
-            return True, []
-
-        # Ordena os itens por ID        
-        self.ordena_por_id(itens)
-        #return True, [p["id"] for p in itens]
-        return True, itens
-    
-    def ordena_por_id(self,lista_itens):
-        lista_itens.sort(key=lambda i: i['id'])
-        return True
+        
+        try:
+            lista_novos_pedidos = await paginar_olist(token=self.token,url=url)
+            return True, lista_novos_pedidos
+        except Exception as e:
+            logger.error(f"{e}")
+            return False, lista_novos_pedidos

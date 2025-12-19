@@ -4,9 +4,10 @@ from datetime import datetime
 from src.utils.formatter import Formatter
 from src.utils.decorador import interno, carrega_dados_empresa
 from src.utils.autenticador import token_snk
-from src.utils.buscar_script import buscar_script
+from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_snk
 load_env()
 logger = set_logger(__name__)
 
@@ -34,15 +35,23 @@ class Transferencia:
             ]
 
     @interno
-    def extrai_nunota(self,payload:dict=None):
+    def extrai_nunota(self,payload:dict=None) -> int:
+        """
+        Extrai o número único da nota de transferência.
+            :param payload: retorno da API do Sankhya em JSON
+            :return int: número único da nota de transferência
+        """
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
     @token_snk
-    async def criar(
-            self,
-            cabecalho:dict,
-            itens:list=None
-        ) -> tuple:
+    async def criar(self,cabecalho:dict,itens:list=None) -> tuple:
+        """
+        Cria uma nota de transferência.
+            :param cabecalho: cabeçalho da nota de transferência
+            :param itens: itens da nota de transferência
+            :return bool: status da operação
+            :return int: número único da nota de transferência
+        """
 
         if cabecalho and not itens:
             payload = {
@@ -69,13 +78,11 @@ class Transferencia:
             }
         
         else:
-            print("Dados não informados")
             logger.error("Dados não informados")
             return False
 
         url = os.getenv('SANKHYA_URL_PEDIDO')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -88,25 +95,25 @@ class Transferencia:
         if res.status_code in (200,201):
             if res.json().get('status')=='0':
                 logger.error("Erro ao lançar nota de transferência. %s",res.json())
-                print(f"Erro ao lançar nota de transferência. {res.json()}")    
                 return False, None
             if res.json().get('status') in ['1','2']:
                 return True, self.extrai_nunota(res.json())
         else:
             logger.error("Erro ao lançar nota de transferência. %s",res.json())
-            print(f"Erro ao lançar nota de transferência. {res.json()}")
             return False, None
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int=None,
-            itens:bool=False
-        ) -> tuple[bool,dict]:
+    async def buscar(self,nunota:int=None,itens:bool=False) -> tuple[bool,dict]:
+        """
+        Busca uma nota de transferência.
+            :param nunota: número único da nota de transferência
+            :param itens: indica se os itens também devem ser buscados ou somente o cabeçalho da nota
+            :return bool: status da operação
+            :return dict: dados da nota de transferência
+        """
 
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False, {}
 
@@ -157,7 +164,7 @@ class Transferencia:
         
         if res.status_code in (200,201):
             if res.json().get('status') in ['0', '2']:
-                print(res.json())
+                logger.error("Erro ao buscar dados da nota de transferência vigente. %s",res.json())
                 return False, {}
             if res.json().get('status')=='1':
                 dados_nota = self.formatter.return_format(res.json())
@@ -171,19 +178,19 @@ class Transferencia:
                         dados_nota['itens'] = dados_itens
                     return True, dados_nota
         else:
-            logger.error("Erro ao buscar dados da nota de transferência vigente. %s",res.json())
-            print(f"Erro ao buscar dados da nota de transferência vigente. {res.json()}")
+            logger.error("Erro ao buscar dados da nota de transferência vigente. %s",res.json())            
             return False, {}
 
     @token_snk
-    async def confirmar(
-            self,
-            nunota:int
-        ) -> bool:
-            
+    async def confirmar(self,nunota:int) -> bool:
+        """
+        Confirma uma nota de transferência.
+            :param nunota: número único da nota de transferência
+            :return bool: status da operação
+        """
+
         url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
         
@@ -206,7 +213,6 @@ class Transferencia:
             return True
         else:
             logger.error("Erro ao confirmar nota. Nunota %s. %s",nunota,res.json())
-            print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
             return False
         
 class Itens(Transferencia):
@@ -216,7 +222,6 @@ class Itens(Transferencia):
         self.codemp = transferencia_instance.codemp if transferencia_instance else codemp
         self.empresa_id = transferencia_instance.empresa_id if transferencia_instance else None
         self.dados_empresa = None
-        # self.codtab_transferencia = int(os.getenv('SANKHYA_CODTAB_TRANSFERENCIA'))
         self.formatter = Formatter()
         self.campos_item = [
             "ATUALESTOQUE", "CODANTECIPST", "CODEMP", "CODLOCALORIG", "CODPROD",
@@ -225,20 +230,20 @@ class Itens(Transferencia):
         ]            
 
     @token_snk
-    async def lancar(
-            self,
-            nunota:int,
-            dados_item:dict
-        ):
+    async def lancar(self,nunota:int,dados_item:dict) -> bool:
+        """
+        Lança um item na nota de transferência.
+            :param nunota: número único da nota de transferência
+            :param dados_item: dados do item a ser lançado
+            :return bool: status da operação
+        """
         
         if not isinstance(dados_item, dict):
-            print("Dados dos itens devem ser um dicionário")
             logger.error("Dados dos itens devem ser um dicionário")
             return False
         
         url = os.getenv('SANKHYA_URL_PEDIDO_ALTERA_ITEM')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False      
 
@@ -262,22 +267,21 @@ class Itens(Transferencia):
         if res.status_code in (200,201) and res.json().get('status')=='1':
             return True
         if res.status_code in (200,201) and res.json().get('status')=='2':
-            print(f"Obs: Nunota {nunota}. {res.json()}")      
             return True
         else:
-            print(f"Erro ao lançar item na nota de transferência. Nunota {nunota}. {res.json()}")
             logger.error("Erro ao lançar item da nota de transferência. Nunota %s. %s",nunota,res.json())      
             return False
 
     @token_snk
-    async def buscar(
-            self,
-            nunota:int
-        ) -> dict:
+    async def buscar(self,nunota:int) -> list[dict]:
+        """
+        Busca os itens da nota de transferência.
+            :param nunota: número único da nota de transferência
+            :return list[dict]: lista com os dados dos itens da nota de transferência
+        """
     
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False
 
@@ -293,10 +297,7 @@ class Itens(Transferencia):
             ]
         }
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
+        payload={
                 "serviceName": "CRUDServiceProvider.loadRecords",
                 "requestBody": {
                     "dataSet": {
@@ -311,22 +312,21 @@ class Itens(Transferencia):
                         }
                     }
                 }
-            })
-        
-        if res.status_code in (200,201) and res.json().get('status')=='1':            
-            return self.formatter.return_format(res.json())
-        else:
-            print(f"Erro ao buscar itens do pedido. Nunota {nunota}. {res.json()}")
-            logger.error("Erro ao buscar itens do pedido. Nunota %s. %s",nunota,res.json())      
-            return False
+            }
+
+        res = await paginar_snk(token=self.token, url=url, payload=payload)
+        return res
 
     @token_snk
     @carrega_dados_empresa
-    async def busca_valor_transferencia(
-            self,
-            codprod:int=None,
-            lista_itens:list=None
-        ) -> float:
+    async def busca_valor_transferencia(self,codprod:int=None,lista_itens:list=None) -> float | list[dict]:
+        """
+        Busca o valor do item na tabela de preços de transferência.
+            :param codprod: código do produto
+            :param lista_itens: lista com os códigos dos itens
+            :return float: valor do item na tabela de preços de transferência
+            :return list[dict]: lista com os valores dos itens na tabela de preços de transferência
+        """
 
         if not any([codprod, lista_itens]):
             print("Produto não informado.")
@@ -355,7 +355,6 @@ class Itens(Transferencia):
                                 })
         except Exception as e:
             erro = f"Falha ao formatar query do saldo de estoque por lote. {e}"
-            print(erro)
             logger.error(erro)
             return False
 
@@ -372,6 +371,5 @@ class Itens(Transferencia):
         if res.status_code in (200,201) and res.json().get('status')=='1':
             return self.formatter.return_format(res.json())
         else:
-            logger.error("Erro ao buscar valor(es) do(s) item(ns) na tabela de transferências. %s",res.json())
-            print(f"Erro ao buscar valor(es) do(s) item(ns) na tabela de transferências. {res.json()}")
+            logger.error("Erro ao buscar valor(es) do(s) item(ns) na tabela de transferências. %s",res.json())            
             return False

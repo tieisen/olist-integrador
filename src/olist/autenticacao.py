@@ -16,7 +16,11 @@ logger = set_logger(__name__)
 
 class Autenticacao:
 
-    def __init__(self, codemp:int=None, empresa_id:int=None):
+    def __init__(
+            self,
+            codemp:int=None,
+            empresa_id:int=None
+        ):
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.auth_url = os.getenv('OLIST_AUTH_URL')
@@ -27,6 +31,10 @@ class Autenticacao:
         
     @carrega_dados_empresa
     async def solicitar_auth_code(self) -> str:
+        """
+        Realiza login com usuário Admin e solicita o código de autorização
+            :return str: código de autorização
+        """
         url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}'
         try:
             driver = webdriver.Firefox()
@@ -56,7 +64,11 @@ class Autenticacao:
 
     @carrega_dados_empresa
     async def solicitar_token(self,authorization_code:str) -> dict:
-        
+        """
+        Solicita token de acesso
+            :param authorization_code: código de autorização
+            :return dict: dicionário com os dados do token vigente
+        """
         header = {
             "Content-Type": "application/x-www-form-urlencoded"
         }
@@ -87,7 +99,11 @@ class Autenticacao:
 
     @carrega_dados_empresa
     async def solicitar_atualizacao_token(self,refresh_token:str) -> dict:
-
+        """
+        Solicita novo token de acesso, se expirado
+            :param refresh_token: refresh token adquirido na solicitação anterior
+            :return dict: dicionário com os dados do novo token vigente
+        """        
         header = {
             "Content-Type": "application/x-www-form-urlencoded"
         }
@@ -117,6 +133,11 @@ class Autenticacao:
     
     @carrega_dados_empresa
     async def salvar_token(self, dados_token: dict) -> bool:
+        """
+        Salva o token no banco de dados
+            :param dados_token: dicionário com os dados do token
+            :return bool: status da operação
+        """
         try:
             access_token = dados_token['access_token']
             refresh_token = dados_token['refresh_token']
@@ -142,6 +163,11 @@ class Autenticacao:
 
     @carrega_dados_empresa        
     async def atualizar_token(self, refresh_token:str) -> str:
+        """
+        Atualiza token expirado
+            :param refresh_token: refresh token
+            :return str: token de acesso vigente
+        """
         
         novo_token = await self.solicitar_atualizacao_token(refresh_token=refresh_token)
         if not novo_token:
@@ -155,13 +181,16 @@ class Autenticacao:
          
     @carrega_dados_empresa        
     async def buscar_token_salvo(self) -> str:
+        """
+        Busca último token salvo no banco de dados
+            :return str: último token de acesso
+        """        
         
         # Busca o token mais recente na base
         dados_token = await crud.buscar(self.dados_empresa.get('id'))
 
         if not dados_token:
             logger.error(f"Token não encontrado para a empresa {self.codemp or self.empresa_id}")
-            print(f"Token não encontrado para a empresa {self.codemp or self.empresa_id}")
             return None
 
         if dados_token.get('dh_expiracao_token') > datetime.now():            
@@ -175,6 +204,10 @@ class Autenticacao:
 
     @carrega_dados_empresa
     async def primeiro_login(self) -> str:
+        """
+        Realiza o fluxo de primeiro login
+            :return str: token de acesso válido
+        """         
         
         authcode = await self.solicitar_auth_code()
         if not authcode:
@@ -193,6 +226,10 @@ class Autenticacao:
 
     @carrega_dados_empresa
     async def autenticar(self) -> str:
+        """
+        Executa rotina de autenticação
+            :return str: token de acesso válido
+        """         
         try:
             token = await self.buscar_token_salvo()
             if isinstance(token,str):

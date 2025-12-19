@@ -4,6 +4,7 @@ import requests
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_olist
 load_env()
 logger = set_logger(__name__)
 
@@ -17,7 +18,11 @@ class Separacao:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
     @token_olist
-    async def listar(self) -> list:
+    async def listar(self) -> list[dict]:
+        """
+        Busca lista de pedidos com status Aguardando separação e Em separação.
+            :return list[dict]: lista de dicionários com os dados resumidos das separações
+        """
         
         urls = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
                 self.endpoint+"/?situacao=4" ] # Em Separacao
@@ -60,14 +65,15 @@ class Separacao:
         return lista
 
     @token_olist
-    async def buscar(
-            self,
-            id:int
-        ) -> bool:
+    async def buscar(self,id:int) -> dict:
+        """
+        Busca os dados de uma separação.
+            :params id: ID da separação
+            :return dict: Dicionário com os dados da separação
+        """
 
         url = self.endpoint+f"/{id}"
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
@@ -82,20 +88,20 @@ class Separacao:
 
         if res.status_code != 200:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         return res.json()
     
     @token_olist
-    async def separar(
-            self,
-            id:int
-        ) -> bool:
+    async def separar(self,id:int) -> bool:
+        """
+        Atualiza o status da separação de um pedido para Separado.
+            :params id: ID da separação
+            :return bool: status da operação
+        """        
 
         url = self.endpoint+f"/{id}/situacao"
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
@@ -113,20 +119,20 @@ class Separacao:
 
         if res.status_code != 204:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         return True
 
     @token_olist
-    async def concluir(
-            self,
-            id:int
-        ) -> bool:
+    async def concluir(self,id:int) -> bool:
+        """
+        Atualiza o status da separação de um pedido para Embalada (checkout).
+            :params id: ID da separação
+            :return bool: status da operação
+        """        
 
         url = self.endpoint+f"/{id}/situacao"
         if not url:
-            print(f"Erro relacionado à url. {url}")
             logger.error("Erro relacionado à url. %s",url)
             return False 
 
@@ -144,7 +150,6 @@ class Separacao:
 
         if res.status_code != 204:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            print(f"Erro {res.status_code}: {res.text}")
             return False
         
         return True

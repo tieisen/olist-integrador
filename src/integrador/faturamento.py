@@ -8,7 +8,10 @@ from src.sankhya.transferencia import Itens as ItemTransfSnk
 from src.sankhya.pedido import Pedido as PedidoSnk
 from src.sankhya.nota import Nota as NotaSnk
 from src.integrador.nota import Nota as IntegradorNota
+from src.integrador.pedido import Pedido as IntegradorPedido
+from src.integrador.financeiro import Financeiro as IntegradorFinanceiro
 from src.parser.transferencia import Transferencia as ParserTransferencia
+from src.parser.pedido import Pedido as ParserPedido
 from src.olist.separacao import Separacao as SeparacaoOlist
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPed
@@ -34,10 +37,11 @@ class Faturamento:
 
     @contexto
     @carrega_dados_empresa
-    async def venda_entre_empresas_em_lote(
-            self,
-            **kwargs
-        ) -> dict:
+    async def venda_entre_empresas_em_lote(self,**kwargs) -> dict:
+        """
+        Rotina para lançar a nota de ressuprimento de estoque da matriz para o e-commerce considerando tudo que foi conferido no dia.
+            :return dict: dicionário com status e erro
+        """
 
         nunota:int = kwargs.get('nunota',None) 
         loja_unica:bool=kwargs.get('loja_unica',False)
@@ -55,7 +59,6 @@ class Faturamento:
         
         try:            
             # Busca itens conferidos no dia
-            # print("-> Buscando itens conferidos no dia...")
             if loja_unica:
                 saldo_pedidos = await faturamento.buscar_itens(nunota=nunota)
             else:
@@ -66,25 +69,22 @@ class Faturamento:
                 raise Exception(msg)
             elif not saldo_pedidos:
                 # Sem itens conferidos
-                return {"success": True}
+                return {"success": True, "__exception__": None}
             
             # Busca saldo de estoque
-            # print("-> Buscando saldo de estoque...")
             saldo_estoque = await estoque.buscar_saldo_por_lote(lista_produtos=saldo_pedidos)
             if not saldo_estoque:
                 msg = "Erro ao buscar saldo de estoque."
                 raise Exception(msg)
 
             # Compara quantidade conferida com estoque disponível
-            # print("Comparando quantidade conferida com estoque disponível...")
             itens_venda_interna = await faturamento.compara_saldos(saldo_estoque=saldo_estoque,
                                                                    saldo_pedidos=saldo_pedidos)
             if not itens_venda_interna:
-                print("Sem necessidade de venda interna")
-                return {"success": True}
+                # Sem necessidade de venda interna
+                return {"success": True, "__exception__": None}
 
             # Busca valor de tranferência dos itens
-            # print("Buscando valores de transferência...")
             codigos_produtos = [item.get('codprod') for item in itens_venda_interna]
             valores_produtos = await item_transf.busca_valor_transferencia(lista_itens=codigos_produtos)
             if not valores_produtos:
@@ -92,7 +92,6 @@ class Faturamento:
                 raise Exception(msg)
 
             # Vincula o valor de transferência o respectivo produto
-            # print("Vinculando valores aos produtos...")
             for item in itens_venda_interna:
                 for valor in valores_produtos:
                     if item.get('codprod') == valor.get('codprod'):
@@ -100,7 +99,6 @@ class Faturamento:
                         break
 
             # Converte para o formato da API Sankhya
-            # print("Convertendo para o formato da API Sankhya...")
             cabecalho, itens = await parser.to_sankhya(objeto='nota',
                                                        itens_transferencia=itens_venda_interna,
                                                        itens_transferidos=[])
@@ -109,7 +107,6 @@ class Faturamento:
                 raise Exception(msg)
 
             # Lança nota de transferência
-            # print("Lançando nota de transferência...")
             ack, nunota = await transferencia.criar(cabecalho=cabecalho,
                                                     itens=itens)        
             if not ack:
@@ -117,24 +114,23 @@ class Faturamento:
                 raise Exception(msg)
             
             # Confirma nota de transferência
-            # print(f"Confirmando nota de transferência {nunota}...")
             ack = await transferencia.confirmar(nunota=nunota)
             if not ack:
                 msg = "Erro ao confirmar nota de transferência."
                 raise Exception(msg)
-            return {"success": True}
+            return {"success": True, "__exception__": None}
         except Exception as e:
-            print(str(e))
             return {"success": False, "__exception__": str(e)}
 
     @contexto
     @interno
     @carrega_dados_empresa
-    async def venda_entre_empresas_por_item(
-            self,
-            nunota:int=None,
-            **kwargs
-        ) -> dict:
+    async def venda_entre_empresas_por_item(self,nunota:int=None,**kwargs) -> dict:
+        """
+        Rotina para lançar a nota de ressuprimento de estoque da matriz para o e-commerce por item.
+            :param nunota: número único do pedido de venda (Sankhya)        
+            :return dict: dicionário com status e erro
+        """        
 
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
@@ -142,8 +138,7 @@ class Faturamento:
                                               para='sankhya',
                                               contexto=kwargs.get('_contexto'))        
         try:
-            # Busca itens conferidos no dia        
-            print("-> Buscando itens conferidos no dia...")
+            # Busca itens conferidos no dia
             faturamento = FaturamentoSnk(codemp=self.codemp)
             saldo_pedidos = await faturamento.buscar_itens()
             if not saldo_pedidos:
@@ -151,7 +146,6 @@ class Faturamento:
                 raise Exception(msg)            
             
             # Busca saldo de estoque
-            print("-> Buscando saldo de estoque...")
             estoque = EstoqueSnk(codemp=self.codemp)
             saldo_estoque = await estoque.buscar_saldo_por_lote(lista_produtos=saldo_pedidos)
             if not saldo_estoque:
@@ -159,13 +153,11 @@ class Faturamento:
                 raise Exception(msg)
 
             # Compara quantidade conferida com estoque disponível
-            print("-> Comparando quantidade conferida com estoque disponível...")
             itens_venda_interna = await faturamento.compara_saldos(saldo_estoque=saldo_estoque,
                                                                    saldo_pedidos=saldo_pedidos)
             if not itens_venda_interna:
-                return {"success": True}
+                return {"success": True, "__exception__": None}
             # Busca valor de tranferência dos itens
-            print("-> Buscando valores de transferência...")
             item_transf = ItemTransfSnk(codemp=self.codemp)
             codigos_produtos = [item.get('codprod') for item in itens_venda_interna]
             valores_produtos = await item_transf.busca_valor_transferencia(lista_itens=codigos_produtos)
@@ -174,7 +166,6 @@ class Faturamento:
                 raise Exception(msg)
             
             # Vincula o valor de transferência o respectivo produto
-            print("-> Vinculando valores aos produtos...")
             for item in itens_venda_interna:
                 for valor in valores_produtos:
                     if item.get('codprod') == valor.get('codprod'):
@@ -182,7 +173,6 @@ class Faturamento:
                         break
 
             # Verifica se existe uma nota de transferência em aberto
-            print("-> Verificando se existe uma nota de transferência em aberto...")
             transferencia = TransferenciaSnk(codemp=self.codemp)                    
             ack_nota_transferencia, dados_nota_transferencia = await transferencia.buscar(itens=True)
             if not ack_nota_transferencia:
@@ -190,12 +180,8 @@ class Faturamento:
                 raise Exception(msg)            
             if dados_nota_transferencia:
                 nunota = dados_nota_transferencia.get('nunota')
-                print(f"Nota encontrada: {nunota}")
-            else:
-                print("Nenhuma nota de transferência encontrada. Criando nova...")
 
             # Converte para o formato da API Sankhya
-            print("-> Convertendo para o formato da API Sankhya...")
             parser = ParserTransferencia(codemp=self.codemp)
             if dados_nota_transferencia:
                 # Formato para adicionar itens na nota de transferência existente                
@@ -210,7 +196,6 @@ class Faturamento:
                                                                  itens_transferidos=[])
 
             # Lança nota de transferência
-            print("-> Lançando/atualizando nota de transferência...")
             if dados_nota_transferencia:
                 ack = await item_transf.lancar(nunota=nunota,
                                                dados_item=dados_itens)
@@ -220,18 +205,19 @@ class Faturamento:
             if not ack:
                 msg = "Erro ao lançar/atualizar nota de transferência."
                 raise Exception(msg)
-            return {"success": True}
+            return {"success": True, "__exception__": None}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}
 
     @contexto
     @interno
     @carrega_dados_ecommerce
-    async def faturar_olist(
-            self,
-            pedido:dict,
-            **kwargs
-        ) -> bool:
+    async def faturar_olist(self,pedido:dict,**kwargs) -> dict:
+        """
+        Rotina para faturar os pedidos (emitir NF, enviar para separação e baixar contas a receber) no Olist.
+            :param pedido: dicionário com os dados do pedido (Olist)
+            :return dict: dicionário com status e erro
+        """        
 
         integra_nota = IntegradorNota(id_loja=self.dados_ecommerce.get('id_loja'))
         separacao = SeparacaoOlist(codemp=self.codemp)
@@ -269,114 +255,301 @@ class Faturamento:
     @contexto
     @interno
     @carrega_dados_ecommerce
-    async def faturar_sankhya(
-            self,
-            pedido:int,
-            **kwargs
-        ) -> bool:
-            
+    async def faturar_sankhya(self,nunota:int,**kwargs) -> dict:
+        """
+        Rotina para faturar os pedidos (gerar ressuprimento, faturar pedido, confirmar nota de venda, baixar estoque do local e-commerce) no Sankhya.
+            :param nunota: número único do pedido (Sankhya)
+            :return dict: dicionário com status e erro
+        """  
+
         loja_unica:bool=kwargs.get('loja_unica',False)
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        parser_pedido = ParserPedido(id_loja=self.dados_ecommerce.get('id_loja'))
+        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
+
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                               de='olist',
                                               para='sankhya',
                                               contexto=kwargs.get('_contexto'))
         try:
-            # Verifica se o pedido foi faturado ou trancou
-            print("Verificando se o pedido foi faturado...")
-            nunota = pedido
-            status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
-            if status_faturamento:
-                nunota_nota = status_faturamento[0].get('nunota')
-                print(f"Pedido {nunota} já foi faturado na nota de venda {nunota_nota}.")
-                # Atualiza base de dados
-                await crudPedido.atualizar(nunota=nunota,
-                                           dh_faturamento=datetime.now())
-                await crudNota.atualizar(nunota_pedido=nunota,
-                                         nunota=nunota_nota)
-            else:
-                # Se o pedido não foi faturado...
-                # Faz a nota de transferência
-                print("Gerando a nota de transferência...")
-                ack = await self.venda_entre_empresas_em_lote(loja_unica=loja_unica, nunota=nunota)
-                if not ack:
-                    msg = "Erro ao gerar a nota de transferência."
-                    raise Exception(msg)
+            if nunota != -1:
+                # Verifica se o pedido foi faturado ou trancou
+                status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
+                if status_faturamento:
+                    nunota_nota = status_faturamento[0].get('nunota')
+                    # Atualiza base de dados
+                    await crudPedido.atualizar(nunota=nunota,
+                                            dh_faturamento=datetime.now())
+                    await crudNota.atualizar(nunota_pedido=nunota,
+                                            nunota=nunota_nota)
+                else:
+                    # Se o pedido não foi faturado...
+                    # Fatura no Sankhya
+                    ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
+                    if not ack:
+                        msg = f"Erro ao faturar pedido {nunota}"
+                        raise Exception(msg)
+                    
+                    # Atualiza local
+                    dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
+                    if not dados_nota:
+                        msg = f"Erro ao buscar dados da nota {nunota_nota}"
+                        raise Exception(msg)                
+                    sequencias:list = [int(item.get('sequencia')) for item in dados_nota.get('itens')]
+                    payload:list[dict] = await parser_pedido.to_sankhya_atualiza_local(nunota=nunota_nota,
+                                                                                       lista_sequencias=sequencias)
+                    if not payload:
+                        msg = f"Erro ao preparar dados da nota {nunota_nota}"
+                        raise Exception(msg)                
+                    ack = await pedido_snk.atualizar_local(nunota=nunota_nota,payload=payload)
+                    if not ack:
+                        msg = f"Erro ao atualizar local de destino dos itens da nota {nunota_nota}"
+                        raise Exception(msg)
 
-                # Fatura no Sankhya
-                print(f"Faturando pedido {nunota} no Sankhya...")
-                ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
-                if not ack:
-                    msg = f"Erro ao faturar pedido {nunota}"
+                    # Atualiza base de dados
+                    await crudPedido.atualizar(nunota=nunota,
+                                               dh_faturamento=datetime.now())                
+                    await crudNota.atualizar(nunota_pedido=nunota,
+                                             nunota=nunota_nota)
+
+                # Confirma nota no Sankhya
+                ack = await nota_snk.confirmar(nunota=nunota_nota)
+                if ack is False:
+                    msg = f"Erro ao confirmar nota {nunota_nota}"
                     raise Exception(msg)
                 
+                # Cria o contas a pagar no Olist
+                ack = await integra_fin.lancar_conta_pagar_olist(nunota_nota=nunota_nota)
+                if not ack:
+                    msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
+                    raise Exception(msg)
+
+                ack = await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
+                if ack is False:
+                    msg = f"Erro ao atualizar hora da confirmação na base. {nunota_nota}"
+                    raise Exception(msg)
+            else:
                 # Atualiza base de dados
-                await crudPedido.atualizar(nunota=nunota,
-                                           dh_faturamento=datetime.now())                
-                await crudNota.atualizar(nunota_pedido=nunota,
-                                         nunota=nunota_nota)
+                await crudPedido.atualizar(nunota=nunota,dh_faturamento=datetime.now())
+                await crudNota.atualizar(nunota_pedido=nunota,dh_confirmacao=datetime.now())
+                nunota_nota = nunota
+
+            # Realiza baixa de estoque do local e-commerce
+            ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
+            if not ack.get('success'):
+                raise Exception(ack.get('__exception__'))
+            return {"success": True, "__exception__": None}
+        
+        except Exception as e:
+            logger.error(f"Erro ao faturar no sankhya: {e}")
+            return {"success": False, "__exception__": str(e)}
+
+    def validar_quantidades_baixa_ecommerce(self,itens_pedidos:list[dict],itens_nota:list[dict]) -> list[dict]:
+        """
+        Valida o saldo de estoque para realizar a baixa do local do e-commerce no Sankhya.
+            :param itens_pedidos: lista de dicionários com os dados dos itens dos pedidos (Olist)
+            :param itens_nota: lista de dicionários com os dados dos itens da nota de ressuprimento (Sankhya)
+            :return list[dict]: lista de dicionários com os dados dos itens a serem baixados do estoque
+        """  
+        lista_produtos_baixa:list[dict] = []
+
+        # Unifica itens da nota
+        aux_nota:list[dict] = []
+        try:
+            if itens_nota:
+                for item_nota in itens_nota:
+                    if not next((b for b in aux_nota if int(b['codprod']) == int(item_nota['codprod'])),None):
+                        aux_nota.append({
+                            'codprod':int(item_nota.get('codprod')),
+                            'qtdneg':int(item_nota.get('qtdneg')),
+                            'unidade': item_nota.get('codvol'),
+                            'vlrunit':float(item_nota.get('vlrunit')),
+                        })
+                    else:
+                        for item in aux_nota:
+                            if item.get('codprod') == item_nota.get('codprod'):
+                                item['qtdneg']+=int(item_nota.get('qtdneg'))
+
+            for item_pedido in itens_pedidos:
+                if item_pedido.get('vlrunit',0) == 0:
+                    match = next((b for b in aux_nota if int(b['codprod']) == int(item_pedido['codprod'])),None)
+                    if match:
+                        item_pedido['vlrunit'] = match.get('vlrunit')
+                    else:
+                        item_pedido['vlrunit'] = 1
+                
+                lista_produtos_baixa.append(item_pedido)
+                
+        except Exception as e:
+            logger.error("Erro ao validar baixa de estoque: %s",str(e))
+        finally:
+            pass           
+        return lista_produtos_baixa
+
+    @carrega_dados_empresa
+    @carrega_dados_ecommerce
+    async def desmembrar_lotes_baixa_ecommerce(self,lista_itens:list[dict]) -> list[dict]:
+        """
+        Desmembra a quantidade total dos itens para baixa do local do e-commerce no Sankhya dentre os lotes disponíveis no sistema.
+            :param lista_itens: lista de dicionários com os dados dos itens a serem baixados do estoque
+            :return list[dict]: lista de dicionários com os dados dos itens a serem baixados do estoque por lote
+        """  
+
+        lista_produtos_baixa:list[dict] = []
+
+        # Buscar o estoque atual no e-commerce por lote
+        estoque = EstoqueSnk(codemp=self.codemp, empresa_id=self.dados_ecommerce.get('empresa_id'))
+        lista_produtos_busca:list[int] = [int(item.get('codprod')) for item in lista_itens]
+        estoque_atual:list[dict] = await estoque.buscar_saldo_ecommerce_por_lote(lista_produtos=lista_produtos_busca)
+        if not estoque_atual:
+            print("Saldo de estoque atual não encontrado.")
+            return lista_produtos_baixa
+
+        try:
+            for item in lista_itens:
+                lista_produtos_baixa.append(item)
+                qtd_pendente:int = int(item.get('qtdneg'))
+                
+                while qtd_pendente > 0:
+                    # Percorrer os lotes verificando se o lote tem saldo para baixar a quantidade total do item
+                    saldo_produto = next((b for b in estoque_atual if int(b['codprod']) == int(item['codprod']) and int(b['estoque']) > 0),None)
+                    if not saldo_produto:
+                        qtd_pendente = -1
+                    else:
+                        if qtd_pendente <= int(saldo_produto.get('estoque')):
+                            lista_produtos_baixa[lista_produtos_baixa.index(item)]['controle'] = saldo_produto.get('controle')
+                            qtd_pendente = -1
+                        else:
+                            lista_produtos_baixa[lista_produtos_baixa.index(item)]['controle'] = saldo_produto.get('controle')
+                            lista_produtos_baixa[lista_produtos_baixa.index(item)]['qtdneg'] = saldo_produto.get('estoque')
+                            qtd_pendente -= int(saldo_produto.get('estoque'))
+                            estoque_atual.remove(saldo_produto)
+        except Exception as e:
+            logger.error("Erro ao desmembrar lotes para baixa de estoque: %s",str(e))
+        finally:
+            pass                       
+        return lista_produtos_baixa
+
+    @contexto
+    @carrega_dados_ecommerce
+    async def baixar_ecommerce(self,nunota_nota:int,**kwargs) -> dict:
+        """
+        Realiza a baixa de estoque do local e-commerce no Sankhya.
+            :param nunota_nota: número único da nota de venda no Sankhya
+            :return dict: dicionário com status, dados da nota e erro
+        """ 
+
+        loja_unica:bool=kwargs.get('loja_unica',False)
+        pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
+        integrador_pedido = IntegradorPedido(id_loja=self.dados_ecommerce.get('id_loja'))
+        
+        try:
+            estoque_baixar:list[dict] = await crudPedido.buscar_baixar_estoque(nunota_nota=nunota_nota)
+            if not estoque_baixar:
+                return True
+
+            # Unifica os itens dos pedidos
+            dados_pedidos_olist:list[dict] = [pedido.get('dados_pedido') for pedido in estoque_baixar]
+            pedidos_agrupados, itens_agrupados = integrador_pedido.unificar(lista_pedidos=dados_pedidos_olist)
+            if not all([pedidos_agrupados, itens_agrupados]):
+                msg = "Erro ao unificar pedidos"
+                raise Exception(msg)
+            
+            dados_nota:dict={}
+            if nunota_nota != -1:
+                # Busca dados da nota
+                dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
+                if not dados_nota:
+                    msg = "Erro ao buscar dados da nota"
+                    raise Exception(msg)
+
+            # Validando saldos
+            lista_produtos_baixa:list[dict] = self.validar_quantidades_baixa_ecommerce(itens_pedidos=itens_agrupados, itens_nota=dados_nota.get('itens'))
+            if not lista_produtos_baixa:
+                msg = "Erro ao validar quantidades para baixa de estoque"
+                raise Exception(msg)
+
+            lista_produtos_baixa = await self.desmembrar_lotes_baixa_ecommerce(lista_itens=lista_produtos_baixa)
+            if not lista_produtos_baixa:
+                msg = "Erro ao desmembrar lotes para baixa de estoque"
+                raise Exception(msg)
+            
+            # Converte para o formato da API do Sankhya
+            parser = ParserPedido(id_loja=self.id_loja)
+            dados_cabecalho, dados_itens = await parser.to_sankhya_baixa_estoque_ecommerce(lista_itens=lista_produtos_baixa)
+            if not all([dados_cabecalho, dados_itens]):
+                msg = "Erro ao converter dados dos pedidos para o formato da API do Sankhya"
+                raise Exception(msg)
+
+            # Insere os dados do pedido
+            pedido_incluido = await pedido_snk.lancar(dados_cabecalho=dados_cabecalho,
+                                                      dados_itens=dados_itens)
+            if not pedido_incluido:
+                msg = f"Erro ao inserir pedido no Sankhya."
+                raise Exception(msg)
+
+            # Atualiza base de dados
+            await crudNota.atualizar(nunota_nota=nunota_nota,
+                                     baixa_estoque_ecommerce=True)
 
             # Confirma nota no Sankhya
-            print(f"Confirmando nota de venda {nunota_nota} no Sankhya...")
-            ack = await nota_snk.confirmar(nunota=nunota_nota)
+            ack = await pedido_snk.confirmar(nunota=pedido_incluido)
             if ack is False:
-                msg = f"Erro ao confirmar nota {nunota_nota}"
+                msg = f"Erro ao confirmar baixa {pedido_incluido}"
                 raise Exception(msg)
-            if ack is None:
-                print(f"Nota de venda {nunota_nota} já foi confirmada")
-            if ack:
+            else:
                 pass
-            # Atualiza base de dados
-            await crudNota.atualizar(nunota_pedido=nunota,
-                                     dh_confirmacao=datetime.now())
-            print(f"Faturamento do pedido {nunota} concluído!")
-            return {"success": True}
+
+            return {"success": True, "__exception__": None}
         except Exception as e:
+            logger.error("Erro ao baixar estoque do ecommerce: %s",str(e))
             return {"success": False, "__exception__": str(e)}
 
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_olist(self,**kwargs):
+    async def integrar_olist(self,**kwargs) -> bool:
+        """
+        Busca os pedidos pendentes e executa a rotina para faturar os pedidos no Olist.
+            :return bool: status da operação
+        """           
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='sankhya',
                                           para='olist',
                                           contexto=kwargs.get('_contexto')) 
 
         # Busca os pedidos pendentes de faturamento
-        print("-> Buscando os pedidos pendentes de faturamento...")
         pedidos_faturar = await crudPedido.buscar_faturar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not pedidos_faturar:
-            print("Nenhum pedido para faturamento.")
+            # Nenhum pedido para faturamento
             await crudLog.atualizar(id=self.log_id)
             return True
 
-        print(f"{len(pedidos_faturar)} pedidos para faturar")
-
         for i, pedido in enumerate(pedidos_faturar):
             time.sleep(self.req_time_sleep)
-            print(f"-> Pedido {i + 1}/{len(pedidos_faturar)}: {pedido.get("num_pedido")}")
             # Fatura pedido no Olist
             ack_pedido = await self.faturar_olist(pedido=pedido)
-            # print(ack_pedido)
             await crudLogPed.criar(log_id=self.log_id,
                                    pedido_id=pedido.get('id'),
                                    evento='F',
                                    sucesso=ack_pedido.get('success'),
-                                   obs=ack_pedido.get('__exception__',None))           
-        
+                                   obs=ack_pedido.get('__exception__',None))
+                    
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        print("--> FATURAMENTO DOS PEDIDOS NO OLIST CONCLUÍDO!")
         return status_log
     
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_snk(self,**kwargs):
-
+    async def integrar_snk(self,**kwargs) -> bool:
+        """
+        Busca os pedidos pendentes e executa a rotina para faturar os pedidos no Sankhya.
+            :return bool: status da operação
+        """  
         loja_unica:bool=kwargs.get('loja_unica',False)
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
@@ -384,21 +557,21 @@ class Faturamento:
                                           contexto=kwargs.get('_contexto')) 
 
         # Busca os pedidos pendentes de faturamento
-        print("-> Buscando os pedidos pendentes de faturamento...")
         pedidos_faturar = await crudPedido.buscar_faturar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not pedidos_faturar:
-            print("Nenhum pedido para faturamento.")
+            # Nenhum pedido para faturamento
             await crudLog.atualizar(id=self.log_id)
             return True
         
+        print(f"Pedidos para faturar: {len(pedidos_faturar)}")
+        
         pedidos_faturar = list(set([p.get("nunota") for p in pedidos_faturar]))
-        print(f"{len(pedidos_faturar)} pedidos para faturar")
 
         for i, pedido in enumerate(pedidos_faturar):
+            print(f"Faturando pedido {pedido} ({i+1}/{len(pedidos_faturar)})")
             time.sleep(self.req_time_sleep)
-            print(f"-> Pedido {i + 1}/{len(pedidos_faturar)}: {pedido}")
             # Fatura pedido no Olist
-            ack_pedido = await self.faturar_sankhya(pedido=pedido,loja_unica=loja_unica)
+            ack_pedido = await self.faturar_sankhya(nunota=pedido,loja_unica=loja_unica)
             await crudLogPed.criar(log_id=self.log_id,
                                    nunota=pedido,
                                    evento='F',
@@ -407,13 +580,17 @@ class Faturamento:
         
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        print("--> FATURAMENTO DOS PEDIDOS NO SANKHYA CONCLUÍDO!")
         return status_log    
     
     @contexto
     @log_execucao
     @carrega_dados_empresa
-    async def realizar_venda_interna(self,**kwargs):
+    async def realizar_venda_interna(self,**kwargs) -> bool:
+        """
+        Executa a rotina da nota de ressuprimento de estoque considerando tudo que foi conferido no dia.
+            :return bool: status da operação
+        """
+        
         self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                           de='olist',
                                           para='sankhya',
@@ -426,6 +603,4 @@ class Faturamento:
                                obs=ack_venda.get('__exception__',None))        
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        print(f"--> VENDA INTERNA FINALIZADA")        
         return status_log
-    

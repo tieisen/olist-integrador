@@ -29,10 +29,12 @@ class Devolucao:
         self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))   
 
     @interno
-    async def validar_existentes(
-            self,
-            lista_notas: list
-        ) -> list:
+    async def validar_existentes(self,lista_notas: list) -> list[dict]:
+        """
+        Verifica quais NFD já foram mapeadas
+            :param lista_notas: lista de dicionários com os dados das NFD
+            :return list[dict]: lista de dicionários com os dados das NFD que ainda não foram mapeadas
+        """     
         lista_chaves = [n.get('chaveAcesso') for n in lista_notas]
         devolucoes_existentes = await crudDev.buscar(lista_chave=lista_chaves)
         lista_devolucoes_existentes = [d.get('id_nota') for d in devolucoes_existentes]
@@ -40,13 +42,16 @@ class Devolucao:
         return devolucoes_pendentes
 
     async def receber(self,id:int=None,numero:int=None) -> dict:
-
-        nota_olist = NotaOlist(id_loja=self.id_loja,
-                               codemp=self.codemp)
+        """
+        Recebe novas NFD
+            :param id: ID da NFD
+            :param numero: número da NFD
+            :return dict: dicionário com status, dados da NFD, dados da nota referenciada e erro
+        """
+        nota_olist = NotaOlist(id_loja=self.id_loja,codemp=self.codemp)
 
         try:
             # Busca nota de devolução
-            print("Buscando nota de devolução...")
             dados_nota_devolucao = await nota_olist.buscar(id=id,numero=numero)
             if not dados_nota_devolucao:
                 msg = f"Nota de devolução não encontrada"
@@ -56,7 +61,6 @@ class Devolucao:
                 raise Exception(msg)                
             
             # Valida nota de venda referenciada
-            print("Validando nota de venda referenciada...")
             chave_referenciada = re.search(REGEX_CHAVE_ACESSO,
                                            dados_nota_devolucao.get('observacoes','')).group(0)
             if not chave_referenciada:
@@ -68,7 +72,6 @@ class Devolucao:
                 raise Exception(msg)
             
             # Registra no banco de dados
-            print("Registrando nota de devolução...")
             ack = await crudDev.criar(chave_referenciada=chave_referenciada,
                                         id_nota=dados_nota_devolucao.get('id'),
                                         numero=int(dados_nota_devolucao.get('numero')),
@@ -78,18 +81,19 @@ class Devolucao:
             if not ack:
                 msg = "Erro ao registrar nota de devolução"
                 raise Exception(msg)
-            print("Nota de devolução recebida com sucesso!")
-            return {"success": True, "dados_nota":dados_nota_devolucao, "dados_nota_referenciada":dados_nota_referenciada}
+            return {"success": True, "dados_nota":dados_nota_devolucao, "dados_nota_referenciada":dados_nota_referenciada, "__exception__": None}
         except Exception as e:
-            return {"success": False, "__exception__": str(e)}   
+            return {"success": False, "dados_nota":None, "dados_nota_referenciada": None, "__exception__": str(e)}
         
     @carrega_dados_ecommerce
     async def lancar(self,dados_devolucao:dict,dados_nota_referenciada:dict) -> dict:
+        """
+        Registra NFDs no Sankhya
+            :param dados_devolucao: dicionário com os dados da NFD
+            :param dados_nota_referenciada: dicionário com os dados da NF referenciada
+            :return dict: dicionário com status, número único da devolução de venda no Sankhya, ID do pedido no Olist e erro
+        """
 
-        dados_nota_devolucao:dict={}
-
-        nota_olist = NotaOlist(id_loja=self.id_loja,
-                               codemp=self.codemp)
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'),
                            codemp=self.codemp)     
 
@@ -110,7 +114,6 @@ class Devolucao:
                 raise Exception(msg)
 
             # Converte para o formato da API do Sankhya
-            print("Convertendo dados para o formato da API do Sankhya...")
             parse = parser()
             dados_formatados = parse.to_sankhya(itens_olist=dados_devolucao.get('itens'),
                                                 itens_snk=dados_venda_snk.get('itens'))
@@ -119,7 +122,6 @@ class Devolucao:
                 raise Exception(msg)
             
             # Lança devolução
-            print(f"Lançando devolução...")
             nunota_devolucao = await nota_snk.devolver(nunota=dados_venda_snk.get('nunota'),
                                                        itens=dados_formatados)
             if not isinstance(nunota_devolucao,int):
@@ -127,7 +129,6 @@ class Devolucao:
                 raise Exception(msg)
             
             # Atualiza a nota no banco de dados
-            print("Atualizando status da nota...")
             ack = await crudDev.atualizar(id_nota=dados_devolucao.get('id'),
                                           nunota=nunota_devolucao)
             if not ack:
@@ -135,7 +136,6 @@ class Devolucao:
                 raise Exception(msg)            
             
             # Informa observação
-            print("Informando observação...")
             observacao = f"NFD {dados_devolucao.get('numero')} de {dados_devolucao.get('dataEmissao')}\n"+dados_devolucao.get('observacoes')
             ack = await nota_snk.alterar_observacao(nunota=nunota_devolucao,
                                                     observacao=observacao)
@@ -144,45 +144,51 @@ class Devolucao:
                 raise Exception(msg)
             
             # Confirma a devolução
-            print("Confirmando devolução...")
             ack = await nota_snk.confirmar(nunota=nunota_devolucao)
             if not ack:
                 msg = "Erro ao confirmar devolução."
                 raise Exception(msg)
         
             # Atualiza a nota no banco de dados
-            print("Atualizando status da nota...")
             ack = await crudDev.atualizar(id_nota=dados_devolucao.get('id'),
                                           dh_confirmacao=datetime.now())
             if not ack:
                 msg = f"Erro ao atualizar status da nota"
                 raise Exception(msg)
-                        
-            print(f"Nota de devolução lançada com sucesso!")
-            return {"success": True, "nunota":nunota_devolucao, "pedido_id":dados_nota_referenciada.get('pedido_id')}
+
+            return {"success": True, "nunota":nunota_devolucao, "pedido_id":dados_nota_referenciada.get('pedido_id'), "__exception__": None}
         except Exception as e:
-            return {"success": False, "__exception__": str(e)}   
+            return {"success": False, "nunota":None, "pedido_id": None, "__exception__": str(e)}   
         
     async def registrar_cancelamento(self,dados_devolucao:dict) -> dict:
+        """
+        Regitra o cancelamento de uma NFD
+            :param dados_devolucao: dicionário com os dados da NFD
+            :return dict: dicionário com status e erro
+        """   
         try:
             # Atualiza a nota no banco de dados
-            print("Atualizando status da nota...")
             ack = await crudDev.atualizar(id_nota=dados_devolucao.get('id'),
                                           dh_cancelamento=datetime.now()) 
             if not ack:
                 msg = f"Erro ao atualizar status da nota"
                 raise Exception(msg)                        
-            print(f"Nota de devolução cancelada com sucesso!")
-            return {"success": True}
+            return {"success": True, "__exception__": None}
         except Exception as e:
             return {"success": False, "__exception__": str(e)}   
     
     @carrega_dados_ecommerce
     async def cancelar(self,id:int=None,chave:str=None,numero:int=None) -> dict:
+        """
+        Exclui uma nota de devolução no Sankhya.
+            :param id: ID da NFD no Olist
+            :param chave: chave de acesso da NFD
+            :param numero: número da NFD
+            :return dict: dicionário com status, dados da NFD e erro
+        """           
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         try:
             # Busca nota de devolução
-            print("Buscando nota de devolução...")
             numero_ecommerce:dict={}
             if numero:
                 numero_ecommerce = {
@@ -196,21 +202,23 @@ class Devolucao:
                 msg = f"Nota de devolução não encontrada"
                 raise Exception(msg)            
             # Excluir devolução
-            print(f"Excluindo devolução...")
             ack = await nota_snk.excluir(nunota=dados_devolucao.get('nunota'))
             if not ack:
                 msg = "Erro ao excluir nota de devolução."
                 raise Exception(msg)                        
-            print(f"Nota de devolução excluída com sucesso!")
-            return {"success": True, "dados_devolucao":dados_devolucao}
+            return {"success": True, "dados_devolucao":dados_devolucao, "__exception__": None}
         except Exception as e:
-            return {"success": False, "__exception__": str(e)}
+            return {"success": False, "dados_devolucao":dados_devolucao, "__exception__": str(e)}
         
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_receber(self,data:str=None,**kwargs):
-
+    async def integrar_receber(self,data:str=None,**kwargs) -> bool:
+        """
+        Rotina para mapear novas NFD.
+            :param data: data da emissão da NFD
+            :return bool: status da operação
+        """
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
                                           para='base',
@@ -219,34 +227,27 @@ class Devolucao:
         lista_devolucoes:list[dict]=[]
         nota_olist = NotaOlist(id_loja=self.id_loja)
         # Busca devoluções
-        print("-> Buscando devoluções...")
         lista_devolucoes = await nota_olist.buscar_devolucoes(data=data)
         if not lista_devolucoes:
-            print("Nenhuma devolução para receber.")
+            # Nenhuma devolução para receber
             await crudLog.atualizar(id=self.log_id)
             return True
 
         # Valida devoluções já recebidas
-        print("Validando devoluções já recebidas...")
         lista_devolucoes = await self.validar_existentes(lista_devolucoes)
         if not lista_devolucoes:
             # Todas as notas de devolução já foram recebidas
-            print("Todas as notas de devolução já foram recebidas")
+            await crudLog.atualizar(id=self.log_id)
             return True
-
-        print(f"{len(lista_devolucoes)} devoluções para receber")
 
         for i, devolucao in enumerate(lista_devolucoes):
             time.sleep(self.req_time_sleep)
-            print(f"-> Nota {i + 1}/{len(lista_devolucoes)}: {devolucao.get("numero")}")
             ack_devolucao = await self.receber(id=devolucao.get("id"))
             # Registra no log
-            print("-> Registrando log...")
             for ack in ack_devolucao:
                 if not ack.get('success'):
                     msg = f"Erro ao receber nota de devolução {devolucao.get('numero')}: {ack.get('__exception__',None)}"
                     logger.error(msg)
-                    print(msg)
                 await crudLogPed.criar(log_id=self.log_id,
                                        pedido_id=ack.get('pedido_id'),
                                        evento='D',
@@ -261,7 +262,11 @@ class Devolucao:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_devolucoes(self,**kwargs):
+    async def integrar_devolucoes(self,**kwargs) -> bool:
+        """
+        Rotina para registrar novas NFD no Sankhya.
+            :return bool: status da operação
+        """
 
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
@@ -269,26 +274,20 @@ class Devolucao:
                                           contexto=kwargs.get('_contexto'))
 
         # Busca devoluções pendentes
-        print("-> Buscando devoluções pendentes...")
         devolucoes_pendentes = await crudDev.buscar_lancar(ecommerce_id=self.dados_ecommerce.get('id'))
         if not devolucoes_pendentes:
-            print("Nenhuma devolução para integrar.")
+            # Nenhuma devolução para registrar
             await crudLog.atualizar(id=self.log_id)
             return True
 
-        print(f"{len(devolucoes_pendentes)} devoluções para integrar")
-
         for i, devolucao in enumerate(devolucoes_pendentes):
             time.sleep(self.req_time_sleep)
-            print(f"-> Nota {i + 1}/{len(devolucoes_pendentes)}: {devolucao.get("numero")}")
             ack_devolucao = await self.lancar(dados_devolucao=devolucao)
             # Registra no log
-            print("-> Registrando log...")
             for ack in ack_devolucao:
                 if not ack.get('success'):
                     msg = f"Erro ao integrar nota de devolução {devolucao.get('numero')}: {ack.get('__exception__',None)}"
                     logger.error(msg)
-                    print(msg)
                 await crudLogPed.criar(log_id=self.log_id,
                                        pedido_id=ack.get('pedido_id'),
                                        evento='D',
@@ -303,7 +302,14 @@ class Devolucao:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_cancelamento(self,id:int=None,chave:str=None,numero:int=None,**kwargs):
+    async def integrar_cancelamento(self,id:int=None,chave:str=None,numero:int=None,**kwargs) -> bool:
+        """
+        Rotina para excluir uma NFD no Sankhya.
+            :param id: ID da NFD no Olist
+            :param chave: chave de acesso da NFD
+            :param numero: número da NFD
+            :return bool: status da operação
+        """ 
 
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
@@ -342,7 +348,13 @@ class Devolucao:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def devolver_unico(self,numero_nota:int,**kwargs):
+    async def devolver_unico(self,numero_nota:int,**kwargs) -> dict:
+        """
+        Rotina mapear e lançar uma NFD.
+            :param numero_nota: número da NFD
+            :return dict: dicionário com status e erro
+        """
+                
         retorno:dict={}
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
@@ -373,7 +385,6 @@ class Devolucao:
                 "exception": None
             }
         except Exception as e:
-            print(f"{e}")
             logger.error(f"{e}")
             retorno = {
                 "status": False,

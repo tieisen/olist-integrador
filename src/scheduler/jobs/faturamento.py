@@ -1,8 +1,6 @@
 from database.crud import empresa, ecommerce
 from src.integrador.faturamento import Faturamento
 
-# ROTINA EXECUTADA SOB DEMANDA
-
 async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
 
     retorno:dict={}

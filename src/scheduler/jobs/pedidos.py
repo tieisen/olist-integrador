@@ -3,9 +3,6 @@ from database.crud import empresa, ecommerce
 from src.integrador.pedido import Pedido
 from src.integrador.separacao import Separacao
 
-# ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 15 MINUTOS
-# APÓS A ROTINA DE ESTOQUE
-
 async def receber_pedido_lote(codemp:int=None,id_loja:int=None) -> dict:
 
     retorno:dict={}
@@ -93,6 +90,8 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
     retorno:dict={}
     empresas:list[dict]=[]
     ecommerces:list[dict]=[]
+    lista_itens_retorno:list[dict]=[]
+    sucesso:list[bool]=[]
     emp:dict={}
     ecom:dict={}
 
@@ -111,12 +110,14 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
                     await pedido.integrar_novos()
                     await pedido.integrar_confirmacao()
             retorno = {
-                "status": True,
-                "exception": None
+                "status": all(sucesso),
+                "data": lista_itens_retorno,
+                "exception": None if all(sucesso) else "Algum problema pode ter ocorrido. Verifique com o TI."
             }
         except Exception as e:
             retorno = {
-                "status": False,
+                "status": all(sucesso),
+                "data": None,
                 "exception": f"{e}"
             }
         finally:
@@ -127,21 +128,28 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
             ecom = ecommerces[0]
             print(f"E-commerce {ecom.get('nome')}".upper())
             pedido = Pedido(id_loja=id_loja)
-            await pedido.consultar_cancelamentos()
-            await pedido.integrar_novos()
-            await pedido.integrar_confirmacao()
+            ack_integrar, lista_retorno = await pedido.integrar_novos()
+            ack_confirmar = await pedido.integrar_confirmacao()
+            sucesso.append(ack_integrar)
+            sucesso.append(ack_confirmar)
+            lista_itens_retorno.append({
+                "ecommerce":ecom.get('nome'),
+                "dados":lista_retorno
+            })            
             retorno = {
-                "status": True,
-                "exception": None
+                "status": all(sucesso),
+                "data": lista_itens_retorno,
+                "exception": None if all(sucesso) else "Algum problema pode ter ocorrido. Verifique com o TI."
             }
         except Exception as e:
             retorno = {
-                "status": False,
+                "status": all(sucesso),
+                "data": None,
                 "exception": f"{e}"
             }
         finally:
             pass
-    
+
     return retorno                              
 
 async def integrar_separacoes(codemp:int=None) -> dict:

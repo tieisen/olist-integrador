@@ -10,13 +10,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        id_pedido:int,
-        id_nota:int,
-        numero:int,
-        serie:str,
-        **kwargs
-    ) -> bool:
+async def criar(id_pedido:int,id_nota:int,numero:int,serie:str,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Nota,
                                kwargs=kwargs,
@@ -52,17 +46,11 @@ async def criar(
         await session.commit()
     return True
 
-async def buscar(
-        id_nota:int=None,
-        nunota:int=None,
-        numero_ecommerce:dict=None,
-        chave_acesso:str=None,
-        tudo:bool=False,
-    ) -> dict:
+async def buscar(id_nota:int=None,nunota:int=None,numero_ecommerce:dict=None,chave_acesso:str=None,cod_pedido:str=None,tudo:bool=False,) -> dict:
     res:dict={}
 
     try:
-        if not any([id_nota,nunota,chave_acesso]) and not tudo:
+        if not any([id_nota,nunota,chave_acesso,cod_pedido,numero_ecommerce]) and not tudo:
             raise ValueError("Parâmetro não informado")
                 
         async with AsyncSessionLocal() as session:
@@ -88,6 +76,12 @@ async def buscar(
                         Nota.pedido_
                             .has(Pedido.ecommerce_id==numero_ecommerce.get('ecommerce')))
                 )
+            elif cod_pedido:
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.pedido_
+                               .has(Pedido.cod_pedido==cod_pedido))
+                )
             elif tudo:
                 result = await session.execute(
                     select(Nota)
@@ -107,14 +101,7 @@ async def buscar(
         pass
     return res
 
-async def atualizar(
-        id_nota:int=None,
-        chave_acesso:str=None,
-        nunota_pedido:int=None,
-        nunota_nota:int=None,
-        cod_pedido:int=None,
-        **kwargs
-    ):
+async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=None,nunota_nota:int=None,cod_pedido:int=None,**kwargs):
 
     if not any([id_nota,chave_acesso,nunota_pedido,nunota_nota,cod_pedido]):
         print("Nenhum parâmetro informado")
@@ -128,7 +115,7 @@ async def atualizar(
             return False
             
     async with AsyncSessionLocal() as session:
-        if chave_acesso and not any([id_nota,nunota_pedido]):
+        if chave_acesso and not any([id_nota,nunota_pedido,cod_pedido]):
             result = await session.execute(
                 select(Nota)
                 .where(Nota.chave_acesso == chave_acesso)
@@ -148,27 +135,45 @@ async def atualizar(
                     select(Nota)
                     .where(Nota.id_nota == id_nota)
                 )
+            elif nunota_pedido == -1:
+                kwargs['nunota'] = nunota_pedido
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.nunota.is_(None),
+                           Nota.pedido_.has(Pedido.nunota == nunota_pedido))
+                )            
             elif nunota_pedido:
                 result = await session.execute(
                     select(Nota)
                     .where(Nota.pedido_.has(Pedido.nunota == nunota_pedido))
                 )            
-            elif nunota_nota:
+            elif nunota_nota and kwargs.get('baixa_estoque_ecommerce'):
+                result = await session.execute(
+                    select(Nota)
+                    .where(Nota.nunota == nunota_nota,
+                           Nota.baixa_estoque_ecommerce.is_(False))
+                )
+            elif nunota_nota:                
                 result = await session.execute(
                     select(Nota)
                     .where(Nota.nunota == nunota_nota)
                 )            
             else:
+                logger.error("Nenhum parâmetro informado")
                 return False
 
         notas = result.scalars().all()
         if not notas:
-            print(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido or nunota_nota or cod_pedido}")
+            logger.error(f"Nota não encontrada. Parâmetro: {id_nota or chave_acesso or nunota_pedido or nunota_nota or cod_pedido}")
             return False
         
-        for nota in notas:
-            for key, value in kwargs.items():
-                setattr(nota, key, value)            
+        try:
+            for nota in notas:
+                for key, value in kwargs.items():
+                    setattr(nota, key, value)
+        except Exception as e:
+            logger.error(f"Erro ao atualizar nota: {e}")
+            return False
             
         await session.commit()
         return True  
@@ -218,6 +223,20 @@ async def buscar_financeiro(ecommerce_id:int):
             select(Nota)
             .where(Nota.dh_cancelamento.is_(None),
                    Nota.id_financeiro.is_(None),
+                   Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
+        )
+        notas = result.scalars().all()
+    dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                  retorno=notas)
+    return dados_nota 
+
+async def buscar_financeiro_parcelado(ecommerce_id:int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.is_(None),
+                   Nota.dh_baixa_financeiro.is_(None),
+                   Nota.parcelado.is_(True),
                    Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
         )
         notas = result.scalars().all()

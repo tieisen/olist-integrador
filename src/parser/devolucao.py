@@ -8,11 +8,13 @@ class Devolucao:
     def __init__(self):
         pass
            
-    def to_sankhya(
-            self,
-            itens_olist:list[dict],
-            itens_snk:list[dict]
-        ) -> list[dict]:
+    def to_sankhya(self,itens_olist:list[dict],itens_snk:list[dict]) -> list[dict]:
+        """
+        Converte os dados dos pedidos no formato da API do Sankhya para realizar a devolução por NFD.
+            :param itens_olist: dados da nota de devolução no Olist
+            :param itens_snk: dados da nota de venda no Sankhya
+            :return list[dict]: lista de dicionários com as dados dos itens da nota
+        """        
 
         resultado:list[dict]=[]
         for item_olist in itens_olist:
@@ -43,8 +45,7 @@ class Devolucao:
                     "QTDFAT": item_olist.get('quantidade')
                 })
             except Exception as e:
-                logger.error("Erro ao converter dados de devolução do item %s. %s",item_olist,e)
-                print(f"Erro ao converter dados de devolução do item {item_olist}. {e}")
+                logger.error("Erro ao converter dados de devolução do item %s. %s",item_olist,e)                
                 continue
 
         return resultado

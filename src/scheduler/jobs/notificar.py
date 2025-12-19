@@ -2,8 +2,6 @@ import asyncio
 from src.services.smtp import Email
 from database.crud import empresa
 
-# ROTINA A SER EXECUTADA DIARIAMENTE, A CADA 1H
-
 async def enviar_notificacao(codemp:int=None):
     empresas:list[dict]=[]
     emp:dict={}
