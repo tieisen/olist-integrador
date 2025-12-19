@@ -132,7 +132,7 @@ class Bot:
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-periodo")))
         return True
 
-    async def gerar_relatorio_custos(self,data_inicial,data_final):
+    async def gerar_relatorio_custos(self,data_inicial:str,data_final:str,ecommerce:int=None):
         if WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "opc-periodo"))):
             btn_intervalo = self.driver.find_element(By.ID, "opc-periodo")
             btn_intervalo.click()
@@ -150,14 +150,23 @@ class Bot:
 
             data_ini.send_keys(data_inicial)
             data_fim.send_keys(data_final)
-
-            btn_gerar = self.driver.find_element(By.ID,"btn-visualizar")
-            btn_gerar.click()
-            time.sleep(self.time_sleep)
-            return True
         else:
-            logger.error("Erro no selecionar opção")
+            logger.error("Erro ao informar datas")
             return False
+
+        if ecommerce:
+            if WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "idEcommerce"))):
+                select_ecommerce = Select(self.driver.find_element(By.ID, "idEcommerce"))
+                select_ecommerce.select_by_value(str(ecommerce))
+            else:
+                logger.error("Erro no selecionar ecommerce")
+                return False
+
+        btn_gerar = self.driver.find_element(By.ID,"btn-visualizar")
+        btn_gerar.click()
+        time.sleep(self.time_sleep)
+        return True
+
 
     async def baixar_relatorio_custos(self):
         if WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "btn-download"))):
@@ -170,7 +179,7 @@ class Bot:
             return False
         
     @contexto
-    async def rotina_relatorio_custos(self,data:datetime,**kwargs) -> bool:
+    async def rotina_relatorio_custos(self,data:datetime,ecommerce:int=None,**kwargs) -> bool:
         """
         Docstring for rotina_relatorio_custos
         
@@ -206,7 +215,8 @@ class Bot:
                     return False
             await self.acessa_relatorio_custos()
             await self.gerar_relatorio_custos(data_inicial=data_ini.strftime('%d/%m/%Y'),
-                                              data_final=data.strftime('%d/%m/%Y'))
+                                              data_final=data.strftime('%d/%m/%Y'),
+                                              ecommerce=ecommerce)
             await self.baixar_relatorio_custos()
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             await self.logout()
