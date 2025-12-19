@@ -152,6 +152,7 @@ class Nota(Base):
     baixa_estoque_ecommerce = Column(Boolean, default=False)
     dh_cancelamento = Column(DateTime(timezone=True), nullable=True)
     cancelado_sankhya = Column(Boolean, default=False)
+    income_data = Column(JSON, nullable=True)
     pedido_id = Column(Integer, ForeignKey("pedido.id", ondelete="CASCADE"), nullable=False)
 
     pedido_ = relationship("Pedido", back_populates="nota_")
