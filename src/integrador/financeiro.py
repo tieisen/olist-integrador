@@ -36,7 +36,6 @@ class Financeiro:
             :param dados_custo: dicionário com os dados da planilha de custos do e-commerce
             :return dict: dicionário com status e erro
         """
-
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                               de='olist',
@@ -58,7 +57,7 @@ class Financeiro:
                 msg = f"Erro ao baixar contas a receber da nota"
                 raise Exception(msg)
             
-            if not await crudNota.atualizar(cod_pedido=dados_custo.get('n_pedido_ecommerce'),dh_baixa_financeiro=datetime.now(),parcelado=False):
+            if not await crudNota.atualizar(cod_pedido=dados_custo.get('no_pedido_ecommerce'),dh_baixa_financeiro=datetime.now(),parcelado=False):
                 msg = f"Erro ao atualizar contas a receber da nota"
                 raise Exception(msg)
             
@@ -168,17 +167,21 @@ class Financeiro:
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             return True
         status_log:list[bool] = []
-        for conta in contas_dia:            
+        for conta in contas_dia:
             try:
                 matches = re.search(REGEX, conta.get('historico'))
                 codigo_pedido:str=matches.group(1)
                 custo:dict = next((r for r in relatorio_custos if r.get("pedido_ecommerce") == codigo_pedido), None)
+                if not custo:
+                    print(f"Pedido {codigo_pedido} não encontrado no relatório de custos")
+                    continue
                 status = await self.baixar_conta_liquido(data_baixa=data_conta,dados_conta=conta,dados_custo=custo)
                 status_log.append(status.get('success'))
             except Exception as e:
                 logger.error("Erro ao baixar conta a receber do pedido %s: %s",codigo_pedido,str(e))
                 status_log.append(False)
             finally:
+                custo={}
                 time.sleep(self.req_time_sleep)
         await crudLog.atualizar(id=self.log_id,sucesso=all(status_log))
         return all(status_log)
