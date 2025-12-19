@@ -211,7 +211,10 @@ class Estoque:
                     raise Exception(msg)
 
                 # Limpa tabela de alterações pendentes
-                await estoque_snk.remover_alteracoes(codprod=produto.get('codprod'))
+                print("Limpa tabela de alterações pendentes")
+                if not await estoque_snk.remover_alteracoes(codprod=produto.get('codprod')):
+                    msg = f"Erro ao limpar tabela de alterações pendentes. Produto {produto.get('codprod')}"
+                    print(msg)
 
                 # Atualiza o log de eventos
                 ack = await crudLogEst.criar(log_id=log_id,
