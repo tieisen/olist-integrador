@@ -3,6 +3,7 @@ import time
 import requests
 from src.olist.produto import Produto
 from datetime import datetime, timedelta
+from src.olist.produto import Produto
 from src.utils.decorador import carrega_dados_empresa
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
@@ -231,6 +232,8 @@ class Pedido:
             :return dict: dicionário com os dados do item ou kit desmembrado
         """          
 
+        produto = Produto(codemp=self.codemp, empresa_id=self.empresa_id)
+
         if isinstance(item_no_pedido, list):
             item_no_pedido = item_no_pedido[0]
         
@@ -238,40 +241,61 @@ class Pedido:
             logger.error("Item do pedido precisa ser um dicionário.")
             return False, {}
         
-        produto = Produto(codemp=self.codemp, empresa_id=self.empresa_id)
 
-        dados_kit = await produto.buscar(id=id)
-
-        if dados_kit.get('tipo') == 'K':
-            qtd_kit = item_no_pedido["quantidade"]
-            vlt_kit = item_no_pedido["valorUnitario"]
-            res_item = []
-            for k in dados_kit.get('kit'):
-
-                dados_produto = await produto.buscar(id=k['produto'].get('id'))
-                if not dados_produto:
-                    logger.error("Produto %s ID %s não encontrado.", dados_kit.get('descricao'), id)
-                    return False, {}
-
-                kit_item = {
-                    "produto": {
-                        "id": k['produto'].get('id'),
-                        "sku": k['produto'].get('sku'),
-                        "descricao": k['produto'].get('descricao')
-                    },
-                    "unidade": dados_produto.get('unidade'),
-                    "quantidade": k.get('quantidade') * qtd_kit,
-                    "valorUnitario": round(vlt_kit / len(dados_kit.get('kit')),4),
-                    "infoAdicional": ""                                    
-                }
-
-                res_item.append(kit_item)                            
-            return True, res_item
-        elif dados_kit.get('tipo') == 'V':
-            logger.error("Produto %s ID %s é uma variação. Ajuste o pedido no Olist", dados_kit.get('descricao'), id)
+        # dados_kit = await produto.buscar(id=id)
+        url = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PRODUTOS')+f"/{id}"
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
             return False, {}
-        else:
-            logger.error("Produto %s ID %s não é kit nem variação.", dados_kit.get('descricao'), id)
+             
+        res = requests.get(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        if res.status_code == 200:
+            if res.json().get('tipo') == 'K':
+                qtd_kit = item_no_pedido["quantidade"]
+                vlt_kit = item_no_pedido["valorUnitario"]
+                res_item = []
+                for k in res.json().get('kit'):
+
+                    dados_produto = await produto.buscar(id=k['produto'].get('id'))
+                    if not dados_produto:
+                        logger.error("Produto %s ID %s não encontrado.", k['produto'].get('descricao'), k['produto'].get('id'))
+                        print(f"Produto {k['produto'].get('descricao')} ID {k['produto'].get('id')} não encontrado.")
+                        return False, {}
+
+                    kit_item = {
+                        "produto": {
+                            "id": k['produto'].get('id'),
+                            "sku": k['produto'].get('sku'),
+                            "descricao": k['produto'].get('descricao')
+                        },
+                        "unidade": dados_produto.get('unidade'),
+                        "quantidade": k.get('quantidade') * qtd_kit,
+                        "valorUnitario": round(vlt_kit / len(res.json().get('kit')),4),
+                        "infoAdicional": ""                                    
+                    }
+
+                    res_item.append(kit_item)                            
+                return True, res_item
+            elif res.json().get('tipo') == 'V':
+                logger.error("Produto %s ID %s é uma variação. Ajuste o pedido no Olist", res.json().get('descricao'), id)
+                print(f"Produto {res.json().get('descricao')} ID {id} é uma variação. Ajuste o pedido no Olist")
+                return False, {}
+            else:
+                logger.error("Produto %s ID %s não é kit nem variação.", res.json().get('descricao'), id)
+                print(f"Produto {res.json().get('descricao')} ID {id} não é kit nem variação.")
+                return False, {}
+        else:                      
+            print(f"Erro {res.status_code}: {res.json().get('mensagem','Erro desconhecido')} cod {id}")
+            logger.error("Erro %s: %s cod %s", res.status_code, res.json().get("mensagem","Erro desconhecido"), id)
             return False, {}
         
     @token_olist

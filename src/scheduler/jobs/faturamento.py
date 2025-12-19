@@ -108,7 +108,6 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
         finally:
             return retorno
 
-
 async def integrar_faturamento_snk(codemp:int=None) -> dict:
 
     retorno:dict={}

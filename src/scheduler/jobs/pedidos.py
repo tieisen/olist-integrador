@@ -106,15 +106,9 @@ async def integrar_pedidos(codemp:int=None,id_loja:int=None) -> dict:
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
-                    pedido = Pedido(id_loja=ecom.get('id_loja'))
-                    ack_integrar, lista_retorno = await pedido.integrar_novos()
-                    ack_confirmar = await pedido.integrar_confirmacao()                    
-                    sucesso.append(ack_integrar)
-                    sucesso.append(ack_confirmar)
-                    lista_itens_retorno.append({
-                        "ecommerce":ecom.get('nome'),
-                        "dados":lista_retorno
-                    })                  
+                    pedido = Pedido(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
+                    await pedido.integrar_novos()
+                    await pedido.integrar_confirmacao()
             retorno = {
                 "status": all(sucesso),
                 "data": lista_itens_retorno,

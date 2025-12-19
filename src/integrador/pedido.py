@@ -126,7 +126,8 @@ class Pedido:
                                                                      olist=pedido_olist)
             if not itens_validados:
                 msg = "Erro ao validar itens/desmembrar kits"                    
-                raise Exception(msg)            
+                raise Exception(msg)
+            
             dados_pedido['itens'] = itens_validados
             # Adiciona pedido na base
             id = await crudPedido.criar(id_loja=dados_pedido['ecommerce'].get('id'),
@@ -237,6 +238,8 @@ class Pedido:
                 pedidos_novos = self.validar_loja(lista_pedidos=pedidos_novos)                
                 for pedido in pedidos_novos:
                     time.sleep(self.req_time_sleep)
+                    # print(f"-> Pedido {i + 1}/{len(pedidos_novos)}: {pedido.get("numeroPedido")}")            
+                    # ack = await self.receber(dados_pedido=pedido)
                     ack = await self.receber(id_pedido=pedido.get('id'))
                     # Registra sucesso no log
                     await crudLogPed.criar(log_id=self.log_id,
@@ -265,22 +268,16 @@ class Pedido:
         produto_olist = ProdutoOlist(codemp=self.codemp)
         dados_produto:dict = await produto_olist.buscar(id=dados_item['produto'].get('id'))
         if not dados_produto:
-            return False        
+            return False
         dados_item['unidade'] = dados_produto.get('unidade')
         return dados_item        
 
-    async def validar_item_desmembrar_kit(self, itens:list[dict], olist:PedidoOlist) -> list[dict]:
-        """
-        Valida se o item do pedido é um kit ou um SKU e faz o desmembramento.
-            :param itens: lista de dicionários com os dados dos itens do pedido
-            :param olist: instância da classe olist.Pedido
-            :return list[dict]: lista de dicionário com os dados do item ou kit desmembrado
-        """
+    async def validar_item_desmembrar_kit(self, itens:list[dict], olist:PedidoOlist):
+        itens_validados:list=[]
 
-        itens_validados:list=[]        
         for item in itens:
-            time.sleep(self.req_time_sleep) # Evita rate limit            
-            # Kits estão marcados com #K no final do código
+            time.sleep(self.req_time_sleep)  # Evita rate limit
+            # Kits não tem vínculo por SKU, ou estão marcados com #K no final do código
             if item['produto'].get('sku') and '#K' not in item['produto'].get('sku'):
                 item = await self.validar_unidade(dados_item=item)
                 if item:
@@ -288,10 +285,9 @@ class Pedido:
                 else:
                     logger.error(f"Erro ao validar unidade do produto ID {item['produto'].get('id')}")
                     return False
-            # Kits que não seguem o padrão #K no final do código são considerados inválidos e precisam ser ajustados
             elif item['produto'].get('sku') and '-' in item['produto'].get('sku'):
                 logger.error(f"Erro ao validar kit. Cadastro no padrão errado {item['produto'].get('sku')}")
-                return False
+                return False            
             else:
                 try:
                     ack, kit_desmembrado = await olist.validar_kit(id=item['produto'].get('id'),item_no_pedido=item)
@@ -354,6 +350,7 @@ class Pedido:
                 if not itens_validados:
                     msg = "Erro ao validar itens/desmembrar kits"
                     raise Exception(msg)
+                
                 dados_pedido_olist['itens'] = itens_validados            
                 
                 # Converte para o formato da API do Sankhya
@@ -414,7 +411,7 @@ class Pedido:
                 msg = f"Não foi possível unificar o pedido {pedido.get('numeroPedido')}. Sem itens."
                 logger.error(msg)
                 print(msg)
-                continue            
+                continue
             for item_pedido in itens_pedido:
                 # Valida o formato do código do produto
                 try:
@@ -549,11 +546,42 @@ class Pedido:
         try:
             aux_lista_pedidos = lista_pedidos.copy()
             for i, pedido in enumerate(aux_lista_pedidos):
-                time.sleep(self.req_time_sleep)                
+                time.sleep(self.req_time_sleep)
+                print(f"-> Pedido {i + 1}/{len(aux_lista_pedidos)}: {pedido.get('num_pedido')}")
+                
+                # # Busca dados do pedido no Olist
+                print("Buscando dados do pedido no Olist...")
+                # dados_pedido_olist = await pedido_olist.buscar(id=pedido.get('id_pedido'))
+                dados_pedido_olist = await crudPedido.buscar(id_pedido=pedido.get('id_pedido'))
+                if not dados_pedido_olist:
+                    msg = f"Erro ao buscar dados do pedido {pedido.get('num_pedido')}"
+                    print(msg)
+                    logger.error(msg)
+                    lista_pedidos.pop(lista_pedidos.index(pedido))
+                    continue
+            
+                try:
+                    dados_pedido_olist = dados_pedido_olist[0].get('dados_pedido')
+                except Exception as e:
+                    msg = f"Erro ao buscar dados do pedido {pedido.get('num_pedido')}"
+                    print(msg)
+                    logger.error(msg)
+                    lista_pedidos.pop(lista_pedidos.index(pedido))
+                    continue
+
+                if not dados_pedido_olist.get('itens'):
+                    msg = f"Erro ao buscar itens do pedido {pedido.get('num_pedido')}"
+                    print(msg)
+                    logger.error(msg)
+                    lista_pedidos.pop(lista_pedidos.index(pedido))
+                    continue
+                
                 # Valida situação e remove se cancelado
-                if not await self.validar_situacao(pedido):
+                print("Validando situação do pedido...")
+                if not await self.validar_situacao(dados_pedido_olist):
                     msg = f"Pedido {pedido.get('num_pedido')} cancelado ou com dados incompletos"
-                    logger.warning(msg)
+                    print(msg)
+                    logger.error(msg)
                     lista_pedidos.pop(lista_pedidos.index(pedido))
                     continue
 
@@ -567,10 +595,9 @@ class Pedido:
 
             if not dados_pedidos_olist:
                 msg = "Nenhum pedido válido para importar"
-                raise Exception(msg)
-            
+                raise Exception(msg)            
+            print(f"--> {len(dados_pedidos_olist)} pedidos validados para importar")
             logger.info(f"{len(dados_pedidos_olist)} pedidos validados para importar")
-            print(f"{len(dados_pedidos_olist)} pedidos validados para importar")
 
             # Unifica os itens dos pedidos
             pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos_olist)
@@ -585,72 +612,57 @@ class Pedido:
                 msg = "Erro ao buscar saldo de estoque."
                 raise Exception(msg)
 
-            # Compara quantidade conferida com estoque disponível
-            itens_venda_interna, itens_ecommerce = self.compara_saldos(saldo_estoque=saldo_estoque,
-                                                                       saldo_pedidos=itens_agrupados)
+            # Converte para o formato da API do Sankhya
+            parser = ParserPedido(id_loja=self.id_loja)
+            print("-> Convertendo para o formato da API do Sankhya...")        
+            dados_cabecalho, dados_itens = await parser.to_sankhya_lote(lista_pedidos=pedidos_agrupados,
+                                                                        lista_itens=itens_agrupados)
+            if not all([dados_cabecalho, dados_itens]):
+                msg = "Erro ao converter dados dos pedidos para o formato da API do Sankhya"
+                raise Exception(msg)
 
-            # print(f"Itens a transferir: {itens_venda_interna}")
-            # print(f"Itens no estoque e-commerce: {itens_ecommerce}")
+            # Insere os dados do pedido
+            print("-> Inserindo o pedido no Sankhya...")
+            pedido_incluido = await pedido_snk.lancar(dados_cabecalho=dados_cabecalho,
+                                                      dados_itens=dados_itens)
+            if not pedido_incluido:
+                msg = f"Erro ao inserir pedido no Sankhya."
+                raise Exception(msg)
+            
+            print(f"-> Pedidos importados no código {pedido_incluido}!")
 
+            # Atualiza log / Envia nunota para os pedidos nos Olist
+            print("-> Finalizando...")
             lista_retornos:list[dict]=[]
-            if itens_venda_interna:
-                # Busca valor de tranferência dos itens
-                item_transf = ItemTransfSnk(codemp=self.codemp)
-                codigos_produtos = [item.get('codprod') for item in itens_venda_interna]
-                valores_produtos = await item_transf.busca_valor_transferencia(lista_itens=codigos_produtos)
-                if not valores_produtos and len(codigos_produtos)==1:
-                    valores_produtos = [{'codprod': codigos_produtos[0], 'valor': 0.1}]
-                elif not valores_produtos:
-                    msg = "Erro ao buscar valores de transferência."
-                    raise Exception(msg)
-                else:
-                    pass                    
-
-                # Vincula o valor de transferência o respectivo produto
-                for item in itens_venda_interna:
-                    for valor in valores_produtos:
-                        if item.get('codprod') == valor.get('codprod'):
-                            item['valor'] = float(valor.get('valor')) if valor.get('valor') else 0.1
-                            break
-
-                # Converte para o formato da API do Sankhya
-                parser = ParserPedido(id_loja=self.id_loja)       
-                dados_cabecalho, dados_itens = await parser.to_sankhya_pedido_venda(lista_itens=itens_venda_interna)
-                if not all([dados_cabecalho, dados_itens]):
-                    msg = "Erro ao converter dados dos pedidos para o formato da API do Sankhya"
-                    raise Exception(msg)            
-
-                # Insere os dados do pedido
-                pedido_incluido = await pedido_snk.lancar(dados_cabecalho=dados_cabecalho,
-                                                          dados_itens=dados_itens)
-                if not pedido_incluido:
-                    msg = f"Erro ao inserir pedido no Sankhya."
-                    raise Exception(msg)
-
-                # Atualiza base
-                lista_ids_pedidos:list[int] = [p.get('id_pedido') for p in aux_lista_pedidos]
-                ack = await crudPedido.atualizar(lista_ids=lista_ids_pedidos,
+            for pedido in lista_pedidos:
+                time.sleep(self.req_time_sleep)
+                retorno = {
+                    "id": pedido.get('id'),
+                    "numero": pedido.get('num_pedido'),
+                    "success": None,
+                    "__exception__": None
+                }
+                ack = await crudPedido.atualizar(id_pedido=pedido.get('id_pedido'),
                                                  nunota=pedido_incluido,
                                                  dh_importacao=datetime.now())
                 if not ack:
-                    msg = f"Erro ao atualizar situação dos pedidos para importado. IDs: {lista_ids_pedidos}"
-                    raise Exception(msg)
-
-                pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
-                for pedido in aux_lista_pedidos:
-                    time.sleep(self.req_time_sleep)
-                    retorno = {
-                        "id": pedido.get('id'),
-                        "numero": pedido.get('num_pedido'),
-                        "success": None,
-                        "__exception__": None
-                    }
-
-                    ack = await self.atualizar_nunota(id_pedido=pedido.get('id_pedido'),
-                                                      nunota=pedido_incluido,
-                                                      olist=pedido_olist)
-                    if not ack:
-                        logger.warning(f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist")
+                    msg = f"Erro ao atualizar situação do pedido {pedido.get('num_pedido')} para importado"
+                    logger.error(msg)
+                    retorno['success'] = False
+                    retorno['__exception__'] = msg
+                    lista_retornos.append(retorno)
+                    continue
+                                
+                ack = await self.atualizar_nunota(id_pedido=pedido.get('id_pedido'),
+                                                  nunota=pedido_incluido,
+                                                  olist=pedido_olist)
+                if not ack:
+                    msg = f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist"
+                    logger.error(msg)
+                    retorno['success'] = False
+                    retorno['__exception__'] = msg
+                    lista_retornos.append(retorno)
+                    continue
 
                 retorno['success'] = True
                 lista_retornos.append(retorno)
@@ -688,8 +700,8 @@ class Pedido:
                 lista_retornos.append(retorno)                
             return lista_retornos, itens_ecommerce
         except Exception as e:
-            logger.error(str(e))
-            return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}], []
+            logger.error("Erro ao importar pedidos em lote. %s",e)
+            return [{"id": None, "numero": None, "success": False, "__exception__": str(e)}]
 
     @interno
     async def atualizar_nunota(self,id_pedido:int,nunota:int,olist:PedidoOlist) -> bool:
@@ -737,6 +749,7 @@ class Pedido:
             return True, []
         
         print(f"{len(pedidos_importar)} pedidos para importar")
+        logger.info(f"{len(pedidos_importar)} pedidos para importar")
         
         # Verifica o tipo de importação do ecommerce
         if self.dados_ecommerce.get('importa_pedido_lote'):
@@ -968,14 +981,14 @@ class Pedido:
                 ack = await olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota)
                 if not ack:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('pedido_id'),
+                                           pedido_id=pedido.get('id'),
                                            evento='N',
                                            sucesso=False,
                                            obs="Não foi possível remover nunota")
                     lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
                 else:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('pedido_id'),
+                                           pedido_id=pedido.get('id'),
                                            evento='N')
             if len(lista_pedidos_com_erro) == len(lista_pedidos):
                 msg = "Erro ao remover número dos pedidos no Olist"
@@ -994,6 +1007,8 @@ class Pedido:
             if status is True:
                 pass
             erro = f'ERRO: {e}'
+            print(erro)
+            logger.error(erro)
             status = False            
         finally:        
             # Atualiza log

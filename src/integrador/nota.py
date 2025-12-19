@@ -46,17 +46,22 @@ class Nota:
                 raise Exception(msg)
             
             if dados_nota_olist.get('mensagem'):
+                print(dados_nota_olist.get('mensagem'))
                 nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
                 dados_nota_olist = await nota_olist.buscar(cod_pedido=dados_pedido.get('cod_pedido'))
+                print(f"#{int(dados_nota_olist.get('numero'))}")                
 
+            # eh_parcelado:bool = True if len(dados_nota_olist.get('parcelas',[])) > 1 else False
             eh_parcelado:bool = True if len(dados_pedido['dados_pedido']['pagamento'].get('parcelas',[])) > 1 else False
-            
+            status_estoque:bool = True if self.dados_ecommerce.get('empresa_id') == 1 else False
+
             # Atualiza nota
             ack = await crudNota.criar(id_pedido=dados_pedido.get('id_pedido'),
                                        id_nota=dados_nota_olist.get('id'),
                                        numero=int(dados_nota_olist.get('numero')),
                                        serie=str(dados_nota_olist.get('serie')),
-                                       parcelado=eh_parcelado)
+                                       parcelado=eh_parcelado,
+                                       baixa_estoque_ecommerce=status_estoque)
             if not ack:
                 msg = f"Erro ao atualizar status da nota"
                 raise Exception(msg)            
@@ -114,9 +119,10 @@ class Nota:
 
         try:            
             # Busca contas a receber no Olist
-            finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-            dados_financeiro = await finOlist.buscar_receber(serieNf=str(dados_nota.get('serie')),                                                                  
-                                                             numeroNf=str(dados_nota.get('numero')).zfill(6))
+            # print("Buscando contas a receber no Olist...")
+            nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+            dados_financeiro = await nota_olist.buscar_financeiro(serie=str(dados_nota.get('serie')),                                                                  
+                                                                  numero=str(dados_nota.get('numero')).zfill(6))
             if not dados_financeiro:
                 msg = f"Erro ao buscar contas a receber da nota"
                 raise Exception(msg)
@@ -129,8 +135,54 @@ class Nota:
                 raise Exception(msg)            
             return {"success": True, "dados_financeiro":dados_financeiro, "__exception__": None}
         except Exception as e:
-            logger.error("Erro ao receber conta: %s",str(e))
-            return {"success": False, "dados_financeiro": None, "__exception__": str(e)}
+            return {"success": False, "__exception__": str(e)}
+
+    @carrega_dados_ecommerce
+    async def baixar_conta(
+            self,
+            id_nota:int,
+            dados_financeiro:dict=None,
+            **kwargs
+        ) -> dict:
+
+        if not self.log_id:
+            self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
+                                              de='olist',
+                                              para='olist',
+                                              contexto=kwargs.get('_contexto'))
+        try:
+            nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+            if not dados_financeiro:
+                # Busca dados do contas a receber no Olist
+                # print("Buscando dados do contas a receber no Olist...")
+                dados_nota = await crudNota.buscar(id_nota=id_nota)
+                if not dados_nota:
+                    msg = f"Erro ao buscar dados da nota"
+                    raise Exception(msg)                
+                dados_financeiro = await nota_olist.buscar_financeiro(numero=str(dados_nota.get('numero')).zfill(6),
+                                                                      serie=str(dados_nota.get('serie')))
+                if not dados_financeiro:
+                    msg = f"Erro ao buscar contas a receber da nota"
+                    raise Exception(msg)
+            
+            # Lança recebimento do contas a receber
+            # print("Lançando baixa do contas a receber...")
+            ack = await nota_olist.baixar_financeiro(id=dados_financeiro.get('id'),
+                                                     valor=dados_financeiro.get('valor'))
+            if not ack:
+                msg = f"Erro ao baixar contas a receber da nota"
+                raise Exception(msg)
+            
+            # Atualiza a nota no banco de dados
+            ack = await crudNota.atualizar(id_nota=id_nota,
+                                           dh_baixa_financeiro=datetime.now())
+            if not ack:
+                msg = f"Erro ao atualizar contas a receber da nota"
+                raise Exception(msg)            
+            print(f"Contas a receber da nota vinculado com sucesso!")
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "__exception__": str(e)}
     
     async def registrar_cancelamento(self,dados_nota:dict) -> dict:
         """

@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
@@ -12,6 +13,7 @@ class Separacao:
     def __init__(self, codemp:int=None, empresa_id:int=None):  
         self.codemp = codemp
         self.empresa_id = empresa_id
+        self.req_time_sleep:float=float(os.getenv('REQ_TIME_SLEEP', 1.5))
         self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
@@ -24,13 +26,43 @@ class Separacao:
         
         urls = [ self.endpoint+"/?situacao=1",  # Aguardando Separacao
                 self.endpoint+"/?situacao=4" ] # Em Separacao
+        
+        if not urls:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False        
 
         status = True
         lista = []
-        for url in urls:
-            lista+= await paginar_olist(token=self.token,url=url)
+        for u in urls:
 
-        return lista if status else status        
+            status = 200
+            paginacao = {}            
+            while status == 200:
+                if paginacao:        
+                    if paginacao["limit"] + paginacao["offset"] < paginacao ["total"]:
+                        offset = paginacao["limit"] + paginacao["offset"]
+                        url = u+f"?offset={offset}"
+                    else:
+                        url = None
+                else:
+                    url = u
+
+                if url:
+                    res = requests.get(url=url,
+                                    headers={
+                                        "Authorization":f"Bearer {self.token}",
+                                        "Content-Type":"application/json",
+                                        "Accept":"application/json"
+                                        })
+                    status = res.status_code
+                    if status == 200:                    
+                        lista += res.json()["itens"]
+                        paginacao = res.json()["paginacao"]
+                        time.sleep(self.req_time_sleep)
+                else:
+                    status=0
+        return lista
 
     @token_olist
     async def buscar(self,id:int) -> dict:

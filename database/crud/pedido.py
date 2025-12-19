@@ -223,6 +223,7 @@ async def cancelar(nunota:int):
             await session.commit()
             return True
         except Exception as e:
+            print(f"Erro ao cancelar pedido {nunota}: {e}")
             logger.error(f"Erro ao cancelar pedido {nunota}: {e}")
             return False
 

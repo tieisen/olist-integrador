@@ -25,10 +25,11 @@ class Devolucao:
                         break
 
                 qtd_disponivel_devolucao = int(item_snk.get('qtdneg'))-int(item_snk.get('qtdentregue'))
-                
+
                 # Verifica se existe quantidade disponível para devolver
                 if int(item_olist.get('quantidade')) > qtd_disponivel_devolucao:
                     msg = f"Item {item_snk.get('codprod')} não pode ser devolvido pois a quantidade disponível para devolução é menor do que a quantiade a ser devolvida.\n\tQuantidade disponível para devolução: {qtd_disponivel_devolucao}.\n\tQuantidade a ser devolvida: {item_olist.get('quantidade')}"
+                    print(msg)
                     logger.warning(msg)
                     continue
 

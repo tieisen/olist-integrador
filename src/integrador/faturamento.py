@@ -231,26 +231,25 @@ class Faturamento:
             # Cria NF no Olist
             ack_criacao = await integra_nota.gerar(dados_pedido=pedido)
             if not ack_criacao.get('success'):
-                raise Exception(f"Erro na criação da NF: {ack_criacao.get('__exception__')}")
+                raise Exception(ack_criacao.get('__exception__'))
                             
             # Emite NF
             ack_emissao = await integra_nota.emitir(ack_criacao.get('dados_nota'))
             if not ack_emissao.get('success'):
-                raise Exception(f"Erro na emissão da NF: {ack_emissao.get('__exception__')}")
+                raise Exception(ack_emissao.get('__exception__'))
             
             # Envia pedido pra separação no Olist
             ack_separacao = await separacao.separar(id=pedido.get('id_separacao'))
             if not ack_separacao:
-                raise Exception(f"Erro na separação do pedido: {ack_separacao.get('__exception__')}")
+                raise Exception(ack_separacao.get('__exception__'))
 
             # Recebe contas a receber do Olist
             ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
-            if not ack_conta.get('success'):
-                raise Exception(f"Erro ao receber conta: {ack_conta.get('__exception__')}")
+            print(ack_conta.get('__exception__')) if not ack_conta.get('success') else None
             
-            return {"success": True, "__exception__": None}
+            return {"success": True}
         except Exception as e:
-            logger.error("Erro ao faturar pedido no Olist: %s",str(e))
+            logger.error(f"Erro ao faturar Olist: {e}")
             return {"success": False, "__exception__": str(e)}
 
     @contexto

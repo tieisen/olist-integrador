@@ -42,7 +42,10 @@ class Estoque:
         if codprod:
             filtro_produtos = str(codprod)
         if lista_produtos:   
-            filtro_produtos = ','.join(map(str,lista_produtos))                
+            filtro_produtos = ','.join(map(str,lista_produtos))
+
+        # Considera estoque da empresa ecommerce e da unidade física do estado
+        cod_empresas_estoque:str = ','.join(map(str,[self.dados_empresa.get('snk_codemp_fornecedor'),self.dados_empresa.get('snk_codemp')]))
 
         parametero = 'SANKHYA_PATH_SCRIPT_SALDO_ESTOQUE'
         script = buscar_script(parametro=parametero)
