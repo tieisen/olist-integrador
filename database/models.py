@@ -95,6 +95,22 @@ class Sankhya(Base):
 
     empresa_ = relationship("Empresa", back_populates="sankhya_")
 
+class Shopee(Base):
+    __tablename__ = "shopee"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    partner_id = Column(Integer, nullable=False)
+    partner_key = Column(String, nullable=False)
+    shop_id = Column(Integer, nullable=False)
+    dh_solicitacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    access_token = Column(String, nullable=False)
+    dh_expiracao_token = Column(DateTime(timezone=True), nullable=False)
+    refresh_token = Column(String, nullable=False)
+    dh_expiracao_refresh_token = Column(DateTime(timezone=True), nullable=False)
+    ecommerce_id = Column(Integer, ForeignKey("ecommerce.id", ondelete="CASCADE"), nullable=False)
+
+    ecommerce_ = relationship("Ecommerce", back_populates="shopee_")
+
 class Ecommerce(Base):
     __tablename__ = "ecommerce"
 
@@ -113,6 +129,7 @@ class Ecommerce(Base):
 
     empresa_ = relationship("Empresa", back_populates="ecommerce_")
     pedido_ = relationship("Pedido", back_populates="ecommerce_", cascade="all, delete-orphan", passive_deletes=True)
+    shopee_ = relationship("Shopee", back_populates="ecommerce_", cascade="all, delete-orphan", passive_deletes=True)
 
 class Pedido(Base):
     __tablename__ = "pedido"
