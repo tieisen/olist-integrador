@@ -1,8 +1,6 @@
-import os
-import re
-import unicodedata
+import os, re, unicodedata
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, UTC
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -290,7 +288,7 @@ class Financeiro:
             vlr_total_pedido = dados_conta.get('valor')
             vlr_pago = dados_recebimento.get('released_amount')
             historico = dados_conta.get('historico')
-            dt_recebimento = dados_recebimento.get('actual_payout_time')
+            dt_recebimento = datetime.fromtimestamp(dados_recebimento.get('actual_payout_time'), UTC).strftime('%d/%m/%Y')
 
             if not any([vlr_total_pedido,vlr_pago]):
                 raise ValueError("Total do pedido ou valor do recebimento não encontrado. vlr_total_pedido: %s. vlr_pago: %s", vlr_total_pedido, vlr_pago)
