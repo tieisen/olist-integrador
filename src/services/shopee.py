@@ -10,6 +10,7 @@ logger = set_logger(__name__)
 HOST_URL = os.getenv('SHOPEE_HOST_URL')
 PATH_AUTH = os.getenv('SHOPEE_PATH_AUTH')
 PATH_TOKEN = os.getenv('SHOPEE_PATH_TOKEN')
+PATH_REFRESH_TOKEN = os.getenv('SHOPEE_PATH_REFRESH_TOKEN')
 PATH_INCOME_DETAIL = os.getenv('SHOPEE_PATH_INCOME_DETAIL')
 REDIRECT_URL = os.getenv('OLIST_REDIRECT_URI')
 
@@ -62,13 +63,14 @@ class Autenticacao:
         shop_id:int = self.dados_shopee.get("shop_id")
         partner_key:str = self.dados_shopee.get("partner_key")        
         body = {"shop_id": shop_id, "refresh_token": refresh_token,"partner_id":partner_id}
-        base_string = "%s%s%s" % (partner_id, PATH_TOKEN, timest)
+        base_string = "%s%s%s" % (partner_id, PATH_REFRESH_TOKEN, timest)
         base_string_encoded = base_string.encode()
         partner_key_encoded = partner_key.encode()
         sign = hmac.new(partner_key_encoded, base_string_encoded, hashlib.sha256).hexdigest()
-        url = HOST_URL + PATH_TOKEN + "?partner_id=%s&timestamp=%s&sign=%s" % (partner_id, timest, sign)
+        url = HOST_URL + PATH_REFRESH_TOKEN + "?partner_id=%s&timestamp=%s&sign=%s" % (partner_id, timest, sign)
         headers = {"Content-Type": "application/json"}
         resp = requests.post(url, json=body, headers=headers)
+        # print(f"Refresh status: {resp.status_code}")
         if resp.ok:
             ret = json.loads(resp.content)
             return ret
