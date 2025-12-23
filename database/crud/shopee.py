@@ -86,6 +86,18 @@ async def buscar(ecommerce_id:int=None,empresa_id:int=None):
     dados_token = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,retorno=token)        
     return dados_token 
 
+async def buscar_idloja(ecommerce_id:int):
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Ecommerce).where(Ecommerce.id == ecommerce_id)
+        )
+        ecommerce = result.scalar_one_or_none()
+    if not ecommerce:
+        return False        
+    else:
+        return ecommerce.id_loja
+
 async def excluir(id:int):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
