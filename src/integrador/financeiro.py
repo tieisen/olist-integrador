@@ -17,7 +17,7 @@ logger = set_logger(__name__)
 
 class Financeiro:
 
-    def __init__(self, id_loja:int, empresa_id:int):
+    def __init__(self, empresa_id:int, id_loja:int=None):
         self.id_loja = id_loja
         self.empresa_id = empresa_id
         self.codemp = None
@@ -41,6 +41,7 @@ class Financeiro:
 
         if dados_contas:
             for conta in dados_contas:
+                time.sleep(self.req_time_sleep)
                 try:
                     ack = await crudNota.salvar_dados_conta_shopee(cod_pedido=conta.get('order_sn'),dados_conta=conta)
                     if not ack:
@@ -214,17 +215,18 @@ class Financeiro:
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='shopee',
                                           para='olist',
-                                          contexto=kwargs.get('_contexto'))          
-        
+                                          contexto=kwargs.get('_contexto')) 
+
         fin_olist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
         parse = ParseFin()
         res:list[bool] = []
         codigo_pedido:str=''
         dados_conta:dict={}
-        payload:dict={}
+        payload:dict=None
 
         contas_para_baixar:list[dict] = await crudNota.buscar_financeiro_baixar_shopee(ecommerce_id=self.dados_ecommerce.get('id'))
         if not contas_para_baixar:
+            print("Nenhuma conta para baixar.")
             return True
         
         for i, conta in enumerate(contas_para_baixar):
@@ -248,7 +250,8 @@ class Financeiro:
                     raise ValueError(msg)
                 print("Baixando contas a receber...")
                 time.sleep(self.req_time_sleep)
-                if not await fin_olist.baixar_receber(id=dados_conta.get('id'),payload=payload):
+                ack = await fin_olist.baixar_receber(id=dados_conta.get('id'),payload=payload)
+                if not ack:
                     msg = f"Erro ao baixar contas a receber"
                     raise Exception(msg)
                 print("Atualizando base...")
@@ -258,12 +261,16 @@ class Financeiro:
                     raise Exception(msg)
                 res.append(True)
             except Exception as e:
-                codigo_pedido=''
-                payload={}                
                 res.append(False)
                 msg = f"Erro ao baixar contas a receber do pedido {codigo_pedido}: {str(e)}"
                 print(msg)
                 logger.error(msg)
+                if dados_conta:
+                    logger.info(f"ID da conta: {dados_conta.get('id')}")
+                if payload:
+                    logger.info(f"Payload: {payload}")
+                codigo_pedido=''
+                payload=None               
             finally:
                 print("")
                 time.sleep(self.req_time_sleep)
