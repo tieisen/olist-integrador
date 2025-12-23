@@ -4,7 +4,7 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from sqlalchemy import create_engine
 from pytz import timezone
 from datetime import datetime, timedelta
-from src.scheduler.jobs import produtos, estoque, pedidos, devolucoes, notificar, limpar_cache
+from src.scheduler.jobs import produtos, estoque, pedidos, devolucoes, notificar, limpar_cache, financeiro
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 import os
@@ -50,11 +50,19 @@ async def rotina_pedidos():
         logger.info("Rotina de pedidos concluída.")
     except Exception as e:
         logger.exception(f"Erro na rotina de pedidos: {e}")
-        
+
 async def rotina_completa():
     await rotina_produtos()
     await rotina_estoque()
     await rotina_pedidos()
+
+async def rotina_financeiro_shopee():
+    logger.info("Iniciando busca dos recebimentos da Shopee...")
+    try:
+        await financeiro.integrar_recebimentos_shopee()
+        logger.info("Rotina de recebimentos Shopee concluída.")
+    except Exception as e:
+        logger.exception(f"Erro na rotina de recebimentos Shopee: {e}")
 
 async def rotina_devolucoes():
     logger.info("Iniciando sincronização de devoluções...")
@@ -123,6 +131,7 @@ async def inicializar_tarefas():
         ("sincronizar_tudo", rotina_completa, "interval", {"minutes": 10}),        
         ("notificar_erros", rotina_notificacao, "interval", {"hours": 6}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
+        ("financeiro_shopee", rotina_financeiro_shopee, "cron", {"hour": 7}),
     ]
 
     for job_id, func, trigger, params in jobs:
