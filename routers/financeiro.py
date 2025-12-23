@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from src.scheduler.jobs.financeiro import integrar_financeiro, baixar_shopee
+from src.scheduler.jobs.financeiro import integrar_financeiro, baixar_shopee, integrar_recebimentos_shopee
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -8,6 +8,9 @@ router = APIRouter()
 class FinanceiroModel(BaseModel):
     codemp:int
     data:str
+
+class FinanceiroShopeeModel(BaseModel):
+    codemp:int
 
 class RecebimentoShopeeModel(BaseModel):
     data:str
@@ -23,6 +26,16 @@ class RecebimentoShopeeModel(BaseModel):
 class FinanceiroShopeeModel(BaseModel):
     codemp:int
     dados:list[RecebimentoShopeeModel]    
+
+@router.post("/processar-shopee")
+async def processar_shopee(financeiro:FinanceiroShopeeModel) -> bool:    
+    """
+    Busca os recebimentos na API da Shopee.
+    Baixa títulos pendentes.
+    """
+    if not await integrar_recebimentos_shopee(codemp=financeiro.codemp):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar recebimentos da Shopee")
+    return True
 
 @router.post("/baixar/shopee")
 async def baixar_titulos_shopee(financeiro:FinanceiroShopeeModel) -> bool:    
