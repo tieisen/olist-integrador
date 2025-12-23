@@ -183,16 +183,18 @@ async def salvar_dados_conta_shopee(cod_pedido:str,dados_conta:dict):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
-            .where(Nota.dh_cancelamento.is_(None),
-                   Nota.dh_baixa_financeiro.is_(None),
+            .where(Nota.dh_cancelamento.is_(None),                   
                    Nota.pedido_.has(Pedido.cod_pedido == cod_pedido))
         )
         nota = result.scalar_one_or_none()
         if not nota:
-            logger.error(f"Nota do pedido {cod_pedido} não encontrada ou já foi baixada.")
+            logger.error(f"Nota do pedido {cod_pedido} não encontrada.")
+            return False
+        elif nota.dh_baixa_financeiro:
+            # logger.info(f"Conta do pedido {cod_pedido} já foi baixada.")
             return True
         elif nota.income_data:
-            logger.error(f"Conta do pedido {cod_pedido} já foi importada.")
+            # logger.info(f"Conta do pedido {cod_pedido} já foi importada.")
             return True
         else:
             try:
@@ -292,7 +294,7 @@ async def buscar_financeiro_baixar_shopee(ecommerce_id:int):
                    Nota.dh_baixa_financeiro.is_(None),
                    Nota.income_data.isnot(None),
                    Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
-            .order_by(Nota.numero)                   
+            .order_by(Nota.numero)
         )
         notas = result.scalars().all()
     dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
