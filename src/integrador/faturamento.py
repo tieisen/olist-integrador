@@ -399,34 +399,44 @@ class Faturamento:
         """  
 
         lista_produtos_baixa:list[dict] = []
-
         # Buscar o estoque atual no e-commerce por lote
         estoque = EstoqueSnk(codemp=self.codemp, empresa_id=self.dados_ecommerce.get('empresa_id'))
         lista_produtos_busca:list[int] = [int(item.get('codprod')) for item in lista_itens]
         estoque_atual:list[dict] = await estoque.buscar_saldo_ecommerce_por_lote(lista_produtos=lista_produtos_busca)
         if not estoque_atual:
             print("Saldo de estoque atual não encontrado.")
-            return lista_produtos_baixa
-
+            return lista_produtos_baixa        
         try:
             for item in lista_itens:
+                primeiro_loop:bool=True
                 lista_produtos_baixa.append(item)
-                qtd_pendente:int = int(item.get('qtdneg'))
-                
+                qtd_pendente:int = int(item.get('qtdneg'))                
                 while qtd_pendente > 0:
                     # Percorrer os lotes verificando se o lote tem saldo para baixar a quantidade total do item
                     saldo_produto = next((b for b in estoque_atual if int(b['codprod']) == int(item['codprod']) and int(b['estoque']) > 0),None)
                     if not saldo_produto:
                         qtd_pendente = -1
                     else:
-                        if qtd_pendente <= int(saldo_produto.get('estoque')):
-                            lista_produtos_baixa[lista_produtos_baixa.index(item)]['controle'] = saldo_produto.get('controle')
-                            qtd_pendente = -1
+                        if primeiro_loop:
+                            if qtd_pendente <= int(saldo_produto.get('estoque')):
+                                lista_produtos_baixa[lista_produtos_baixa.index(item)]['controle'] = saldo_produto.get('controle')
+                                qtd_pendente = -1
+                            else:
+                                lista_produtos_baixa[lista_produtos_baixa.index(item)]['controle'] = saldo_produto.get('controle')
+                                lista_produtos_baixa[lista_produtos_baixa.index(item)]['qtdneg'] = saldo_produto.get('estoque')
+                                qtd_pendente -= int(saldo_produto.get('estoque'))
+                                estoque_atual.remove(saldo_produto)
                         else:
-                            lista_produtos_baixa[lista_produtos_baixa.index(item)]['controle'] = saldo_produto.get('controle')
-                            lista_produtos_baixa[lista_produtos_baixa.index(item)]['qtdneg'] = saldo_produto.get('estoque')
-                            qtd_pendente -= int(saldo_produto.get('estoque'))
+                            item_adicional = lista_produtos_baixa[lista_produtos_baixa.index(item)].copy()
+                            item_adicional['controle'] = saldo_produto.get('controle')
+                            item_adicional['qtdneg'] = saldo_produto.get('estoque')
+                            if qtd_pendente <= int(saldo_produto.get('estoque')):                            
+                                qtd_pendente = -1
+                            else:
+                                qtd_pendente -= int(saldo_produto.get('estoque'))
                             estoque_atual.remove(saldo_produto)
+                            lista_produtos_baixa.append(item_adicional)                                                          
+                        primeiro_loop = False
         except Exception as e:
             logger.error("Erro ao desmembrar lotes para baixa de estoque: %s",str(e))
         finally:
@@ -473,10 +483,16 @@ class Faturamento:
                 msg = "Erro ao validar quantidades para baixa de estoque"
                 raise Exception(msg)
 
+            print("lista_produtos_baixa")
+            print(lista_produtos_baixa)
+
             lista_produtos_baixa = await self.desmembrar_lotes_baixa_ecommerce(lista_itens=lista_produtos_baixa)
             if not lista_produtos_baixa:
                 msg = "Erro ao desmembrar lotes para baixa de estoque"
                 raise Exception(msg)
+            
+            print("lista_produtos_desmembrados")
+            print(lista_produtos_baixa)
             
             # Converte para o formato da API do Sankhya
             parser = ParserPedido(id_loja=self.id_loja)
@@ -507,6 +523,8 @@ class Faturamento:
             return {"success": True, "__exception__": None}
         except Exception as e:
             logger.error("Erro ao baixar estoque do ecommerce: %s",str(e))
+            logger.info(f"dados_cabecalho: {dados_cabecalho}")
+            logger.info(f"dados_itens: {dados_itens}")
             return {"success": False, "__exception__": str(e)}
 
     @contexto
