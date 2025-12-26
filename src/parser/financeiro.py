@@ -160,7 +160,7 @@ class Financeiro:
             subst = ""
 
             try:
-                relatorio['pedido_ecommerce'] = relatorio['n_pedido_ecommerce'].apply(lambda x: re.sub(regex, subst, x) if len(x) != 14 else x)
+                relatorio['pedido_ecommerce'] = relatorio['no_pedido_ecommerce'].apply(lambda x: re.sub(regex, subst, x) if len(x) != 14 else x)
             except Exception as e:
                 logger.error(f"Erro ao tratar código do pedido: {e}")
             finally:
@@ -354,7 +354,7 @@ class Financeiro:
         vlr_pago:float=0
 
         try:       
-            if len(dados_custo.get('n_pedido_ecommerce')) == 14:
+            if len(dados_custo.get('no_pedido_ecommerce')) == 14:
                 # Shopee - valor da comissão é variável por pedido e já está informado no relatório
                 vlr_comissao = dados_custo.get('total_comissao',0)
                 vlr_desconto_total = vlr_comissao + dados_custo.get('frete_do_pedido',0)
@@ -392,7 +392,7 @@ class Financeiro:
                 "acrescimo": None
             }
         except Exception as e:
-            logger.error("Erro ao converter dados para baixa de contas a receber do pedido %s. %s", dados_custo.get('n_pedido_ecommerce'), e)
+            logger.error("Erro ao converter dados para baixa de contas a receber do pedido %s. %s", dados_custo.get('no_pedido_ecommerce'), e)
         finally:
             pass
         return payload    
