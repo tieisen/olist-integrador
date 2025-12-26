@@ -83,7 +83,7 @@ class Financeiro:
                 msg = f"Erro ao baixar contas a receber da nota"
                 raise Exception(msg)
             
-            if not await crudNota.atualizar(cod_pedido=dados_custo.get('n_pedido_ecommerce'),dh_baixa_financeiro=datetime.now(),parcelado=False):
+            if not await crudNota.atualizar(cod_pedido=dados_custo.get('no_pedido_ecommerce'),dh_baixa_financeiro=datetime.now(),parcelado=False):
                 msg = f"Erro ao atualizar contas a receber da nota"
                 raise Exception(msg)
             
@@ -189,6 +189,7 @@ class Financeiro:
         fin_olist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
         contas_dia:list[dict] = await fin_olist.buscar_lista_receber_aberto(dt_emissao=data_conta.strftime('%Y-%m-%d'))
         contas_dia = filtra_loja(contas_dia=contas_dia,id_loja=self.id_loja)
+        print(f"Contas a receber: {len(contas_dia)}")
         if not contas_dia:
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             return True
