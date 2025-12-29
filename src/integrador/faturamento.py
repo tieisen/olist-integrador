@@ -483,16 +483,10 @@ class Faturamento:
                 msg = "Erro ao validar quantidades para baixa de estoque"
                 raise Exception(msg)
 
-            print("lista_produtos_baixa")
-            print(lista_produtos_baixa)
-
             lista_produtos_baixa = await self.desmembrar_lotes_baixa_ecommerce(lista_itens=lista_produtos_baixa)
             if not lista_produtos_baixa:
                 msg = "Erro ao desmembrar lotes para baixa de estoque"
                 raise Exception(msg)
-            
-            print("lista_produtos_desmembrados")
-            print(lista_produtos_baixa)
             
             # Converte para o formato da API do Sankhya
             parser = ParserPedido(id_loja=self.id_loja)
