@@ -10,14 +10,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        chave_referenciada:str,
-        id_nota:int,
-        numero:int,
-        serie:str,
-        dh_emissao:str=None,
-        **kwargs
-    ) -> bool:
+async def criar(chave_referenciada:str,id_nota:int,numero:int,serie:str,dh_emissao:str=None,**kwargs) -> bool:
 
     if kwargs:
         kwargs = validar_dados(modelo=Devolucao,
@@ -59,7 +52,8 @@ async def buscar_lancar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Devolucao)
-            .where(Devolucao.nunota.is_(None),
+            .where(Devolucao.dh_confirmacao.is_(None),
+                   Devolucao.dh_cancelamento.is_(None),
                    Devolucao.nota_.has(
                         Nota.pedido_.has(
                         Pedido.ecommerce_id==ecommerce_id)))
@@ -82,14 +76,7 @@ async def buscar_confirmar() -> list[dict]:
                                             retorno=devolucoes)
         return dados_devolucoes
 
-async def buscar(
-        id_nota:int=None,
-        nunota:int=None,
-        chave:str=None,
-        numero_ecommerce:dict=None,
-        lista_chave:list[str]=None,
-        tudo:bool=False
-    ) -> dict:
+async def buscar(id_nota:int=None,nunota:int=None,chave:str=None,numero_ecommerce:dict=None,lista_chave:list[str]=None,tudo:bool=False) -> dict:
     res:dict={}
 
     try:
@@ -144,12 +131,7 @@ async def buscar(
         pass
     return res 
 
-async def atualizar(
-        id_nota:int=None,
-        numero:int=None,
-        nunota:int=None,
-        **kwargs
-    ) -> bool:
+async def atualizar(id_nota:int=None,numero:int=None,nunota:int=None,**kwargs) -> bool:
 
     if not any([id_nota,numero,nunota]):
         return False
