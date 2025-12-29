@@ -132,6 +132,7 @@ async def inicializar_tarefas():
         ("notificar_erros", rotina_notificacao, "interval", {"hours": 6}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
         ("financeiro_shopee", rotina_financeiro_shopee, "cron", {"hour": 7}),
+        ("devolucoes", rotina_devolucoes, "cron", {"hour": 12, "minute": 30})
     ]
 
     for job_id, func, trigger, params in jobs:
