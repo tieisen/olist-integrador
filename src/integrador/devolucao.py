@@ -9,7 +9,7 @@ from database.crud import devolucao as crudDev
 from src.olist.nota import Nota as NotaOlist
 from src.sankhya.nota import Nota as NotaSnk
 from src.parser.devolucao import Devolucao as parser
-from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno
+from src.utils.decorador import contexto, carrega_dados_ecommerce, log_execucao, interno, carrega_dados_empresa
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -22,6 +22,7 @@ class Devolucao:
     def __init__(self, id_loja:int=None, codemp:int=None):
         self.id_loja:int=id_loja
         self.codemp:int=codemp
+        self.empresa_id:int=None
         self.log_id:int=None
         self.contexto:str='devolucao'
         self.dados_ecommerce:dict={}
@@ -73,20 +74,60 @@ class Devolucao:
             
             # Registra no banco de dados
             ack = await crudDev.criar(chave_referenciada=chave_referenciada,
-                                        id_nota=dados_nota_devolucao.get('id'),
-                                        numero=int(dados_nota_devolucao.get('numero')),
-                                        serie=dados_nota_devolucao.get('serie'),
-                                        chave_acesso=dados_nota_devolucao.get('chaveAcesso'),
-                                        dh_emissao=dados_nota_devolucao.get('dataInclusao'))
+                                      id_nota=dados_nota_devolucao.get('id'),
+                                      numero=int(dados_nota_devolucao.get('numero')),
+                                      serie=dados_nota_devolucao.get('serie'),
+                                      chave_acesso=dados_nota_devolucao.get('chaveAcesso'),
+                                      dh_emissao=dados_nota_devolucao.get('dataInclusao'))
             if not ack:
                 msg = "Erro ao registrar nota de devolução"
                 raise Exception(msg)
             return {"success": True, "dados_nota":dados_nota_devolucao, "dados_nota_referenciada":dados_nota_referenciada, "__exception__": None}
         except Exception as e:
+            logger.error(f"Erro ao receber nota de devolução: {e}")
             return {"success": False, "dados_nota":None, "dados_nota_referenciada": None, "__exception__": str(e)}
         
     @carrega_dados_ecommerce
-    async def lancar(self,dados_devolucao:dict,dados_nota_referenciada:dict) -> dict:
+    @carrega_dados_empresa
+    async def lancar(self,dados_devolucao:dict) -> dict:
+        """
+        Registra NFDs no Sankhya
+            :param dados_devolucao: dicionário com os dados da NFD
+            :return dict: dicionário com status, número único da devolução de venda no Sankhya, ID do pedido no Olist e erro
+        """
+
+        nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'),codemp=self.codemp)     
+
+        try:
+            if not isinstance(dados_devolucao,dict):
+                dados_devolucao = dados_devolucao[0]
+
+            # Converte para o formato da API do Sankhya
+            parse = parser()
+            dados_cabecalho, dados_itens = parse.to_sankhya_(dados_empresa=self.dados_empresa,dados_nfd=dados_devolucao)
+            if not all([dados_cabecalho, dados_itens]):
+                msg = "Erro ao converter dados da devolucao para o formato da API do Sankhya"
+                raise Exception(msg)
+            
+            # Lança devolução
+            nunota_devolucao = await nota_snk.devolver_sem_lote(dados_cabecalho=dados_cabecalho,dados_itens=dados_itens)
+            if not isinstance(nunota_devolucao,int) or nunota_devolucao==0:
+                msg = f"Erro ao lançar NFD {dados_devolucao.get('numero')}. Nenhum número de nota retornado. {nunota_devolucao}"
+                raise Exception(msg)
+            
+            # Atualiza a nota no banco de dados            
+            ack = await crudDev.atualizar(id_nota=dados_devolucao.get('id'),nunota=nunota_devolucao,dh_confirmacao=datetime.now())
+            if not ack:
+                msg = f"Erro ao atualizar status da nota"
+                print(msg)
+                raise Exception(msg)
+
+            return {"success": True, "nunota":nunota_devolucao, "__exception__": None}
+        except Exception as e:
+            return {"success": False, "nunota":None, "__exception__": str(e)}   
+        
+    @carrega_dados_ecommerce
+    async def lancar_unico(self,dados_devolucao:dict,dados_nota_referenciada:dict) -> dict:
         """
         Registra NFDs no Sankhya
             :param dados_devolucao: dicionário com os dados da NFD
@@ -240,19 +281,20 @@ class Devolucao:
             await crudLog.atualizar(id=self.log_id)
             return True
 
+        print(f"Devoluções para processar: {len(lista_devolucoes)}")
+
         for i, devolucao in enumerate(lista_devolucoes):
             time.sleep(self.req_time_sleep)
-            ack_devolucao = await self.receber(id=devolucao.get("id"))
-            # Registra no log
-            for ack in ack_devolucao:
-                if not ack.get('success'):
-                    msg = f"Erro ao receber nota de devolução {devolucao.get('numero')}: {ack.get('__exception__',None)}"
-                    logger.error(msg)
-                await crudLogPed.criar(log_id=self.log_id,
-                                       pedido_id=ack.get('pedido_id'),
-                                       evento='D',
-                                       sucesso=ack.get('success'),
-                                       obs=ack.get('__exception__',None))              
+            ack = await self.receber(id=devolucao.get("id"))
+            # Registra no log        
+            if not ack.get('success'):
+                msg = f"Erro ao receber nota de devolução {devolucao.get('numero')}: {ack.get('__exception__',None)}"
+                logger.error(msg)
+            await crudLogPed.criar(log_id=self.log_id,
+                                    pedido_id=ack.get('pedido_id'),
+                                    evento='D',
+                                    sucesso=ack.get('success'),
+                                    obs=ack.get('__exception__',None))
 
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
@@ -280,19 +322,28 @@ class Devolucao:
             await crudLog.atualizar(id=self.log_id)
             return True
 
+        nota_olist = NotaOlist(id_loja=self.id_loja)        
         for i, devolucao in enumerate(devolucoes_pendentes):
             time.sleep(self.req_time_sleep)
-            ack_devolucao = await self.lancar(dados_devolucao=devolucao)
+            print(f"Processando NFD {devolucao.get('numero')} :: {i+1}/{len(devolucoes_pendentes)}")
+            dados_nfd:dict = await nota_olist.buscar(id=devolucao.get('id_nota'))
+            if not dados_nfd:
+                msg = f"Erro ao buscar nota de devolução {devolucao.get('numero')}"
+                logger.error(msg)
+                continue
+            
+            # Lança devolução
+            print("Lançando nota devolução")
+            ack_devolucao = await self.lancar(dados_devolucao=dados_nfd)
             # Registra no log
-            for ack in ack_devolucao:
-                if not ack.get('success'):
-                    msg = f"Erro ao integrar nota de devolução {devolucao.get('numero')}: {ack.get('__exception__',None)}"
-                    logger.error(msg)
-                await crudLogPed.criar(log_id=self.log_id,
-                                       pedido_id=ack.get('pedido_id'),
-                                       evento='D',
-                                       sucesso=ack.get('success'),
-                                       obs=ack.get('__exception__',None))              
+            if not ack_devolucao.get('success'):
+                msg = f"Erro ao integrar nota de devolução {devolucao.get('numero')}: {ack_devolucao.get('__exception__',None)}"
+                logger.error(msg)
+                # await crudLogPed.criar(log_id=self.log_id,
+                #                        pedido_id=ack.get('pedido_id'),
+                #                        evento='D',
+                #                        sucesso=ack.get('success'),
+                #                        obs=ack.get('__exception__',None))              
 
         # Atualiza log
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
@@ -374,7 +425,7 @@ class Devolucao:
                 msg = f"Erro ao receber nota de devolução {numero_nota}: dados da nota não encontrados"
                 raise Exception(msg)
             
-            ack = await self.lancar(dados_devolucao=dados_nota_devolucao,
+            ack = await self.lancar_unico(dados_devolucao=dados_nota_devolucao,
                                     dados_nota_referenciada=dados_nota_referenciada)
             if not ack.get('success'):
                 msg = f"Erro ao lançar nota de devolução {numero_nota}: {ack.get('__exception__',None)}"
