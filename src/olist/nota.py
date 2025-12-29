@@ -133,7 +133,7 @@ class Nota:
         """
 
         if not data:
-            data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d')
+            data = (datetime.today()-timedelta(days=5)).strftime('%Y-%m-%d')
         else:
             data = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
             
