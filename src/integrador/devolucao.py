@@ -124,6 +124,7 @@ class Devolucao:
 
             return {"success": True, "nunota":nunota_devolucao, "__exception__": None}
         except Exception as e:
+            logger.error(f"Erro ao lancar NFD {dados_devolucao.get('numero')}: {e}")
             return {"success": False, "nunota":None, "__exception__": str(e)}   
         
     @carrega_dados_ecommerce
@@ -322,7 +323,8 @@ class Devolucao:
             await crudLog.atualizar(id=self.log_id)
             return True
 
-        nota_olist = NotaOlist(id_loja=self.id_loja)        
+        nota_olist = NotaOlist(id_loja=self.id_loja)
+        msg = ''
         for i, devolucao in enumerate(devolucoes_pendentes):
             time.sleep(self.req_time_sleep)
             print(f"Processando NFD {devolucao.get('numero')} :: {i+1}/{len(devolucoes_pendentes)}")
@@ -339,14 +341,10 @@ class Devolucao:
             if not ack_devolucao.get('success'):
                 msg = f"Erro ao integrar nota de devolução {devolucao.get('numero')}: {ack_devolucao.get('__exception__',None)}"
                 logger.error(msg)
-                # await crudLogPed.criar(log_id=self.log_id,
-                #                        pedido_id=ack.get('pedido_id'),
-                #                        evento='D',
-                #                        sucesso=ack.get('success'),
-                #                        obs=ack.get('__exception__',None))              
+                continue
 
         # Atualiza log
-        status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
+        status_log = False if msg else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
         return status_log
     
