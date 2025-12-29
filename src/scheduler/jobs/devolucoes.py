@@ -17,8 +17,8 @@ async def integrar_devolucoes(codemp:int=None):
         print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
         ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
         for j, ecom in enumerate(ecommerces):
-            print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecom)})".upper())
-            devolucao = Devolucao(id_loja=ecom.get('id_loja'))
+            print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
+            devolucao = Devolucao(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
             ack.append(await devolucao.integrar_receber())
             ack.append(await devolucao.integrar_devolucoes())
     
