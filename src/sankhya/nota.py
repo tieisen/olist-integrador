@@ -300,6 +300,50 @@ class Nota:
         else:
             logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
             return False
+        
+    @token_snk
+    @carrega_dados_empresa
+    async def devolver_sem_lote(self,dados_cabecalho:dict,dados_itens:list[dict]) -> int:
+        """
+        Lança uma NFD.
+            :param dados_cabecalho: cabecalho da NFD
+            :param dados_itens: itens da NFD
+            :return int: número único da NFD gerada
+        """
+        
+        url = os.getenv('SANKHYA_URL_PEDIDO')
+        if not url:
+            print(f"Erro relacionado à url. {url}")
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json={
+                "serviceName":"CACSP.incluirNota",
+                "requestBody":{
+                    "nota":{
+                        "cabecalho":dados_cabecalho,
+                        "itens":{
+                            "INFORMARPRECO":"True",
+                            "item": dados_itens
+                        }
+                    }
+                }
+            })
+        if res.status_code in (200,201):
+            if res.json().get('status')=='0':
+                logger.error("Erro ao lançar NFD. %s",res.text)
+                return False
+            if res.json().get('status')=='1':
+                return self.extrai_nunota(res.json())
+            if res.json().get('status')=='2':
+                logger.error("NFD %s lançado com erro. %s",self.extrai_nunota(res.json()),res.text)
+                return self.extrai_nunota(res.json())
+        else:
+            logger.error("Erro ao lançar NFD. %s",res.text)
+            return False
 
     @token_snk
     async def alterar_observacao(self,nunota:int,observacao:str) -> bool:
