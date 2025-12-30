@@ -274,7 +274,10 @@ class Financeiro:
             vlr_total_pedido = dados_conta.get('valor')
             vlr_pago = dados_recebimento.get('released_amount')
             historico = dados_conta.get('historico')
-            dt_recebimento = datetime.fromtimestamp(dados_recebimento.get('actual_payout_time'), UTC).strftime('%d/%m/%Y')
+            try:
+                dt_recebimento = datetime.fromtimestamp(dados_recebimento.get('actual_payout_time'), UTC).strftime('%d/%m/%Y')
+            except:
+                dt_recebimento = dados_recebimento.get('actual_payout_time')
 
             if not any([vlr_total_pedido,vlr_pago]):
                 raise ValueError("Total do pedido ou valor do recebimento não encontrado. vlr_total_pedido: %s. vlr_pago: %s", vlr_total_pedido, vlr_pago)
