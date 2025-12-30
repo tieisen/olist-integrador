@@ -164,7 +164,6 @@ class Pedido:
             return True
         return lista_pedidos
 
-    @interno
     @carrega_dados_ecommerce
     async def consultar_cancelamentos(self) -> bool:
         """
