@@ -1,8 +1,6 @@
-import os
-import re
-import unicodedata
+import os, re, unicodedata
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, UTC
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -24,25 +22,11 @@ class Financeiro:
         if not texto:
             return texto
 
-        # Normaliza para decompor acentos
         texto = unicodedata.normalize('NFKD', texto)
-
-        # Remove acentos (caracteres combinantes)
-        texto = ''.join(
-            c for c in texto
-            if not unicodedata.combining(c)
-        )
-
-        # Remove caracteres especiais (mantém letras, números e espaço)
+        texto = ''.join(c for c in texto if not unicodedata.combining(c))
         texto = re.sub(r'[^a-zA-Z0-9\s]', '', texto)
-
-        # Remove espaços extras
         texto = re.sub(r'\s+', ' ', texto).strip()
-
-        # Adiciona _ nos espaços
         texto = texto.replace(' ', '_')
-
-        # Remove maiúsculas
         texto = texto.lower()
 
         return texto
@@ -288,9 +272,12 @@ class Financeiro:
 
         try:
             vlr_total_pedido = dados_conta.get('valor')
-            vlr_pago = dados_recebimento.get('valor')
+            vlr_pago = dados_recebimento.get('released_amount')
             historico = dados_conta.get('historico')
-            dt_recebimento = datetime.strptime(dados_recebimento.get('data'),'%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y')
+            try:
+                dt_recebimento = datetime.fromtimestamp(dados_recebimento.get('actual_payout_time'), UTC).strftime('%d/%m/%Y')
+            except:
+                dt_recebimento = dados_recebimento.get('actual_payout_time')
 
             if not any([vlr_total_pedido,vlr_pago]):
                 raise ValueError("Total do pedido ou valor do recebimento não encontrado. vlr_total_pedido: %s. vlr_pago: %s", vlr_total_pedido, vlr_pago)

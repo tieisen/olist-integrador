@@ -1,7 +1,4 @@
-import os
-import time
-import json
-import requests
+import os, json, requests
 from datetime import datetime, timedelta
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
@@ -16,7 +13,6 @@ class Produto:
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.token = None
-        self.req_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL') + os.getenv('OLIST_ENDPOINT_PRODUTOS')
         self.tempo_busca_alter_prod = int(os.getenv('OLIST_TEMPO_BUSCA_ALTER_PROD',30))
 

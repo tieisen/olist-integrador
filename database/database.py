@@ -1,6 +1,6 @@
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
 from sqlalchemy.sql import text
 from src.utils.load_env import load_env
 from src.utils.log import set_logger

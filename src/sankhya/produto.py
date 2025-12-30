@@ -1,6 +1,4 @@
-import os
-import requests
-import time
+import os, requests, time
 from src.utils.decorador import carrega_dados_empresa
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.autenticador import token_snk
@@ -255,3 +253,4 @@ class Produto:
         else:
             logger.error("Erro ao remover alterações pendentes. %s",res.json())
             return False
+        

@@ -1,5 +1,4 @@
-import os
-import requests
+import os, requests
 from datetime import datetime
 from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.autenticador import token_snk

@@ -1,8 +1,8 @@
+import os
 from database.database import AsyncSessionLocal
 from database.models import Sankhya, Empresa
 from datetime import datetime, timedelta
 from sqlalchemy.future import select
-import os
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -11,11 +11,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = [ 'token' ]
 
-async def criar(
-        empresa_id:int,
-        **kwargs
-    ):
-
+async def criar(empresa_id:int,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Sankhya,
                                kwargs=kwargs,
@@ -35,16 +31,11 @@ async def criar(
             logger.error("Erro ao salvar token no banco de dados: %s",e)
             return False
 
-async def buscar(
-        empresa_id:int=None,
-        codemp:int=None
-    ):
-
+async def buscar(empresa_id:int=None,codemp:int=None) -> dict:
     if not any([empresa_id,codemp]):
         return False
     
     async with AsyncSessionLocal() as session:
-
         if empresa_id:
             result = await session.execute(
                 select(Sankhya).where(Sankhya.empresa_id == empresa_id).order_by(Sankhya.id.desc()).fetch(1)
@@ -57,7 +48,6 @@ async def buscar(
 
         token = result.scalar_one_or_none()
         if not token:
-            # print("Token não encontrado")
             return False
                 
         dados_token = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
@@ -65,7 +55,7 @@ async def buscar(
         
         return dados_token 
 
-async def excluir(id:int):
+async def excluir(id:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Sankhya).where(Sankhya.id == id)
@@ -82,7 +72,7 @@ async def excluir(id:int):
             logger.error("Erro ao excluir token do banco de dados: %s", e)
             return False
 
-async def excluir_cache():
+async def excluir_cache() -> bool:
 
     try:
         dias = int(os.getenv('DIAS_LIMPA_CACHE',7))

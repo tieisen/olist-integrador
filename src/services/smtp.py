@@ -1,5 +1,4 @@
-import os
-import smtplib
+import os, smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database.crud import log
@@ -78,8 +77,7 @@ class Email:
         
         return ok
 
-
-    async def notificar(self, empresa_id:int, destinatario:str=None):
+    async def notificar(self, empresa_id:int, destinatario:str=None) -> bool:
 
         historico:list[dict]=[]
         corpo:str=''

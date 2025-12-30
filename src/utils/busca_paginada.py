@@ -1,6 +1,4 @@
-import os
-import time
-import requests
+import os, time, json, requests
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.formatter import Formatter
@@ -88,3 +86,29 @@ async def paginar_snk(token:str,url:str,payload:dict) -> list[dict]:
         pass
 
     return todos_resultados
+
+async def paginar_shopee(url:str,headers:dict) -> list[dict]:
+
+    itens:list[dict]=[]
+    req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP',1.5))
+    cursor_data:dict={'cursor': '', 'page_size': None}
+
+    try:
+        while cursor_data:
+            time.sleep(req_time_sleep)
+            resp = requests.post(
+                url=url+f"&cursor={cursor_data.get('cursor')}",
+                headers=headers
+            )
+            if not resp.ok:
+                return False
+            ret = json.loads(resp.content)        
+            new_cursor, new_data = ret['response'].get('next_page'), ret['response'].get('list')
+            itens.extend(new_data)
+            cursor_data = new_cursor
+    except Exception as e:
+        logger.error(f"Erro ao realizar busca paginada: {e}")
+    finally:
+        pass
+
+    return itens

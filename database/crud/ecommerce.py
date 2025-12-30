@@ -9,12 +9,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        id_loja:int,
-        nome:str,
-        empresa_id:int,
-        **kwargs
-    ):
+async def criar(id_loja:int,nome:str,empresa_id:int,**kwargs):
 
     if kwargs:
         kwargs = validar_dados(modelo=Ecommerce,
@@ -43,7 +38,7 @@ async def criar(
         await session.commit()
         return True
 
-async def buscar(empresa_id:int=None, id_loja:int=None):
+async def buscar(empresa_id:int=None, id_loja:int=None, ecommerce_id:int=None):
    
     async with AsyncSessionLocal() as session:
         if empresa_id:
@@ -56,6 +51,11 @@ async def buscar(empresa_id:int=None, id_loja:int=None):
             result = await session.execute(
                 select(Ecommerce)
                 .where(Ecommerce.id_loja == id_loja)
+            )
+        elif id:
+            result = await session.execute(
+                select(Ecommerce)
+                .where(Ecommerce.id == ecommerce_id)
             )
         else:
             result = await session.execute(

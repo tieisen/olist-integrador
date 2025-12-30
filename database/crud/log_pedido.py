@@ -10,14 +10,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        log_id:int,
-        evento:str,
-        pedido_id:int=None,
-        nunota:int=None,        
-        sucesso:bool=True,
-        obs:str=None
-    ) -> bool:
+async def criar(log_id:int,evento:str,pedido_id:int=None,nunota:int=None,sucesso:bool=True,obs:str=None) -> bool:
     async with AsyncSessionLocal() as session:
 
         if not any([pedido_id, nunota]):

@@ -1,6 +1,4 @@
-import os
-import re
-import time
+import os, re, time
 from datetime import datetime
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
@@ -138,8 +136,7 @@ class Pedido:
             if not id:
                 msg = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
                 raise Exception(msg)
-            print(f"Pedido {dados_pedido.get('numeroPedido')} adicionado à base de dados.")
-            return {"success": True, "id": id}
+            return {"success": True, "id": id, "__exception__": None}
         except Exception as e:
             logger.error("Erro ao receber pedido %s. %s",num_pedido or id_pedido,e)
             return {"success": False, "id": None, "__exception__": str(e)}
@@ -168,7 +165,6 @@ class Pedido:
             return True
         return lista_pedidos
 
-    @interno
     @carrega_dados_ecommerce
     async def consultar_cancelamentos(self) -> bool:
         """

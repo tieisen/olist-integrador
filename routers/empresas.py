@@ -34,13 +34,7 @@ async def criar(empresa: EmpresaCreate) -> bool:
     try:
         sucesso = await crud.criar(**empresa.model_dump())
         if not sucesso:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Erro ao criar empresa"
-            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="Erro ao criar empresa")
         return sucesso
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=str(e))

@@ -1,5 +1,4 @@
-import re
-import requests
+import re, requests
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()

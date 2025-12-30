@@ -1,9 +1,6 @@
-import inspect
-import asyncio
-import time
+import inspect, asyncio, time
 from functools import wraps
-from database.crud import ecommerce
-from database.crud import empresa
+from database.crud import ecommerce, empresa, shopee
 
 # EXTRAI CONTEXTO 
 def contexto(func):
@@ -57,6 +54,27 @@ def carrega_dados_empresa(func):
         # Garante que os dados da empresa estão carregados
         if not self.dados_empresa:
             await buscar_dados_empresa(self)
+        return await func(self, *args, **kwargs)
+    return wrapper
+
+# DADOS DA SHOPEE
+async def buscar_dados_shopee(self):
+    res = await shopee.buscar(ecommerce_id=self.ecommerce_id, empresa_id=self.empresa_id)
+    if isinstance(res, list):
+        self.dados_shopee = res[0]
+    else:
+        self.dados_shopee = res
+
+def carrega_dados_shopee(func):
+    """
+    Carrega os dados da loja Shopee na memória.
+        :param func: função que recebe o decorador
+    """
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        # Garante que os dados da empresa estão carregados
+        if not self.dados_shopee:
+            await buscar_dados_shopee(self)
         return await func(self, *args, **kwargs)
     return wrapper
 

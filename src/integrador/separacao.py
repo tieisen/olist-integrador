@@ -1,5 +1,4 @@
-import os
-import time
+import os, time
 from database.crud import pedido as crudPedido
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPedido
@@ -19,10 +18,7 @@ class Separacao:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
     @interno
-    async def valida_separacoes_registradas(
-            self,
-            lista_pedidos:list[dict]
-        ) -> list[dict]:
+    async def valida_separacoes_registradas(self,lista_pedidos:list[dict]) -> list[dict]:
         """
         Verifica quais separações já foram mapeadas
             :param lista_pedidos: lista de dicionários com os dados dos pedidos em separação
@@ -35,10 +31,7 @@ class Separacao:
         return pedidos_pendentes_separacao
 
     @interno
-    def validar_loja(
-            self,
-            lista_pedidos: list[dict]
-        ) -> list:
+    def validar_loja(self,lista_pedidos: list[dict]) -> list:
         """
         Verifica quais separações pertencem ao E-commerce informado
             :param lista_pedidos: lista de dicionários com os dados dos pedidos

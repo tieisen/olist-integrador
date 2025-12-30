@@ -1,6 +1,4 @@
-import os
-import requests
-from src.utils.decorador import carrega_dados_empresa, interno
+import os, requests
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger

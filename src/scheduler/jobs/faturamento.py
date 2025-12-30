@@ -1,5 +1,6 @@
 from database.crud import empresa, ecommerce
 from src.integrador.faturamento import Faturamento
+from src.integrador.pedido import Pedido
 
 async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
 
@@ -20,6 +21,8 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
                 for j, ecom in enumerate(ecommerces):
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     faturamento = Faturamento(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
+                    pedido = Pedido(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
+                    await pedido.consultar_cancelamentos()
                     await faturamento.integrar_olist()
                     await faturamento.integrar_snk()
             retorno = {

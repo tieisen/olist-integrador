@@ -15,10 +15,7 @@ COLUNAS_CRIPTOGRAFADAS = [
         'snk_admin_senha'
     ]    
 
-async def criar(snk_codemp:int,
-                nome:str,
-                cnpj:str,
-                **kwargs) -> bool:
+async def criar(snk_codemp:int,nome:str,cnpj:str,**kwargs) -> bool:
 
     if kwargs:
         kwargs = validar_dados(modelo=Empresa,
@@ -50,11 +47,7 @@ async def criar(snk_codemp:int,
         await session.refresh(nova_empresa)
         return nova_empresa.id
 
-async def atualizar(
-        id:int=None,
-        codemp:int=None,
-        **kwargs
-    ) -> bool:
+async def atualizar(id:int=None,codemp:int=None,**kwargs) -> bool:
 
     if not any([id,codemp]):
         return False
@@ -84,10 +77,7 @@ async def atualizar(
         await session.commit()
         return True
 
-async def buscar(
-        id:int=None,
-        codemp:int=None
-    ) -> dict:
+async def buscar(id:int=None,codemp:int=None) -> dict:
 
     async with AsyncSessionLocal() as session:
         if id:
@@ -109,10 +99,7 @@ async def buscar(
                                          retorno=empresa)        
         return dados_empresa
 
-async def excluir(
-        id:int=None,
-        codemp:int=None
-    ) -> bool:
+async def excluir(id:int=None,codemp:int=None) -> bool:
 
     if not any([id,codemp]):
         return False

@@ -1,7 +1,4 @@
-import os
-import time
-import requests
-from tqdm import tqdm
+import os, time, requests
 from src.utils.autenticador import token_olist
 from src.parser.estoque import Estoque as ParserEstoque
 from src.utils.log import set_logger
@@ -11,11 +8,7 @@ logger = set_logger(__name__)
 
 class Estoque:
 
-    def __init__(
-            self,
-            codemp:int=None,
-            empresa_id:int=None
-        ):  
+    def __init__(self,codemp:int=None,empresa_id:int=None):  
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.token = None
@@ -23,11 +16,7 @@ class Estoque:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         
     @token_olist
-    async def buscar(
-            self,
-            id:int=None,
-            lista_produtos:list[int]=None
-        ) -> list[dict]:
+    async def buscar(self,id:int=None,lista_produtos:list[int]=None) -> list[dict]:
         """
         Busca estoque atual dos produtos
             :param id: ID do produto (Olist)
@@ -59,7 +48,7 @@ class Estoque:
                 return result            
 
         if lista_produtos:
-            for produto in tqdm(lista_produtos):
+            for produto in lista_produtos:
                 url = self.endpoint+f"/{produto}"
                 time.sleep(self.req_time_sleep)
                 res = requests.get(
@@ -80,12 +69,7 @@ class Estoque:
         return result
     
     @token_olist
-    async def enviar_saldo(
-            self,
-            id:int=None,
-            data:dict=None,
-            lista_dados:list=None
-        ) -> list[dict]:
+    async def enviar_saldo(self,id:int=None,data:dict=None,lista_dados:list=None) -> list[dict]:
         """
         Atualiza o estoque do produto no Olist
             :param id: ID do produto (Olist)
@@ -95,7 +79,6 @@ class Estoque:
         """
         
         if not all([id,data]) and not lista_dados:
-            logger.error("Dados não informados.")
             return False
 
         url = None

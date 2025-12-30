@@ -19,8 +19,8 @@ async def integrar(devolucao:DevolucaoEmpresa) -> bool:
     """
     res:dict={}
     res = await integrar_devolucoes(codemp=devolucao.codemp)
-    if not res.get('status'):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
+    if not res:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao integrar devoluções.")
     return True
 
 @router.post("/devolver")
@@ -41,9 +41,7 @@ async def cancelar_devolucao(devolucao:DevolucaoNota) -> bool:
     Cancela nota de devolução
     """
     _devolucao = Devolucao(codemp=devolucao.codemp)
-    res:dict={}
     res = await _devolucao.integrar_cancelamento(numero=devolucao.numero)
-    if not res.get('status'):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
+    if not res:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao cancelar devolução.")
     return True
-

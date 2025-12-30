@@ -10,13 +10,12 @@ load_env()
 logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = [
-        'token', 'refresh_token', 'id_token'
+        'token',
+        'refresh_token',
+        'id_token'
     ]   
 
-async def criar(
-        empresa_id:int,
-        **kwargs
-    ):
+async def criar(empresa_id:int,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Olist,
                                kwargs=kwargs,
@@ -34,10 +33,7 @@ async def criar(
             logger.error("Erro ao salvar token no banco de dados: %s",e)
             return False
 
-async def buscar(
-        empresa_id:int=None,
-        codemp:int=None
-    ):
+async def buscar(empresa_id:int=None,codemp:int=None) -> dict:
     if not any([empresa_id,codemp]):
         return False
     async with AsyncSessionLocal() as session:
@@ -56,7 +52,7 @@ async def buscar(
                                     retorno=token)        
     return dados_token 
 
-async def excluir(id:int):
+async def excluir(id:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Olist).where(Olist.id == id)
@@ -73,7 +69,7 @@ async def excluir(id:int):
             logger.error("Erro ao excluir token do banco de dados: %s", e)
             return False
 
-async def excluir_cache():    
+async def excluir_cache() -> bool:    
     try:
         dias = int(os.getenv('DIAS_LIMPA_CACHE',7))
     except Exception as e:

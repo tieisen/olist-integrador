@@ -1,5 +1,4 @@
-import os
-import uvicorn
+import os, uvicorn
 from src.utils.load_env import load_env
 load_env()
 

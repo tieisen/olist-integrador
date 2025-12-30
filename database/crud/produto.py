@@ -10,13 +10,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        codprod:int,
-        idprod:int,
-        empresa_id:int,
-        **kwargs
-    ):
-
+async def criar(codprod:int,idprod:int,empresa_id:int,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Produto,
                                kwargs=kwargs,
@@ -47,13 +41,7 @@ async def criar(
         await session.refresh(novo_produto)
     return True
 
-async def atualizar(
-        codprod:int,
-        empresa_id:int,
-        pendencia:bool=False,
-        **kwargs
-    ):
-
+async def atualizar(codprod:int,empresa_id:int,pendencia:bool=False,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Produto,
                                kwargs=kwargs,
@@ -83,21 +71,19 @@ async def atualizar(
         await session.close()
         return True
 
-async def buscar_pendencias(empresa_id: int):
+async def buscar_pendencias(empresa_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Produto).where(Produto.pendencia.is_(True),
                                   Produto.empresa_id == empresa_id)
         )
         produtos = result.scalars().all()
-
         dados_produtos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
-                                         retorno=produtos)
+                                          retorno=produtos)
         
         return dados_produtos
 
-async def buscar(empresa_id: int, idprod: int=None, codprod: int=None):
-
+async def buscar(empresa_id:int, idprod:int=None, codprod:int=None) -> dict:
     if not any([idprod, codprod]):
         return False
 
@@ -119,7 +105,7 @@ async def buscar(empresa_id: int, idprod: int=None, codprod: int=None):
 
         return dados_produto
 
-async def excluir(codprod: int, empresa_id: int):
+async def excluir(codprod:int, empresa_id:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Produto).where(Produto.codprod == codprod,

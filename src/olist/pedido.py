@@ -1,6 +1,4 @@
-import os
-import time
-import requests
+import os, requests
 from src.olist.produto import Produto
 from datetime import datetime, timedelta
 from src.olist.produto import Produto
@@ -336,3 +334,4 @@ class Pedido:
         except Exception as e:
             logger.error(f"{e}")
             return False, lista_novos_pedidos
+        

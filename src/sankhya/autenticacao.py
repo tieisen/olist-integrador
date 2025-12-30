@@ -1,6 +1,4 @@
-import os
-import json
-import requests
+import os, json, requests
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_empresa, interno
 from database.crud import sankhya as crud
