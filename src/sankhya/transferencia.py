@@ -1,5 +1,4 @@
-import os
-import requests
+import os, requests
 from datetime import datetime
 from src.utils.formatter import Formatter
 from src.utils.decorador import interno, carrega_dados_empresa

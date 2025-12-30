@@ -1,6 +1,4 @@
-import os
-import json
-import requests
+import os, requests
 from datetime import datetime,timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -16,11 +14,7 @@ logger = set_logger(__name__)
 
 class Autenticacao:
 
-    def __init__(
-            self,
-            codemp:int=None,
-            empresa_id:int=None
-        ):
+    def __init__(self,codemp:int=None,empresa_id:int=None):
         self.codemp = codemp
         self.empresa_id = empresa_id
         self.auth_url = os.getenv('OLIST_AUTH_URL')
@@ -248,6 +242,3 @@ class Autenticacao:
         except Exception as e:
             logger.error("Erro na autenticacao: %s",e)
             return ''
-
-
-

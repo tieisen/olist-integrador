@@ -1,6 +1,4 @@
-import os
-import time
-import requests
+import os, time, requests
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_ecommerce
 from src.utils.autenticador import token_olist
@@ -151,10 +149,7 @@ class Nota:
             :return dict: dicionários com os dados da NF
         """
 
-        def desmembra_xml(
-                dados_nota:dict,
-                xml:str
-            ) -> dict:
+        def desmembra_xml(dados_nota:dict,xml:str) -> dict:
             """
             Extrai dados de controle de lotes e chave de acesso do XML da NF.
                 :param dados_nota: dicionário com os dados da NF

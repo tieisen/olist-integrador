@@ -9,14 +9,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        id_loja:int,
-        id_pedido:int,
-        cod_pedido:str,
-        num_pedido:int,
-        **kwargs
-    ):
-    
+async def criar(id_loja:int,id_pedido:int,cod_pedido:str,num_pedido:int,**kwargs) -> bool:    
     if kwargs:
         kwargs = validar_dados(modelo=Pedido,
                                kwargs=kwargs,
@@ -55,13 +48,7 @@ async def criar(
             print(f"Erro ao criar pedido {id_pedido}: {e}")
             return False
 
-async def buscar(
-        id_pedido:int=None,
-        num_pedido:int=None,
-        cod_pedido:str=None,
-        nunota:int=None,
-        lista:list[int]=None
-    ) -> list[dict]:
+async def buscar(id_pedido:int=None,num_pedido:int=None,cod_pedido:str=None,nunota:int=None,lista:list[int]=None) -> list[dict]:
 
     if not any([id_pedido, num_pedido, cod_pedido, nunota, lista]):
         print("Nenhum parâmetro informado")
@@ -98,13 +85,7 @@ async def buscar(
                                          retorno=pedidos)
         return dados_pedidos
 
-async def atualizar(
-        id_pedido:int=None,
-        num_pedido:int=None,
-        nunota:int=None,
-        lista_ids:list[int]=None,
-        **kwargs
-    ):
+async def atualizar(id_pedido:int=None,num_pedido:int=None,nunota:int=None,lista_ids:list[int]=None,**kwargs) -> bool:
 
     if not any([id_pedido, num_pedido, nunota, lista_ids]):
         print("Nenhum parâmetro informado")
@@ -156,12 +137,7 @@ async def atualizar(
         await session.commit()
         return True
 
-async def buscar_cancelar(
-        id_pedido:int=None,
-        num_pedido:int=None,
-        cod_pedido:str=None,
-        lista:list[int]=None
-    ) -> list[dict]:
+async def buscar_cancelar(id_pedido:int=None,num_pedido:int=None,cod_pedido:str=None,lista:list[int]=None) -> list[dict]:
 
     if not any([id_pedido, num_pedido, cod_pedido, lista]):
         print("Nenhum parâmetro informado")
@@ -202,7 +178,7 @@ async def buscar_cancelar(
                                          retorno=pedidos)
         return dados_pedidos
 
-async def cancelar(nunota:int):
+async def cancelar(nunota:int) -> bool:
             
     async with AsyncSessionLocal() as session:
         try:
@@ -226,7 +202,7 @@ async def cancelar(nunota:int):
             logger.error(f"Erro ao cancelar pedido {nunota}: {e}")
             return False
 
-async def buscar_importar(ecommerce_id:int):
+async def buscar_importar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.dh_importacao.is_(None),
@@ -241,7 +217,7 @@ async def buscar_importar(ecommerce_id:int):
                                         retorno=pedidos)
         return dados_pedido
 
-async def buscar_confirmar(ecommerce_id:int):
+async def buscar_confirmar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.dh_importacao.isnot(None),
@@ -255,7 +231,7 @@ async def buscar_confirmar(ecommerce_id:int):
                                         retorno=pedidos)
         return dados_pedido
 
-async def buscar_checkout(ecommerce_id:int):
+async def buscar_checkout(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.dh_cancelamento.is_(None),
@@ -268,7 +244,7 @@ async def buscar_checkout(ecommerce_id:int):
                                          retorno=pedidos)           
         return dados_pedidos
     
-async def buscar_faturar(ecommerce_id:int):
+async def buscar_faturar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).where(Pedido.dh_confirmacao.isnot(None),
@@ -281,7 +257,7 @@ async def buscar_faturar(ecommerce_id:int):
                                          retorno=pedidos)           
         return dados_pedidos
     
-async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
+async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None) -> list[dict]:
     if not any([ecommerce_id, nunota_nota]):
         return False
     
@@ -309,7 +285,7 @@ async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None):
                                          retorno=pedidos)           
         return dados_pedidos
 
-async def resetar(id_pedido:int):
+async def resetar(id_pedido:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido).filter(Pedido.id_pedido == id_pedido)

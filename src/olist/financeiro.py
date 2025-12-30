@@ -1,5 +1,4 @@
-import os
-import requests
+import os, requests
 from datetime import datetime
 from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
 from src.utils.autenticador import token_olist
@@ -195,4 +194,4 @@ class Financeiro:
             logger.error("payload: %s", payload)
             return False       
 
-        return True        
+        return True

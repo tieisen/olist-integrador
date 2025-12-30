@@ -1,5 +1,4 @@
-import os
-import json
+import os, json
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
@@ -50,3 +49,4 @@ class Estoque:
             logger.error(e)
         finally:
             return int_res,dict_res
+        

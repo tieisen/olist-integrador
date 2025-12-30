@@ -1,6 +1,4 @@
-import os
-import re
-import json
+import os, json
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env

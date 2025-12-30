@@ -1,5 +1,4 @@
-import os
-import requests
+import os, requests
 from src.utils.autenticador import token_olist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env

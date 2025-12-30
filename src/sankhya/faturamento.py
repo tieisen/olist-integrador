@@ -1,5 +1,4 @@
-import os
-import requests
+import os, requests
 from src.utils.autenticador import token_snk
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.formatter import Formatter

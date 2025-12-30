@@ -101,7 +101,7 @@ async def buscar(id_nota:int=None,nunota:int=None,numero_ecommerce:dict=None,cha
         pass
     return res
 
-async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=None,nunota_nota:int=None,cod_pedido:int=None,**kwargs):
+async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=None,nunota_nota:int=None,cod_pedido:int=None,**kwargs) -> bool:
 
     if not any([id_nota,chave_acesso,nunota_pedido,nunota_nota,cod_pedido]):
         print("Nenhum parâmetro informado")
@@ -178,7 +178,7 @@ async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=Non
         await session.commit()
         return True  
 
-async def salvar_dados_conta_shopee(cod_pedido:str,dados_conta:dict):
+async def salvar_dados_conta_shopee(cod_pedido:str,dados_conta:dict) -> bool:
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -191,10 +191,10 @@ async def salvar_dados_conta_shopee(cod_pedido:str,dados_conta:dict):
             logger.error(f"Nota do pedido {cod_pedido} não encontrada.")
             return False
         elif nota.dh_baixa_financeiro:
-            # logger.info(f"Conta do pedido {cod_pedido} já foi baixada.")
+            logger.info(f"Conta do pedido {cod_pedido} já foi baixada.")
             return True
         elif nota.income_data:
-            # logger.info(f"Conta do pedido {cod_pedido} já foi importada.")
+            logger.info(f"Conta do pedido {cod_pedido} já foi importada.")
             return True
         else:
             try:
@@ -205,7 +205,7 @@ async def salvar_dados_conta_shopee(cod_pedido:str,dados_conta:dict):
             await session.commit()
             return True  
 
-async def validar_pedido_atendido(id_pedido:int):
+async def validar_pedido_atendido(id_pedido:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -215,7 +215,7 @@ async def validar_pedido_atendido(id_pedido:int):
         pedido_atendido = result.scalar_one_or_none()
     return True if pedido_atendido else False    
 
-async def buscar_criar(ecommerce_id:int):
+async def buscar_criar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido)
@@ -230,7 +230,7 @@ async def buscar_criar(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota    
     
-async def buscar_emitir(ecommerce_id:int):
+async def buscar_emitir(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -244,7 +244,7 @@ async def buscar_emitir(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_financeiro(ecommerce_id:int):
+async def buscar_financeiro(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -257,7 +257,7 @@ async def buscar_financeiro(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_financeiro_parcelado(ecommerce_id:int):
+async def buscar_financeiro_parcelado(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -271,7 +271,7 @@ async def buscar_financeiro_parcelado(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_financeiro_baixar(ecommerce_id:int):
+async def buscar_financeiro_baixar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -285,7 +285,7 @@ async def buscar_financeiro_baixar(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_financeiro_baixar_shopee(ecommerce_id:int):
+async def buscar_financeiro_baixar_shopee(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -301,7 +301,7 @@ async def buscar_financeiro_baixar_shopee(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_atualizar_nunota(ecommerce_id:int):
+async def buscar_atualizar_nunota(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -313,7 +313,7 @@ async def buscar_atualizar_nunota(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_confirmar(ecommerce_id:int):
+async def buscar_confirmar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -327,7 +327,7 @@ async def buscar_confirmar(ecommerce_id:int):
                                   retorno=notas)
     return dados_nota 
 
-async def buscar_cancelar(ecommerce_id:int):
+async def buscar_cancelar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)

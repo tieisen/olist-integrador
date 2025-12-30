@@ -9,19 +9,8 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = []
 
-async def criar(
-        log_id:int,
-        codprod:int=0,
-        idprod:int=0,
-        campo:str='',
-        valor_old:str=None,
-        valor_new:str=None,
-        sucesso:bool=True,
-        obs:str=None,
-        produto_id:int=None
-    ) -> bool:
+async def criar(log_id:int,codprod:int=0,idprod:int=0,campo:str='',valor_old:str=None,valor_new:str=None,sucesso:bool=True,obs:str=None,produto_id:int=None) -> bool:
     async with AsyncSessionLocal() as session:
-
         empresa = await session.execute(
                     select(Log)
                     .where(Log.id == log_id)

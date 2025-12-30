@@ -9,15 +9,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = []
 
-async def criar(
-        log_id:int,
-        codprod:int,
-        idprod:int,
-        qtdmov:int=0,
-        sucesso:bool=True,
-        status_lotes:bool=None,
-        obs:str=None
-    ) -> bool:
+async def criar(log_id:int,codprod:int,idprod:int,qtdmov:int=0,sucesso:bool=True,status_lotes:bool=None,obs:str=None) -> bool:
     async with AsyncSessionLocal() as session:
         novo_log = LogEstoque(log_id=log_id,
                               codprod=codprod,

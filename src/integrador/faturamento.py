@@ -1,5 +1,4 @@
-import os
-import time
+import os, time
 from datetime import datetime
 from src.sankhya.faturamento import Faturamento as FaturamentoSnk
 from src.sankhya.estoque import Estoque as EstoqueSnk

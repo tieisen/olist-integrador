@@ -1,5 +1,4 @@
-import os
-import requests
+import os, requests
 from src.utils.decorador import carrega_dados_empresa, interno
 from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
@@ -378,3 +377,4 @@ class Estoque:
             erro = f"Erro ao validar estoque do(s) item(ns) de e-commerce na empresa {self.dados_empresa.get('snk_codemp_fornecedor')}. {res.json()}" 
             logger.error(erro)
             return False
+        

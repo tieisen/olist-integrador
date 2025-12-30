@@ -22,25 +22,11 @@ class Financeiro:
         if not texto:
             return texto
 
-        # Normaliza para decompor acentos
         texto = unicodedata.normalize('NFKD', texto)
-
-        # Remove acentos (caracteres combinantes)
-        texto = ''.join(
-            c for c in texto
-            if not unicodedata.combining(c)
-        )
-
-        # Remove caracteres especiais (mantém letras, números e espaço)
+        texto = ''.join(c for c in texto if not unicodedata.combining(c))
         texto = re.sub(r'[^a-zA-Z0-9\s]', '', texto)
-
-        # Remove espaços extras
         texto = re.sub(r'\s+', ' ', texto).strip()
-
-        # Adiciona _ nos espaços
         texto = texto.replace(' ', '_')
-
-        # Remove maiúsculas
         texto = texto.lower()
 
         return texto

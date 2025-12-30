@@ -12,12 +12,7 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(
-        empresa_id:int,
-        de:str,
-        para:str,
-        contexto:str
-    ) -> int:
+async def criar(empresa_id:int,de:str,para:str,contexto:str) -> int:
     async with AsyncSessionLocal() as session:
         novo_log = Log(empresa_id=empresa_id,
                        de=de,
@@ -28,10 +23,7 @@ async def criar(
         await session.refresh(novo_log)
     return novo_log.id
 
-async def atualizar(
-        id:int,
-        sucesso:bool=None
-    ) -> bool:
+async def atualizar(id:int,sucesso:bool=None) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Log)
@@ -112,10 +104,7 @@ async def buscar_falhas(empresa_id:int) -> list[dict]:
             pass
         return dados_logs
         
-async def listar_falhas(
-        empresa_id:int=None,
-        logs:list=None
-    ) -> list[dict]:
+async def listar_falhas(empresa_id:int=None,logs:list=None) -> list[dict]:
     lista_falhas = []
 
     if not any([empresa_id, logs]):
@@ -154,7 +143,6 @@ async def listar_falhas(
     return lista_falhas
 
 async def excluir_cache():
-
     try:
         dias = int(os.getenv('DIAS_LIMPA_CACHE',7))*4
     except Exception as e:

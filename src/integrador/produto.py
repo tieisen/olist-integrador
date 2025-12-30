@@ -1,5 +1,4 @@
-import os
-import time
+import os, time
 from datetime import datetime
 from src.parser.produto import Produto as Parser
 from src.olist.produto import Produto as ProdutoOlist
@@ -175,8 +174,7 @@ class Produto:
         # Envia dados para o Olist
         ack_olist, dados_produto_olist = await self.olist.incluir(data=dados_formato_olist)
         if not ack_olist:
-            produto['obs'] = f'''Erro ao incluir produto {produto.get('codprod')} no Olist.
-                                 Payload:{dados_formato_olist}'''
+            produto['obs'] = f"Erro ao incluir produto {produto.get('codprod')} no Olist.\nPayload:{dados_formato_olist}"
             produto['sucesso'] = False
             logger.error(produto['obs'])
             return False
@@ -251,8 +249,7 @@ class Produto:
                                                      idprodpai=dados_produto_sankhya.get('idprodpai'),
                                                      data=dados_formato_olist)
         if not ack_atualizacao:
-            produto['obs'] = f'''Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Olist.
-                                 Payload:{dados_formato_olist}'''
+            produto['obs'] = f"Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Olist.\nPayload:{dados_formato_olist}"
             produto['sucesso'] = False
             logger.error(produto['obs'])
             return False
@@ -320,8 +317,7 @@ class Produto:
         ack_atualizacao = await self.snk.atualizar(codprod=int(produto.get('codprod')),
                                                    payload=dados_formato_snk)
         if not ack_atualizacao:
-            produto['obs'] = f'''Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Sankhya.
-                                 Payload:{dados_formato_snk}'''
+            produto['obs'] = f"Erro ao atualizar produto {produto.get('codprod')}/{produto.get('idprod')} no Sankhya.\nPayload:{dados_formato_snk}"
             produto['sucesso'] = False
             logger.error(produto['obs'])
             return False

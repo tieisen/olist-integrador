@@ -1,6 +1,4 @@
-import os
-import re
-import time
+import os, re, time
 from datetime import datetime
 from database.crud import log as crudLog
 from database.crud import log_pedido as crudLogPed
