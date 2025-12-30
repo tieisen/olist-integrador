@@ -35,7 +35,8 @@ app = FastAPI(title=api_title,
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",  # Permite qualquer origem
+    # allow_origin_regex=".*",  # Permite qualquer origem
+    allow_origins=["*"],  # Permite qualquer origem
     allow_credentials=True,
     allow_methods=["*"],  # Permite todos os métodos HTTP
     allow_headers=["*"],  # Permite todos os headers
