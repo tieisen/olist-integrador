@@ -62,6 +62,8 @@ async def integrar_financeiro(data:str,codemp:int=None) -> dict:
             if await bot.rotina_relatorio_custos(data=data):            
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 for j, ecom in enumerate(ecommerces):
+                    if 'SHOPEE' in ecom.get('nome').upper():
+                        continue
                     print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                     financeiro = Financeiro(id_loja=ecom.get('id_loja'),empresa_id=ecom.get('empresa_id'))
                     # Agrupa títulos dos pedidos parcelados
@@ -88,7 +90,7 @@ async def integrar_recebimentos_shopee(codemp:int=None) -> dict:
     empresas:list[dict]=[]
     emp:dict={}
 
-    print(":::::::::::::::::::: BUSCANDO RECEBIMENTOS SHOPEE ::::::::::::::::::::")    
+    print(":::::::::::::::::::: RECEBIMENTOS SHOPEE ::::::::::::::::::::")    
 
     empresas = await empresa.buscar(codemp=codemp)
     try:
