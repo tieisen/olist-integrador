@@ -1,5 +1,4 @@
-import os
-import time
+import os, time
 from datetime import datetime, timedelta
 from database.crud import log as crudLog
 from database.crud import nota as crudNota
@@ -27,9 +26,9 @@ class Financeiro:
         self.dados_empresa:dict = None
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
-    async def buscar_contas_shopee(self, ecommerce_id:int=None):
+    async def buscar_contas_shopee(self, ecommerce_id:int=None, dias:int=1) -> bool:
         
-        dt_inicio = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        dt_inicio = (datetime.now() - timedelta(days=dias)).strftime('%Y-%m-%d')
         dt_fim = datetime.now().strftime('%Y-%m-%d')        
         dados_contas:list[dict] = []
 
