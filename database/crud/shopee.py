@@ -1,7 +1,5 @@
-import os
 from database.database import AsyncSessionLocal
 from database.models import Shopee, Ecommerce
-from datetime import datetime, timedelta
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
@@ -10,10 +8,12 @@ load_env()
 logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = [
-        'access_token', 'refresh_token', 'partner_key'
+        'access_token',
+        'refresh_token',
+        'partner_key'
     ]   
 
-async def criar(ecommerce_id:int,**kwargs):
+async def criar(ecommerce_id:int,**kwargs) -> bool:
     if kwargs:
         kwargs = validar_dados(modelo=Shopee, kwargs=kwargs, colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
         if not kwargs:
@@ -28,8 +28,7 @@ async def criar(ecommerce_id:int,**kwargs):
             logger.error("Erro ao salvar token no banco de dados: %s",e)
             return False
 
-async def atualizar(partner_id:int=None,ecommerce_id:int=None,**kwargs):
-
+async def atualizar(partner_id:int=None,ecommerce_id:int=None,**kwargs) -> bool:
     if not any([partner_id, ecommerce_id]):
         print("Nenhum parâmetro informado")
         return False
@@ -68,7 +67,7 @@ async def atualizar(partner_id:int=None,ecommerce_id:int=None,**kwargs):
         await session.commit()
         return True
 
-async def buscar(ecommerce_id:int=None,empresa_id:int=None):
+async def buscar(ecommerce_id:int=None,empresa_id:int=None) -> dict:
     if not any([ecommerce_id,empresa_id]):
         return False
     async with AsyncSessionLocal() as session:
@@ -86,7 +85,7 @@ async def buscar(ecommerce_id:int=None,empresa_id:int=None):
     dados_token = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,retorno=token)        
     return dados_token 
 
-async def buscar_idloja(ecommerce_id:int):
+async def buscar_idloja(ecommerce_id:int) -> int:
     
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -94,11 +93,11 @@ async def buscar_idloja(ecommerce_id:int):
         )
         ecommerce = result.scalar_one_or_none()
     if not ecommerce:
-        return False        
+        return 0        
     else:
         return ecommerce.id_loja
 
-async def excluir(id:int):
+async def excluir(id:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Shopee).where(Shopee.id == id)
@@ -113,27 +112,4 @@ async def excluir(id:int):
             return True
         except Exception as e:
             logger.error("Erro ao excluir token do banco de dados: %s", e)
-            return False
-
-async def excluir_cache():    
-    try:
-        dias = int(os.getenv('DIAS_LIMPA_CACHE',7))
-    except Exception as e:
-        erro = f"Valor para intervalo de dias do cache não encontrado. {e}"
-        logger.error(erro)
-        return False    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Shopee).where(Shopee.dh_solicitacao < (datetime.now()-timedelta(days=dias)))
-        )
-        tokens = result.scalars().all()
-        if not tokens:
-            return None
-        try:
-            for token in tokens:
-                await session.delete(token)
-            await session.commit()
-            return True
-        except Exception as e:
-            logger.error("Erro ao excluir tokens do banco de dados: %s", e)
             return False
