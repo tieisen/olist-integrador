@@ -185,7 +185,7 @@ class Pagamento:
         self.dados_shopee = auth_instance.dados_shopee if auth_instance else None        
 
     @carrega_dados_shopee
-    async def get_income_detail(self, date_from:str, date_to:str, income_status:int=1,page_size:int=100) -> tuple[list[dict],list[dict]]:
+    async def get_income_detail(self, date_from:str, date_to:str, income_status:int=1, page_size:int=100) -> list[dict]:
         access_token = await self.auth_instance.autenticar()
         timest:int = int(time.time())
         partner_id:int = self.dados_shopee.get("partner_id")
