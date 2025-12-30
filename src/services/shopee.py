@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_shopee
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.busca_paginada import paginar_shopee
 load_env()
 logger = set_logger(__name__)
 
@@ -184,7 +185,7 @@ class Pagamento:
         self.dados_shopee = auth_instance.dados_shopee if auth_instance else None        
 
     @carrega_dados_shopee
-    async def get_income_detail(self, date_from:str, date_to:str, income_status:int=1,cursor:str='',page_size:int=100) -> tuple[list[dict],list[dict]]:
+    async def get_income_detail(self, date_from:str, date_to:str, income_status:int=1,page_size:int=100) -> tuple[list[dict],list[dict]]:
         access_token = await self.auth_instance.autenticar()
         timest:int = int(time.time())
         partner_id:int = self.dados_shopee.get("partner_id")
@@ -195,13 +196,7 @@ class Pagamento:
         partner_key_encoded = partner_key.encode()
         sign = hmac.new(partner_key_encoded, base_string_encoded, hashlib.sha256).hexdigest()
         common_params = "partner_id=%s&timestamp=%s&access_token=%s&shop_id=%s&sign=%s" % (partner_id,timest,access_token,shop_id,sign)
-        req_params = "date_from=%s&date_to=%s&income_status=%s&cursor=%s&page_size=%s" % (date_from,date_to,income_status,cursor,page_size)
+        req_params = "date_from=%s&date_to=%s&income_status=%s&page_size=%s" % (date_from,date_to,income_status,page_size)
         url = HOST_URL + PATH_INCOME_DETAIL + "?" + common_params + "&" + req_params
         headers = {"Content-Type": "application/json"}
-        resp = requests.post(url, headers=headers)
-        if resp.ok:
-            ret = json.loads(resp.content)
-            return ret['response'].get('next_page'), ret['response'].get('list')
-        else:
-            print(resp.content)
-            return False
+        return await paginar_shopee(url=url,headers=headers)
