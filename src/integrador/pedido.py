@@ -585,8 +585,8 @@ class Pedido:
             itens_venda_interna, itens_ecommerce = self.compara_saldos(saldo_estoque=saldo_estoque,
                                                                        saldo_pedidos=itens_agrupados)
 
-            # print(f"Itens a transferir: {itens_venda_interna}")
-            # print(f"Itens no estoque e-commerce: {itens_ecommerce}")
+            logger.info(f"Itens a transferir: {True if itens_venda_interna else False}")
+            logger.info(f"Itens no estoque e-commerce: {True if itens_ecommerce else False}")
 
             lista_retornos:list[dict]=[]
             if itens_venda_interna:
