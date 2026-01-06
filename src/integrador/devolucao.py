@@ -280,7 +280,7 @@ class Devolucao:
             await crudLog.atualizar(id=self.log_id)
             return True
 
-        print(f"Devoluções para processar: {len(lista_devolucoes)}")
+        logger.info(f"Devoluções para processar: {len(lista_devolucoes)}")
 
         for i, devolucao in enumerate(lista_devolucoes):
             time.sleep(self.req_time_sleep)
