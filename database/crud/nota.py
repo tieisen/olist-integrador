@@ -209,7 +209,7 @@ async def validar_pedido_atendido(id_pedido:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
-            .where(Nota.dh_cancelamento.isnot(None),
+            .where(Nota.dh_cancelamento.is_(None),
                    Nota.pedido_.has(Pedido.id_pedido == id_pedido))
         )
         pedido_atendido = result.scalar_one_or_none()
