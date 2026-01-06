@@ -131,11 +131,12 @@ class Nota:
         """
 
         if not data:
-            data = (datetime.today()-timedelta(days=5)).strftime('%Y-%m-%d')
+            data_fim = datetime.today().strftime('%Y-%m-%d')
+            data_ini = (datetime.today()-timedelta(days=5)).strftime('%Y-%m-%d')
         else:
-            data = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
+            data_ini = data_fim = datetime.strptime(data, '%Y-%m-%d').strftime('%Y-%m-%d')
             
-        url = self.endpoint+f"/?tipo=E&dataInicial={data}&dataFinal={data}"
+        url = self.endpoint+f"/?tipo=E&dataInicial={data_ini}&dataFinal={data_fim}"
 
         return await paginar_olist(token=self.token,url=url)
     
