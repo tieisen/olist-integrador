@@ -265,7 +265,7 @@ class Devolucao:
                                           contexto=kwargs.get('_contexto'))
 
         lista_devolucoes:list[dict]=[]
-        nota_olist = NotaOlist(id_loja=self.id_loja)
+        nota_olist = NotaOlist(empresa_id=self.dados_ecommerce.get('empresa_id'),id_loja=self.id_loja)        
         # Busca devoluções
         lista_devolucoes = await nota_olist.buscar_devolucoes(data=data)
         if not lista_devolucoes:
@@ -321,7 +321,7 @@ class Devolucao:
             await crudLog.atualizar(id=self.log_id)
             return True
 
-        nota_olist = NotaOlist(id_loja=self.id_loja)
+        nota_olist = NotaOlist(empresa_id=self.dados_ecommerce.get('empresa_id'),id_loja=self.id_loja)
         msg = ''
         for i, devolucao in enumerate(devolucoes_pendentes):
             time.sleep(self.req_time_sleep)
