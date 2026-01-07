@@ -56,9 +56,17 @@ class Financeiro:
         if id:
             return res.json()
         elif id_nota:
-            return res.json().get('itens')[0]        
+            try:
+                res_ = res.json().get('itens')[0]
+                return res_
+            except IndexError:
+                return None
         elif all([serieNf, numeroNf]):
-            return res.json().get('itens')[0]
+            try:
+                res_ = res.json().get('itens')[0]
+                return res_
+            except IndexError:
+                return None            
         else:
             return res.json().get('itens')
 
