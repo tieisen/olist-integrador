@@ -70,6 +70,8 @@ async def validar_sucesso_pelo_historico(id:int) -> bool:
             contexto = log_produto
         case c if 'estoque' in c:
             contexto = log_estoque
+        case c if 'devolucao' in c:
+            contexto = log_pedido
 
     if not contexto:
         print(f"Contexto não encontrado. Parâmetro: {dados_log.get('contexto')}")
