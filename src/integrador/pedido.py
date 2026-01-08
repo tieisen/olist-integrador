@@ -227,6 +227,11 @@ class Pedido:
                                    sucesso=ack.get('success'),
                                    obs=ack.get('__exception__',None))            
         else:
+            # Valida cancelamentos
+            if not await self.consultar_cancelamentos():
+                logger.error("Erro ao validar cancelamentos")
+                await crudLog.atualizar(id=self.log_id,sucesso=False)
+
             # Consulta pedidos novos
             pedidos_novos = await self.consultar_pedidos_novos(atual=atual)
             if isinstance(pedidos_novos, list):
