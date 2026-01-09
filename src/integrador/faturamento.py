@@ -543,25 +543,19 @@ class Faturamento:
         
         # Valida status da conferência dos pedidos
         conf_snk = ConfSnk(codemp=self.codemp,empresa_id=self.dados_ecommerce.get('empresa_id'))
-        pedidos_validar_conferencia:list[dict] = list(set([p.get("nunota") for p in pedidos_faturar]))
+        pedidos_validar_conferencia:list[int] = list(set([p.get("nunota") for p in pedidos_faturar]))
         pedidos_validos:list[dict] = []
         for pedido in pedidos_validar_conferencia:
             time.sleep(self.req_time_sleep)
-            ack_validacao:dict = await conf_snk.buscar(nunota=pedido.get('nunota'))
+            ack_validacao:dict = await conf_snk.buscar(nunota=pedido)
             if not ack_validacao:
-                await crudLogPed.criar(log_id=self.log_id,
-                                       pedido_id=pedido.get('id'),
-                                       evento='F',
-                                       sucesso=False,
-                                       obs="Pedido não conferido.")
+                logger.info(f"Pedido {pedido} não conferido.")
             elif ack_validacao.get('status') != 'F':
-                await crudLogPed.criar(log_id=self.log_id,
-                                       pedido_id=pedido.get('id'),
-                                       evento='F',
-                                       sucesso=False,
-                                       obs="Conferência do pedido não foi concluída ou com divergências.")
+                logger.info(f"Conferência do pedido {pedido} não foi concluída ou com divergências.")
             else:
-                pedidos_validos.append(next((p for p in pedidos_faturar if p.get("nunota") == pedido),None))
+                for p in pedidos_faturar:
+                    if p.get("nunota") == pedido:
+                        pedidos_validos.append(p)
 
         # Fatura pedidos no Olist
         for i, pedido in enumerate(pedidos_validos):
@@ -605,19 +599,11 @@ class Faturamento:
         for i, pedido in enumerate(pedidos_faturar):
             time.sleep(self.req_time_sleep)
             # Valida status da conferência dos pedidos
-            ack_validacao:dict = await conf_snk.buscar(nunota=pedido.get('nunota'))
+            ack_validacao:dict = await conf_snk.buscar(nunota=pedido)
             if not ack_validacao:
-                await crudLogPed.criar(log_id=self.log_id,
-                                       pedido_id=pedido.get('id'),
-                                       evento='F',
-                                       sucesso=False,
-                                       obs="Pedido não conferido.")
+                logger.info(f"Pedido {pedido} não conferido.")
             elif ack_validacao.get('status') != 'F':
-                await crudLogPed.criar(log_id=self.log_id,
-                                       pedido_id=pedido.get('id'),
-                                       evento='F',
-                                       sucesso=False,
-                                       obs="Conferência do pedido não foi concluída ou com divergências.")
+                logger.info(f"Conferência do pedido {pedido} não foi concluída ou com divergências.")
             else:
                 # Fatura pedido no Sankhya
                 print(f"Faturando pedido {pedido} ({i+1}/{len(pedidos_faturar)})")                
