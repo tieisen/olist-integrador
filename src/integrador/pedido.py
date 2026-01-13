@@ -661,7 +661,8 @@ class Pedido:
                 lista_ids_pedidos:list[int] = [p.get('id_pedido') for p in aux_lista_pedidos]
                 ack = await crudPedido.atualizar(lista_ids=lista_ids_pedidos,
                                                  nunota=-1,
-                                                 dh_importacao=datetime.now())
+                                                 dh_importacao=datetime.now(),
+                                                 dh_confirmacao=datetime.now())
                 if not ack:
                     msg = f"Erro ao atualizar situação dos pedidos para importado. IDs: {lista_ids_pedidos}"
                     raise Exception(msg)                                
