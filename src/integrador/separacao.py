@@ -36,7 +36,9 @@ class Separacao:
         Verifica quais separações pertencem ao E-commerce informado
             :param lista_pedidos: lista de dicionários com os dados dos pedidos
             :return list[dict]: lista de dicionários com os dados dos pedidos do E-commerce
-        """        
+        """
+        if self.id_loja == 371828442:  # Parfum Brasil
+            return [p for p in lista_pedidos if p['ecommerce'].get('id') == 0]
         return [p for p in lista_pedidos if p['ecommerce'].get('id') == self.id_loja]
 
     @contexto

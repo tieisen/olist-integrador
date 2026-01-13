@@ -61,7 +61,9 @@ class Pedido:
         Verifica quais pedidos pertencem ao E-commerce informado
             :param lista_pedidos: lista de dicionários com os dados dos pedidos
             :return list[dict]: lista de dicionários com os dados dos pedidos do E-commerce
-        """           
+        """
+        if self.id_loja == 371828442:  # Parfum Brasil
+            return [p for p in lista_pedidos if p['vendedor'].get('id') == self.id_loja]
         return [p for p in lista_pedidos if p['ecommerce'].get('id') == self.id_loja]
 
     @interno
@@ -126,10 +128,12 @@ class Pedido:
                 msg = "Erro ao validar itens/desmembrar kits"                    
                 raise Exception(msg)            
             dados_pedido['itens'] = itens_validados
-            # Adiciona pedido na base
-            id = await crudPedido.criar(id_loja=dados_pedido['ecommerce'].get('id'),
+            id_loja:int = dados_pedido['ecommerce'].get('id') if dados_pedido['ecommerce'].get('id') != 0 else dados_pedido['vendedor'].get('id')
+            cod_pedido:int = dados_pedido['ecommerce'].get('numeroPedidoEcommerce') if dados_pedido['ecommerce'].get('id') != 0 else f"{id_loja}-{dados_pedido.get('numeroPedido')}"
+            # Adiciona pedido na base            
+            id = await crudPedido.criar(id_loja=id_loja,
                                         id_pedido=dados_pedido.get('id'),
-                                        cod_pedido=dados_pedido['ecommerce'].get('numeroPedidoEcommerce'),
+                                        cod_pedido=cod_pedido,
                                         num_pedido=dados_pedido.get('numeroPedido'),
                                         dados_pedido=dados_pedido)
             if not id:
