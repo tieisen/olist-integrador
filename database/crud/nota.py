@@ -128,7 +128,8 @@ async def atualizar(id_nota:int=None,chave_acesso:str=None,nunota_pedido:int=Non
                     kwargs['id_nota'] = id_nota
                 result = await session.execute(
                     select(Nota)
-                    .where(Nota.pedido_.has(Pedido.cod_pedido == cod_pedido))
+                    .where(Nota.pedido_.has(Pedido.cod_pedido == cod_pedido),
+                           Nota.dh_cancelamento.is_(None))
                 )
             elif id_nota:
                 result = await session.execute(
