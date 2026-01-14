@@ -1,4 +1,4 @@
-import os, requests
+import os, time, requests
 from src.olist.produto import Produto
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_empresa
@@ -186,6 +186,146 @@ class Pedido:
 
         if res_put.status_code != 204:
             logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
+            return False
+        
+        return True
+
+    @token_olist
+    async def buscar_marcadores(self,id:int) -> bool:
+        """
+        Lista marcadores do pedido.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """
+        
+        dados_marcadores:list[dict] = []
+
+        url = self.endpoint+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+        res = requests.get(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }       
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
+        else:
+            dados_marcadores = res.json()
+
+        return dados_marcadores
+
+    @token_olist
+    async def marcar_integrado(self,id:int) -> bool:
+        """
+        Adiciona um marcador no pedido integrado.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """
+        
+        url = self.endpoint+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        payload = [
+            {
+                "descricao": "Integrado"
+            }
+        ]
+
+        res = requests.post(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload        
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
+            return False
+        
+        return True
+
+    @token_olist
+    async def marcar_parfum(self,id:int) -> bool:
+        """
+        Adiciona um marcador no pedido integrado.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """
+        
+        url = self.endpoint+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        payload = [
+            {
+                "descricao": "Parfum"
+            }
+        ]
+
+        res = requests.post(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload        
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
+            return False
+        
+        return True
+
+    @token_olist
+    async def desmarcar_integrado(self,id:int) -> bool:
+        """
+        Remove um marcador no pedido integrado.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """
+
+        url = self.endpoint+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        time.sleep(self.req_time_sleep)
+        dados_marcadores:list[dict] = await self.buscar_marcadores(id=id)
+        if not dados_marcadores:            
+            return True
+        
+        for marcador in dados_marcadores:
+            if marcador.get('descricao') == 'Integrado':
+                dados_marcadores.remove(marcador)
+                break
+
+        res = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=dados_marcadores     
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
             return False
         
         return True

@@ -186,7 +186,7 @@ class Pedido:
 
         nunota_nota = await self.buscar_nunota_nota(nunota=nunota)
         if not nunota_nota:            
-            logger.warning("Pedido %s sem Nota vinculada",nunota_nota)
+            # logger.warning("Pedido %s sem Nota vinculada",nunota_nota)
             return 0
         nunota_nota = nunota_nota[0].get('nunota')
         

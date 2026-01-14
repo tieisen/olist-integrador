@@ -655,7 +655,19 @@ class Pedido:
                                                       nunota=pedido_incluido,
                                                       olist=pedido_olist)
                     if not ack:
-                        logger.warning(f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist")
+                        msg = f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist"
+                        retorno['success'] = False
+                        retorno['__exception__'] = msg
+                        lista_retornos.append(retorno)
+                        continue
+
+                    ack = await pedido_olist.marcar_integrado(id=pedido.get('id_pedido'))
+                    if not ack:
+                        msg = f"Erro ao enviar marcador para o pedido {pedido.get('num_pedido')} no Olist"
+                        retorno['success'] = False
+                        retorno['__exception__'] = msg
+                        lista_retornos.append(retorno)
+                        continue
 
                 retorno['success'] = True
                 lista_retornos.append(retorno)
@@ -685,6 +697,14 @@ class Pedido:
                                                       olist=pedido_olist)
                     if not ack:
                         msg = f"Erro ao enviar nunota para o pedido {pedido.get('num_pedido')} no Olist"
+                        retorno['success'] = False
+                        retorno['__exception__'] = msg
+                        lista_retornos.append(retorno)
+                        continue
+
+                    ack = await pedido_olist.marcar_integrado(id=pedido.get('id_pedido'))
+                    if not ack:
+                        msg = f"Erro ao enviar marcador para o pedido {pedido.get('num_pedido')} no Olist"
                         retorno['success'] = False
                         retorno['__exception__'] = msg
                         lista_retornos.append(retorno)
@@ -974,20 +994,32 @@ class Pedido:
                 ack = await olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota)
                 if not ack:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('pedido_id'),
+                                           pedido_id=pedido.get('id'),
                                            evento='N',
                                            sucesso=False,
                                            obs="Não foi possível remover nunota")
                     lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
-                else:
+                    continue
+
+                ack = await olist.desmarcar_integrado(id=pedido.get('id_pedido'))
+                if not ack:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('pedido_id'),
-                                           evento='N')
+                                           pedido_id=pedido.get('id'),
+                                           evento='N',
+                                           sucesso=False,
+                                           obs="Não foi possível remover marcador de integrado")
+                    lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
+                    continue
+
+                await crudLogPed.criar(log_id=self.log_id,
+                                       pedido_id=pedido.get('id'),
+                                       evento='N')
+                
             if len(lista_pedidos_com_erro) == len(lista_pedidos):
-                msg = "Erro ao remover número dos pedidos no Olist"
+                msg = "Erro ao reverter os pedidos no Olist"
                 raise Exception(msg)
             if lista_pedidos_com_erro:
-                msg = f"Não foi possível remover número do(s) pedido(s) {', '.join(lista_pedidos_com_erro)} no Olist"
+                msg = f"Não foi possível reverter o(s) pedido(s) {', '.join(lista_pedidos_com_erro)} no Olist"
                 status = True
                 raise Exception(msg)
 
