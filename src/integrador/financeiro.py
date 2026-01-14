@@ -40,7 +40,7 @@ class Financeiro:
                 try:
                     ack = await crudNota.salvar_dados_conta_shopee(cod_pedido=conta.get('order_sn'),dados_conta=conta)
                     if not ack:
-                        logger.error("Erro ao salvar dados da conta do pedido %s",conta.get('order_sn'))
+                        logger.error("Erro ao salvar dados da conta do pedido %s",conta.get('order_sn'))                    
                 except Exception as e:
                     logger.error("Erro ao salvar dados da conta do pedido %s: %s",conta.get('order_sn'),str(e))
                     
@@ -170,7 +170,7 @@ class Financeiro:
             if id_loja in [9227,9265]:
                 return [conta for conta in contas_dia if not str.strip(conta['cliente'].get('email'))]
             elif id_loja == 10940:
-                return [conta for conta in contas_dia if str.strip(conta['cliente'].get('email'))]
+                return [conta for conta in contas_dia if "@grupoboticario.com.br" in conta['cliente'].get('email')]
             else:
                 return []
 
@@ -189,11 +189,15 @@ class Financeiro:
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             return True
         status_log:list[bool] = []
-        for conta in contas_dia:            
+        for conta in contas_dia:
+            codigo_pedido:str=''
             try:
                 matches = re.search(REGEX, conta.get('historico'))
-                codigo_pedido:str=matches.group(1)
+                codigo_pedido=matches.group(1)
                 custo:dict = next((r for r in relatorio_custos if r.get("pedido_ecommerce") == codigo_pedido), None)
+                if not custo:
+                    msg = f"Erro ao encontrar custo para o pedido {codigo_pedido}"
+                    raise ValueError(msg)
                 status = await self.baixar_conta_liquido(data_baixa=data_conta,dados_conta=conta,dados_custo=custo)
                 status_log.append(status.get('success'))
             except Exception as e:
