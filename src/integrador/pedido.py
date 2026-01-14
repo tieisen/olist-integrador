@@ -661,6 +661,7 @@ class Pedido:
                         lista_retornos.append(retorno)
                         continue
 
+                    time.sleep(self.req_time_sleep)
                     ack = await pedido_olist.marcar_integrado(id=pedido.get('id_pedido'))
                     if not ack:
                         msg = f"Erro ao enviar marcador para o pedido {pedido.get('num_pedido')} no Olist"
@@ -1000,7 +1001,8 @@ class Pedido:
                                            obs="Não foi possível remover nunota")
                     lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
                     continue
-
+                
+                time.sleep(self.req_time_sleep)
                 ack = await olist.desmarcar_integrado(id=pedido.get('id_pedido'))
                 if not ack:
                     await crudLogPed.criar(log_id=self.log_id,
