@@ -1,4 +1,4 @@
-import os, requests
+import os, time, requests
 from datetime import datetime
 from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
 from src.utils.autenticador import token_olist
@@ -19,6 +19,7 @@ class Financeiro:
         self.token = None
         self.endpoint_receber = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO_RECEBER')
         self.endpoint_pagar = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO_PAGAR')
+        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
     @token_olist
     async def buscar_receber(self,id:int=None,serieNf:str=None,numeroNf:str=None,id_nota:int=None) -> dict:
@@ -70,6 +71,38 @@ class Financeiro:
         else:
             return res.json().get('itens')
 
+
+    @token_olist
+    async def buscar_marcadores_receber(self,id:int) -> bool:
+        """
+        Lista marcadores do título de recebimento.
+            :param id: ID do título de recebimento (Olist)
+            :return bool: status da operação
+        """
+        
+        dados_marcadores:list[dict] = []
+
+        url = self.endpoint_receber+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+        res = requests.get(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }       
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s. Conta receber %s", res.status_code, res.text, id)
+        else:
+            dados_marcadores = res.json()
+
+        return dados_marcadores
+
     @carrega_dados_ecommerce
     @token_olist
     async def buscar_pagar(self,id:int=None,numeroNf:str=None) -> dict:
@@ -119,6 +152,82 @@ class Financeiro:
             dt_emissao = datetime.today().strftime('%Y-%m-%d')
         url = self.endpoint_receber+f"/?situacao=aberto&dataInicialEmissao={dt_emissao}&dataFinalEmissao={dt_emissao}"
         return await paginar_olist(token=self.token,url=url)
+
+
+    @token_olist
+    async def marcar_devolvido(self,id:int) -> bool:
+        """
+        Adiciona um marcador no título de recebimento.
+            :param id: ID do título de recebimento (Olist)
+            :return bool: status da operação
+        """
+        
+        url = self.endpoint_receber+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        payload = [
+            {
+                "descricao": "devolvido"
+            }
+        ]
+
+        res = requests.post(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload        
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s. Conta receber %s", res.status_code, res.text, id)
+            return False
+        
+        return True
+
+
+    @token_olist
+    async def desmarcar_devolvido_receber(self,id:int) -> bool:
+        """
+        Remove um marcador no título de recebimento.
+            :param id: ID do título de recebimento (Olist)
+            :return bool: status da operação
+        """
+
+        url = self.endpoint_receber+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        time.sleep(self.req_time_sleep)
+        dados_marcadores:list[dict] = await self.buscar_marcadores_receber(id=id)
+        if not dados_marcadores:            
+            return True
+        
+        for marcador in dados_marcadores:
+            if marcador.get('descricao') == 'devolvido':
+                dados_marcadores.remove(marcador)
+                break
+
+        res = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=dados_marcadores     
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s. Conta receber %s", res.status_code, res.text, id)
+            return False
+        
+        return True
 
     @carrega_dados_ecommerce
     @token_olist

@@ -225,11 +225,25 @@ class Financeiro:
             print("Nenhuma conta para baixar.")
             return True
         
-        for i, conta in enumerate(contas_para_baixar):
-            
+        for i, conta in enumerate(contas_para_baixar):            
             codigo_pedido = conta['income_data'].get('order_sn')
             print(f"{i+1}/{len(contas_para_baixar)}: Pedido {codigo_pedido}")
             try:
+                if conta['income_data'].get('released_amount') < 0:
+                    ack = await fin_olist.marcar_devolvido(id=conta.get('id_financeiro'))
+                    if not ack:
+                        msg = f"Erro ao marcar conta como devolvida"
+                        raise ValueError(msg)
+                    
+                    ack = await crudNota.atualizar(cod_pedido=codigo_pedido,parcelado=False,dh_baixa_financeiro=datetime.now())
+                    if not ack:
+                        msg = f"Erro ao atualizar contas a receber da nota"
+                        raise ValueError(msg)
+                    
+                    print("Conta marcada como devolvida.")
+                    res.append(True)
+                    continue
+                
                 print("Buscando dados da conta...")
                 dados_conta = await fin_olist.buscar_receber(id=conta.get('id_financeiro'))
                 if not dados_conta:
@@ -239,6 +253,7 @@ class Financeiro:
                     print("Conta já foi paga.")
                     res.append(True)
                     continue
+
                 print("Montando payload...")
                 payload = parse.olist_receber_shopee(dados_ecommerce=self.dados_ecommerce,dados_conta=dados_conta,dados_recebimento=conta.get('income_data'))
                 if not payload:
