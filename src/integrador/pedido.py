@@ -89,6 +89,35 @@ class Pedido:
         else:
             return True
 
+    async def sinalizar_erro_recebimento(self, dados_pedido:dict, texto_erro:str, olist:PedidoOlist) -> bool:
+        """
+        Sinaliza erro no recebimento do pedido no Olist
+            :param num_pedido: número do pedido (Olist)
+            :param mensagem: mensagem de erro
+            :return bool: status da operação
+        """
+
+        await olist.marcar_erro(id=dados_pedido.get('id'))
+        time.sleep(self.req_time_sleep)
+        await olist.adicionar_texto_erro(id=dados_pedido.get('id'),observacao=dados_pedido.get('observacoes'),texto_erro=texto_erro)
+
+        return True
+
+    async def remover_erro_recebimento(self, dados_pedido:dict, olist:PedidoOlist) -> bool:
+        """
+        Remove erro no recebimento do pedido no Olist
+            :param num_pedido: número do pedido (Olist)
+            :param mensagem: mensagem de erro
+            :return bool: status da operação
+        """
+
+        if "ERRO AO RECEBER PEDIDO" in str(dados_pedido.get('observacoes')).upper():
+            await olist.desmarcar_erro(id=dados_pedido.get('id'))
+            time.sleep(self.req_time_sleep)
+            await olist.remover_texto_erro(id=dados_pedido.get('id'))
+
+        return True
+
     @contexto
     @interno
     @carrega_dados_ecommerce
@@ -107,6 +136,7 @@ class Pedido:
                                               para='base',
                                               contexto=kwargs.get('_contexto'))            
         try:
+            cod_pedido:int=None
             if not dados_pedido:
                 pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get('empresa_id'))
                 # Busca dados do pedido no Olist
@@ -129,7 +159,7 @@ class Pedido:
                 raise Exception(msg)            
             dados_pedido['itens'] = itens_validados
             id_loja:int = dados_pedido['ecommerce'].get('id') if dados_pedido['ecommerce'].get('id') != 0 else dados_pedido['vendedor'].get('id')
-            cod_pedido:int = dados_pedido['ecommerce'].get('numeroPedidoEcommerce') if dados_pedido['ecommerce'].get('id') != 0 else f"{id_loja}-{dados_pedido.get('numeroPedido')}"
+            cod_pedido = dados_pedido['ecommerce'].get('numeroPedidoEcommerce') if dados_pedido['ecommerce'].get('id') != 0 else f"{id_loja}-{dados_pedido.get('numeroPedido')}"
             # Adiciona pedido na base            
             id = await crudPedido.criar(id_loja=id_loja,
                                         id_pedido=dados_pedido.get('id'),
@@ -139,10 +169,18 @@ class Pedido:
             if not id:
                 msg = f"Erro ao adicionar pedido {dados_pedido.get('numeroPedido')} à base de dados."
                 raise Exception(msg)
+
+            await self.remover_erro_recebimento(dados_pedido=dados_pedido,
+                                                olist=pedido_olist)
+
             return {"success": True, "id": id, "__exception__": None}
         except Exception as e:
-            logger.error("Erro ao receber pedido %s. %s",num_pedido or id_pedido,e)
-            return {"success": False, "id": None, "__exception__": str(e)}
+            msg = f"Erro ao receber pedido {cod_pedido or dados_pedido.get('numeroPedido') or num_pedido or id_pedido}. {e}"
+            logger.error(msg)
+            await self.sinalizar_erro_recebimento(dados_pedido=dados_pedido,
+                                                  texto_erro=msg,
+                                                  olist=pedido_olist)
+            return {"success": False, "id": None, "__exception__": msg}
 
     @interno
     @carrega_dados_ecommerce

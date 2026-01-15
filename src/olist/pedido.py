@@ -128,6 +128,45 @@ class Pedido:
         return True
 
     @token_olist
+    async def adicionar_texto_erro(self,id:int,observacao:str,texto_erro:str) -> bool:
+        """
+        Envia informação de erro no pedido.
+            :param id: ID do pedido (Olist)
+            :param observacao: observação atualizada do pedido
+            :return bool: status da operação
+        """
+        
+        url = self.endpoint+f"/{id}"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+
+        payload = {
+            "dataPrevista": None,
+            "dataEnvio": None,
+            "observacoes": observacao + f"\n{texto_erro}",
+            "observacoesInternas": None,
+            "pagamento": {
+                "parcelas": []
+            }
+        }
+
+        res_put = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload
+        )
+
+        if res_put.status_code != 204:
+            logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
+            return False        
+        return True
+
+    @token_olist
     async def remover_nunota(self,id:int,nunota:int=None) -> bool:
         """
         Remove número único do pedido de venda do Sankhya dos pedidos no Olist.
@@ -174,6 +213,69 @@ class Pedido:
             }
         }
 
+        time.sleep(self.req_time_sleep)
+        res_put = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload
+        )
+
+        if res_put.status_code != 204:
+            logger.error("Erro %s: %s pedido %s", res_put.status_code, res_put.text, id)
+            return False
+        
+        return True
+
+    @token_olist
+    async def remover_texto_erro(self,id:int) -> bool:
+        """
+        Envia informação de erro no pedido.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """        
+
+        def tratar_observacao(observacao:str) -> str:
+            import re
+            regex = r"\nErro ao receber pedido.+"
+            return re.sub(regex, '', observacao, 0, re.MULTILINE | re.IGNORECASE).strip()
+        
+        url = self.endpoint+f"/{id}"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+
+        res_get = requests.get(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            }
+        )
+
+        if res_get.status_code != 200:
+            logger.error("Erro %s: %s pedido %s", res_get.status_code, res_get.text, id)
+            return False
+        
+        nova_observacao:str = tratar_observacao(res_get.json().get('observacoes'))
+        if not nova_observacao:
+            return False
+
+        payload = {
+            "dataPrevista": None,
+            "dataEnvio": None,
+            "observacoes": nova_observacao,
+            "observacoesInternas": None,
+            "pagamento": {
+                "parcelas": []
+            }
+        }
+
+        time.sleep(self.req_time_sleep)
         res_put = requests.put(
             url=url,
             headers={
@@ -292,6 +394,41 @@ class Pedido:
         return True
 
     @token_olist
+    async def marcar_erro(self,id:int) -> bool:
+        """
+        Adiciona um marcador no pedido integrado.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """
+        
+        url = self.endpoint+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        payload = [
+            {
+                "descricao": "erro"
+            }
+        ]
+
+        res = requests.post(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=payload        
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
+            return False
+        
+        return True
+
+    @token_olist
     async def desmarcar_integrado(self,id:int) -> bool:
         """
         Remove um marcador no pedido integrado.
@@ -310,7 +447,46 @@ class Pedido:
             return True
         
         for marcador in dados_marcadores:
-            if marcador.get('descricao') == 'Integrado':
+            if str(marcador.get('descricao')).upper() == 'INTEGRADO':
+                dados_marcadores.remove(marcador)
+                break
+
+        res = requests.put(
+            url=url,
+            headers={
+                "Authorization":f"Bearer {self.token}",
+                "Content-Type":"application/json",
+                "Accept":"application/json"
+            },
+            json=dados_marcadores     
+        )
+
+        if not res.ok:
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
+            return False
+        
+        return True
+
+    @token_olist
+    async def desmarcar_erro(self,id:int) -> bool:
+        """
+        Remove um marcador no pedido integrado.
+            :param id: ID do pedido (Olist)
+            :return bool: status da operação
+        """
+
+        url = self.endpoint+f"/{id}/marcadores"
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False 
+        
+        time.sleep(self.req_time_sleep)
+        dados_marcadores:list[dict] = await self.buscar_marcadores(id=id)
+        if not dados_marcadores:            
+            return True
+        
+        for marcador in dados_marcadores:
+            if str(marcador.get('descricao')).upper() == 'ERRO':
                 dados_marcadores.remove(marcador)
                 break
 
