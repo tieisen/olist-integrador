@@ -96,11 +96,11 @@ class Pedido:
             :param mensagem: mensagem de erro
             :return bool: status da operação
         """
-
+        if "ERRO AO RECEBER PEDIDO" in str(dados_pedido.get('observacoes')).upper():
+            return True
         await olist.marcar_erro(id=dados_pedido.get('id'))
         time.sleep(self.req_time_sleep)
         await olist.adicionar_texto_erro(id=dados_pedido.get('id'),observacao=dados_pedido.get('observacoes'),texto_erro=texto_erro)
-
         return True
 
     async def remover_erro_recebimento(self, dados_pedido:dict, olist:PedidoOlist) -> bool:
