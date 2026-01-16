@@ -42,8 +42,7 @@ class Nota:
             # Gera NF no Olist
             dados_nota_olist = await pedido_olist.gerar_nf(id=dados_pedido.get('id_pedido'))
             if not dados_nota_olist:
-                msg = f"Erro ao gerar NF"
-                raise Exception(msg)
+                raise Exception(dados_nota_olist)
             
             if dados_nota_olist.get('mensagem'):
                 nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
@@ -63,6 +62,7 @@ class Nota:
             return {"success": True, "dados_nota":dados_nota_olist, "__exception__": None}
         except Exception as e:
             logger.error(f"Erro ao gerar NF: {e}")
+
             return {"success": False, "dados_nota": None, "__exception__": str(e)}
 
     @contexto
