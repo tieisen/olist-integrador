@@ -302,8 +302,8 @@ class Financeiro:
                 },
                 "historico": historico,
                 "taxa": vlr_desconto_total,
-                "juros": None,
-                "desconto": None,
+                "juros": 0,
+                "desconto": 0,
                 "valorPago": vlr_pago,
                 "acrescimo": vlr_cupom
             }
@@ -375,10 +375,10 @@ class Financeiro:
                 },
                 "historico": historico,
                 "taxa": vlr_desconto_total,
-                "juros": None,
-                "desconto": None,
+                "juros": 0,
+                "desconto": 0,
                 "valorPago": vlr_pago,
-                "acrescimo": None
+                "acrescimo": 0
             }
         except Exception as e:
             logger.error("Erro ao converter dados para baixa de contas a receber do pedido %s. %s", dados_custo.get('no_pedido_ecommerce'), e)
