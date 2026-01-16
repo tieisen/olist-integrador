@@ -526,11 +526,15 @@ class Pedido:
                 "Authorization":f"Bearer {self.token}",
                 "Content-Type":"application/json",
                 "Accept":"application/json"
+            },
+            json={
+                "modelo": 55
             }
         )
 
         if res.status_code not in [200,409]:
-            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)            
+            logger.error("Erro %s: %s pedido %s", res.status_code, res.text, id)
+            logger.info(f"url: {url}")
             return False
 
         return res.json()
