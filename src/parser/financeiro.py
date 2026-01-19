@@ -267,7 +267,7 @@ class Financeiro:
         vlr_total_pedido:float=0
         vlr_pago:float=0
         vlr_desconto_total:float=None
-        vlr_cupom:float=None
+        vlr_cupom:float=0
         dt_recebimento:str=None
 
         try:
