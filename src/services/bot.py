@@ -1,5 +1,5 @@
 import os, time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -131,7 +131,7 @@ class Bot:
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "opc-periodo")))
         return True
 
-    async def gerar_relatorio_custos(self,data_inicial,data_final):
+    async def gerar_relatorio_custos(self,data_inicial,data_final,ecommerce_id):
         if WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "opc-periodo"))):
             btn_intervalo = self.driver.find_element(By.ID, "opc-periodo")
             btn_intervalo.click()
@@ -143,16 +143,33 @@ class Bot:
 
             data_ini = self.driver.find_element(By.ID, "dataIni")
             data_fim = self.driver.find_element(By.ID, "dataFim")
-
             data_ini.clear()
             data_fim.clear()
-
             data_ini.send_keys(data_inicial)
             data_fim.send_keys(data_final)
 
+            if ecommerce_id:
+                ecommerce = self.driver.find_element(By.ID, "idEcommerce")
+                ecommerce = Select(ecommerce)
+                ecommerce.select_by_value(f"{ecommerce_id}")
+
+            cabecalho_status_pedidos = self.driver.find_element(By.XPATH, "//button[@class='multiselect dropdown-toggle form-control form-control-select']")
+            select_all = self.driver.find_element(By.XPATH, "//a[@class='multiselect-all']")
+            cabecalho_status_pedidos.click()
+            select_all = self.driver.find_element(By.XPATH, "//a[@class='multiselect-all']")
+            select_all.click()
+            select_all.click()
+
+            status_options = self.driver.find_elements(By.XPATH, "//div[@class='checkbox']")
+            for option in status_options:
+                inputs = option.find_elements(By.TAG_NAME, "input")
+                for input in inputs:
+                    if input.get_attribute("value") in ['1','7','5','6']:
+                        self.driver.execute_script("arguments[0].scrollIntoView(true);", option)                        
+                        option.click()
+
             btn_gerar = self.driver.find_element(By.ID,"btn-visualizar")
             btn_gerar.click()
-            time.sleep(self.time_sleep)
             return True
         else:
             logger.error("Erro no selecionar opção")
@@ -185,7 +202,7 @@ class Bot:
                                           de='olist',
                                           para='sankhya',
                                           contexto=kwargs.get('_contexto'))
-        if not isinstance(data,datetime):
+        if not isinstance(data,date):
             try:
                 data = datetime.strptime(data, "%Y-%m-%d")
             except:
@@ -205,7 +222,8 @@ class Bot:
                     return False
             await self.acessa_relatorio_custos()
             await self.gerar_relatorio_custos(data_inicial=data_ini.strftime('%d/%m/%Y'),
-                                              data_final=data.strftime('%d/%m/%Y'))
+                                              data_final=data.strftime('%d/%m/%Y'),
+                                              ecommerce_id=kwargs.get('ecommerce'))
             await self.baixar_relatorio_custos()
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             await self.logout()

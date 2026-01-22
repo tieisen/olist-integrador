@@ -1,5 +1,5 @@
 import os, time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from database.crud import log as crudLog
 from database.crud import nota as crudNota
 from src.services.bot import Bot
@@ -164,7 +164,7 @@ class Financeiro:
     
     @contexto
     @carrega_dados_ecommerce
-    async def realizar_baixa_contas_receber(self,data_conta:datetime,relatorio_custos:list[dict],**kwargs) -> bool:
+    async def realizar_baixa_contas_receber(self,data_conta:date,relatorio_custos:list[dict],**kwargs) -> bool:
 
         def filtra_loja(contas_dia:list[dict],id_loja:int) -> list[dict]:
             if id_loja in [9227,9265]:
@@ -293,7 +293,7 @@ class Financeiro:
         return all(res)
     
     @log_execucao
-    async def executar_baixa(self,data:datetime) -> bool:
+    async def executar_baixa(self,data:date) -> bool:
         parser = ParseFin()
         relatorio_custos:list[dict] = buscar_relatorio_custos()
         if not relatorio_custos:
