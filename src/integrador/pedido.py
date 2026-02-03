@@ -466,7 +466,6 @@ class Pedido:
                 except Exception as e:
                     status_itens = False
                     logger.error("Código do produto inválido: %s", item_pedido['produto'].get('sku'))
-                    print(f"Código do produto inválido: {item_pedido['produto'].get('sku')}")                    
                     continue
 
                 dados_item = {
@@ -523,6 +522,7 @@ class Pedido:
             qtd_solicitada:int = None
             qtd_transferir:int = None
             qtd_ecommerce:int = None
+            qtd_total_disponivel:int = None
 
             # Busca o saldo do produto em cada local
             for i, estoque in enumerate(saldo_estoque):
@@ -547,6 +547,7 @@ class Pedido:
 
             # Valida agrupamento mínimo
             if qtd_transferir:
+                qtd_total_disponivel = int(estoque.get('saldo_matriz')) + int(estoque.get('saldo_valcurta'))
                 if int(estoque.get('agrupmin')) > 1:
                     if qtd_transferir <= int(estoque.get('agrupmin')):
                         qtd_transferir = int(estoque.get('agrupmin'))
@@ -557,9 +558,9 @@ class Pedido:
                             multiplo += int(estoque.get('agrupmin'))                        
                         qtd_transferir = multiplo
                         # Transfere a quantidade disponível, mesmo fora do agrupamento min.
-                        if qtd_transferir > int(estoque.get('saldo_matriz')):
-                            qtd_transferir = int(estoque.get('saldo_matriz'))
-
+                        if qtd_transferir > qtd_total_disponivel:
+                            qtd_transferir = qtd_total_disponivel
+                
                 lista_transferir.append({
                     "codprod": int(pedido.get('codprod')),
                     "unidade": pedido.get('unidade'),
@@ -613,7 +614,6 @@ class Pedido:
                 raise Exception(msg)
             
             logger.info(f"{len(dados_pedidos_olist)} pedidos validados para importar")
-            print(f"{len(dados_pedidos_olist)} pedidos validados para importar")
 
             # Unifica os itens dos pedidos
             pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos_olist)
