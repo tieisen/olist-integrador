@@ -276,8 +276,8 @@ class Estoque:
         try:
             query = script.format_map({
                                 "codemp_fornecedor":self.dados_empresa.get('snk_codemp_fornecedor'),
-                                "local_matriz":self.dados_empresa.get('snk_codlocal_venda'),
-                                "local_ecommerce":self.dados_empresa.get('snk_codlocal_ecommerce'),
+                                # "local_matriz":self.dados_empresa.get('snk_codlocal_venda'),
+                                # "local_ecommerce":self.dados_empresa.get('snk_codlocal_ecommerce'),
                                 "produtos": codprod or ','.join(map(str,lista_produtos))
                             })
         except Exception as e:
