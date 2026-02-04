@@ -564,6 +564,10 @@ class Pedido:
                 local_estoque:int=None
 
                 while loop:
+                    if qtd_transferir <= 0:                        
+                        loop = False
+                        continue
+
                     if int(estoque.get('agrupmin')) > 1:
                         if qtd_transferir <= int(estoque.get('agrupmin')):
                             qtd_transferir = int(estoque.get('agrupmin'))
@@ -587,19 +591,20 @@ class Pedido:
                             qtd_transferida = qtd_transferir
                             qtd_valcurta -= qtd_transferir
                             qtd_transferir = 0
-                        print(f"    - Transferindo {qtd_transferida} unidades de validade curta.")
-                        logger.info(f"    - Transferindo {qtd_transferida} unidades de validade curta.")
+                        print(f"    - Transferindo {qtd_transferida} unidades de validade curta. Restam {qtd_transferir} unidades para transferir.")
+                        logger.info(f"    - Transferindo {qtd_transferida} unidades de validade curta. Restam {qtd_transferir} unidades para transferir.")
                     else:
                         local_estoque = 101 # Validade normal
                         qtd_transferida = qtd_transferir
                         loop = False
-                        print(f"    - Transferindo {qtd_transferida} unidades da matriz.")
-                        logger.info(f"    - Transferindo {qtd_transferida} unidades da matriz.")
+                        print(f"    - Transferindo {qtd_transferida} unidades da matriz. Restam {qtd_transferir} unidades para transferir.")
+                        logger.info(f"    - Transferindo {qtd_transferida} unidades da matriz. Restam {qtd_transferir} unidades para transferir.")
 
                     if qtd_transferida <= 0:
                         loop = False
+                        continue
 
-                    if local_estoque and qtd_transferida > 0:
+                    if local_estoque:
                         lista_transferir.append({
                             "codprod": int(pedido.get('codprod')),
                             "unidade": pedido.get('unidade'),
