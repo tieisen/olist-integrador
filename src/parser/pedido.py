@@ -168,7 +168,7 @@ class Pedido:
                 dados_item['PERCDESC'] = {"$":'0'}
                 dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
                 dados_item['CODVOL'] = {"$":item.get('unidade')}
-                dados_item['CODLOCALORIG'] = {"$":self.dados_empresa.get('snk_codlocal_venda')}
+                dados_item['CODLOCALORIG'] = {"$":item.get('codlocal')}
                 dados_itens.append(dados_item)
             except Exception as e:
                 logger.error("Item %s. Erro: %s",item.get('codprod'),e)
