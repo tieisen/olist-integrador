@@ -73,6 +73,7 @@ async def paginar_snk(token:str,url:str,payload:dict) -> list[dict]:
             )
             if res.status_code != 200:
                 logger.error(f"Erro {res.status_code} na busca paginada. Resposta: {res.text}")
+                raise Exception(f"Erro {res.status_code} na busca paginada.")
             elif res.json().get('status') == '1':
                 todos_resultados.extend(formatter.return_format(res.json()))
                 if res.json()['responseBody']['entities'].get('hasMoreResult') == 'true':
@@ -80,7 +81,7 @@ async def paginar_snk(token:str,url:str,payload:dict) -> list[dict]:
                 else:   
                     limite_alcancado = True
     except Exception as e:
-        logger.error(f"Erro ao realizar busca paginada: {e}")
+        logger.error(f"Falha ao realizar busca paginada: {e}")
         todos_resultados = []
     finally:
         pass
