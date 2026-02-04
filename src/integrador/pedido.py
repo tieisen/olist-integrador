@@ -547,25 +547,39 @@ class Pedido:
 
             # Valida agrupamento mínimo
             if qtd_transferir:
-                qtd_total_disponivel = int(estoque.get('saldo_matriz')) + int(estoque.get('saldo_valcurta'))
-                if int(estoque.get('agrupmin')) > 1:
-                    if qtd_transferir <= int(estoque.get('agrupmin')):
-                        qtd_transferir = int(estoque.get('agrupmin'))
-                    else:
-                        # Valida múltiplos do agrupamento mínimo
-                        multiplo = int(estoque.get('agrupmin'))
-                        while multiplo < qtd_transferir:
-                            multiplo += int(estoque.get('agrupmin'))                        
-                        qtd_transferir = multiplo
-                        # Transfere a quantidade disponível, mesmo fora do agrupamento min.
-                        if qtd_transferir > qtd_total_disponivel:
-                            qtd_transferir = qtd_total_disponivel
-                
-                lista_transferir.append({
-                    "codprod": int(pedido.get('codprod')),
-                    "unidade": pedido.get('unidade'),
-                    "quantidade": int(qtd_transferir)
-                })
+                qtd_matriz:int = int(estoque.get('saldo_matriz',0))
+                qtd_valcurta:int = int(estoque.get('saldo_valcurta',0))
+                qtd_total_disponivel:int = qtd_matriz + qtd_valcurta
+                loop:bool=True
+                local_estoque:int=None
+
+                while loop:
+                    if int(estoque.get('agrupmin')) > 1:
+                        if qtd_transferir <= int(estoque.get('agrupmin')):
+                            qtd_transferir = int(estoque.get('agrupmin'))
+                        else:
+                            # Valida múltiplos do agrupamento mínimo
+                            multiplo = int(estoque.get('agrupmin'))
+                            while multiplo < qtd_transferir:
+                                multiplo += int(estoque.get('agrupmin'))                        
+                            qtd_transferir = multiplo
+                            # Transfere a quantidade disponível, mesmo fora do agrupamento min.
+                            if qtd_transferir > qtd_total_disponivel:
+                                qtd_transferir = qtd_total_disponivel
+
+                    if qtd_transferir <= qtd_valcurta:
+                        local_estoque = 911 # Validade curta
+                        qtd_valcurta -= qtd_transferir
+                    elif qtd_transferir <= qtd_matriz:
+                        local_estoque = 101 # Validade normal
+                        loop = False
+
+                    lista_transferir.append({
+                        "codprod": int(pedido.get('codprod')),
+                        "unidade": pedido.get('unidade'),
+                        "quantidade": int(qtd_transferir),
+                        "codlocal": local_estoque
+                    })
 
         return lista_transferir, lista_ecommerce
 
