@@ -521,6 +521,7 @@ class Pedido:
         for pedido in saldo_pedidos:
             qtd_solicitada:int = None
             qtd_transferir:int = None
+            qtd_transferida:int = 1
             qtd_ecommerce:int = None
             qtd_total_disponivel:int = None
 
@@ -528,6 +529,9 @@ class Pedido:
             for i, estoque in enumerate(saldo_estoque):
                 if int(estoque.get('codprod')) == int(pedido.get('codprod')):
                     break
+
+            print(f"Produto {pedido.get('codprod')} {pedido.get('descricao')}: saldo e-commerce {estoque.get('saldo_ecommerce',0)}, saldo matriz {estoque.get('saldo_matriz',0)}, saldo validade curta {estoque.get('saldo_valcurta',0)}")
+            logger.info(f"Produto {pedido.get('codprod')} {pedido.get('descricao')}: saldo e-commerce {estoque.get('saldo_ecommerce',0)}, saldo matriz {estoque.get('saldo_matriz',0)}, saldo validade curta {estoque.get('saldo_valcurta',0)}")
 
             qtd_ecommerce = int(estoque.get('saldo_ecommerce',0))
             qtd_solicitada = int(pedido.get('qtdneg',0))
@@ -543,9 +547,15 @@ class Pedido:
 
             # Verifica se precisa transferência
             if qtd_ecommerce < qtd_solicitada:            
-                qtd_transferir = qtd_solicitada - qtd_ecommerce
+                qtd_transferir = qtd_solicitada - qtd_ecommerce                
+                print(f"  - Necessário transferir {qtd_transferir} unidades.")
+                logger.info(f"  - Necessário transferir {qtd_transferir} unidades.")
+            else:
+                print(f"  - Não é necessário transferir.")
+                logger.info(f"  - Não é necessário transferir.")
+                continue
 
-            # Valida agrupamento mínimo
+            # Valida agrupamento mínimo e local de estoque
             if qtd_transferir:
                 qtd_matriz:int = int(estoque.get('saldo_matriz',0))
                 qtd_valcurta:int = int(estoque.get('saldo_valcurta',0))
@@ -567,19 +577,35 @@ class Pedido:
                             if qtd_transferir > qtd_total_disponivel:
                                 qtd_transferir = qtd_total_disponivel
 
-                    if qtd_transferir <= qtd_valcurta:
+                    if qtd_valcurta > 0:
                         local_estoque = 911 # Validade curta
-                        qtd_valcurta -= qtd_transferir
-                    elif qtd_transferir <= qtd_matriz:
+                        if qtd_transferir >= qtd_valcurta:
+                            qtd_transferida = qtd_valcurta
+                            qtd_transferir -= qtd_valcurta
+                            qtd_valcurta = 0
+                        else:
+                            qtd_transferida = qtd_transferir
+                            qtd_valcurta -= qtd_transferir
+                            qtd_transferir = 0
+                        print(f"    - Transferindo {qtd_transferida} unidades de validade curta.")
+                        logger.info(f"    - Transferindo {qtd_transferida} unidades de validade curta.")
+                    else:
                         local_estoque = 101 # Validade normal
+                        qtd_transferida = qtd_transferir
+                        loop = False
+                        print(f"    - Transferindo {qtd_transferida} unidades da matriz.")
+                        logger.info(f"    - Transferindo {qtd_transferida} unidades da matriz.")
+
+                    if qtd_transferida <= 0:
                         loop = False
 
-                    lista_transferir.append({
-                        "codprod": int(pedido.get('codprod')),
-                        "unidade": pedido.get('unidade'),
-                        "quantidade": int(qtd_transferir),
-                        "codlocal": local_estoque
-                    })
+                    if local_estoque and qtd_transferida > 0:
+                        lista_transferir.append({
+                            "codprod": int(pedido.get('codprod')),
+                            "unidade": pedido.get('unidade'),
+                            "quantidade": int(qtd_transferida),
+                            "codlocal": local_estoque
+                        })
 
         return lista_transferir, lista_ecommerce
 
