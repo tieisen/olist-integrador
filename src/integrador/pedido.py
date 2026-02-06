@@ -530,9 +530,6 @@ class Pedido:
                 if int(estoque.get('codprod')) == int(pedido.get('codprod')):
                     break
 
-            print(f"Produto {pedido.get('codprod')} {pedido.get('descricao')}: saldo e-commerce {estoque.get('saldo_ecommerce',0)}, saldo matriz {estoque.get('saldo_matriz',0)}, saldo validade curta {estoque.get('saldo_valcurta',0)}")
-            logger.info(f"Produto {pedido.get('codprod')} {pedido.get('descricao')}: saldo e-commerce {estoque.get('saldo_ecommerce',0)}, saldo matriz {estoque.get('saldo_matriz',0)}, saldo validade curta {estoque.get('saldo_valcurta',0)}")
-
             qtd_ecommerce = int(estoque.get('saldo_ecommerce',0))
             qtd_solicitada = int(pedido.get('qtdneg',0))
 
@@ -547,13 +544,7 @@ class Pedido:
 
             # Verifica se precisa transferência
             if qtd_ecommerce < qtd_solicitada:            
-                qtd_transferir = qtd_solicitada - qtd_ecommerce                
-                print(f"  - Necessário transferir {qtd_transferir} unidades.")
-                logger.info(f"  - Necessário transferir {qtd_transferir} unidades.")
-            else:
-                print(f"  - Não é necessário transferir.")
-                logger.info(f"  - Não é necessário transferir.")
-                continue
+                qtd_transferir = qtd_solicitada - qtd_ecommerce
 
             # Valida agrupamento mínimo e local de estoque
             if qtd_transferir:
@@ -591,14 +582,10 @@ class Pedido:
                             qtd_transferida = qtd_transferir
                             qtd_valcurta -= qtd_transferir
                             qtd_transferir = 0
-                        print(f"    - Transferindo {qtd_transferida} unidades de validade curta. Restam {qtd_transferir} unidades para transferir.")
-                        logger.info(f"    - Transferindo {qtd_transferida} unidades de validade curta. Restam {qtd_transferir} unidades para transferir.")
                     else:
                         local_estoque = 101 # Validade normal
                         qtd_transferida = qtd_transferir
                         loop = False
-                        print(f"    - Transferindo {qtd_transferida} unidades da matriz. Restam {qtd_transferir} unidades para transferir.")
-                        logger.info(f"    - Transferindo {qtd_transferida} unidades da matriz. Restam {qtd_transferir} unidades para transferir.")
 
                     if qtd_transferida <= 0:
                         loop = False
