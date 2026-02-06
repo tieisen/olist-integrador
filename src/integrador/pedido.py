@@ -521,6 +521,7 @@ class Pedido:
         for pedido in saldo_pedidos:
             qtd_solicitada:int = None
             qtd_transferir:int = None
+            qtd_transferida:int = 1
             qtd_ecommerce:int = None
             qtd_total_disponivel:int = None
 
@@ -545,27 +546,58 @@ class Pedido:
             if qtd_ecommerce < qtd_solicitada:            
                 qtd_transferir = qtd_solicitada - qtd_ecommerce
 
-            # Valida agrupamento mínimo
+            # Valida agrupamento mínimo e local de estoque
             if qtd_transferir:
-                qtd_total_disponivel = int(estoque.get('saldo_matriz')) + int(estoque.get('saldo_valcurta'))
-                if int(estoque.get('agrupmin')) > 1:
-                    if qtd_transferir <= int(estoque.get('agrupmin')):
-                        qtd_transferir = int(estoque.get('agrupmin'))
+                qtd_matriz:int = int(estoque.get('saldo_matriz',0))
+                qtd_valcurta:int = int(estoque.get('saldo_valcurta',0))
+                qtd_total_disponivel:int = qtd_matriz + qtd_valcurta
+                loop:bool=True
+                local_estoque:int=None
+
+                while loop:
+                    if qtd_transferir <= 0:                        
+                        loop = False
+                        continue
+
+                    if int(estoque.get('agrupmin')) > 1:
+                        if qtd_transferir <= int(estoque.get('agrupmin')):
+                            qtd_transferir = int(estoque.get('agrupmin'))
+                        else:
+                            # Valida múltiplos do agrupamento mínimo
+                            multiplo = int(estoque.get('agrupmin'))
+                            while multiplo < qtd_transferir:
+                                multiplo += int(estoque.get('agrupmin'))                        
+                            qtd_transferir = multiplo
+                            # Transfere a quantidade disponível, mesmo fora do agrupamento min.
+                            if qtd_transferir > qtd_total_disponivel:
+                                qtd_transferir = qtd_total_disponivel
+
+                    if qtd_valcurta > 0:
+                        local_estoque = 911 # Validade curta
+                        if qtd_transferir >= qtd_valcurta:
+                            qtd_transferida = qtd_valcurta
+                            qtd_transferir -= qtd_valcurta
+                            qtd_valcurta = 0
+                        else:
+                            qtd_transferida = qtd_transferir
+                            qtd_valcurta -= qtd_transferir
+                            qtd_transferir = 0
                     else:
-                        # Valida múltiplos do agrupamento mínimo
-                        multiplo = int(estoque.get('agrupmin'))
-                        while multiplo < qtd_transferir:
-                            multiplo += int(estoque.get('agrupmin'))                        
-                        qtd_transferir = multiplo
-                        # Transfere a quantidade disponível, mesmo fora do agrupamento min.
-                        if qtd_transferir > qtd_total_disponivel:
-                            qtd_transferir = qtd_total_disponivel
-                
-                lista_transferir.append({
-                    "codprod": int(pedido.get('codprod')),
-                    "unidade": pedido.get('unidade'),
-                    "quantidade": int(qtd_transferir)
-                })
+                        local_estoque = 101 # Validade normal
+                        qtd_transferida = qtd_transferir
+                        loop = False
+
+                    if qtd_transferida <= 0:
+                        loop = False
+                        continue
+
+                    if local_estoque:
+                        lista_transferir.append({
+                            "codprod": int(pedido.get('codprod')),
+                            "unidade": pedido.get('unidade'),
+                            "quantidade": int(qtd_transferida),
+                            "codlocal": local_estoque
+                        })
 
         return lista_transferir, lista_ecommerce
 

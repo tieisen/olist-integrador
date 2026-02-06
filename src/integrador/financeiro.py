@@ -141,7 +141,7 @@ class Financeiro:
 
     @contexto
     @carrega_dados_ecommerce
-    async def agrupar_titulos_parcelados(self,**kwargs) -> bool:
+    async def agrupar_titulos_parcelados(self,data:datetime=None,**kwargs) -> bool:
         self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                           de='olist',
                                           para='olist',
@@ -152,8 +152,9 @@ class Financeiro:
                 notas_parceladas:list[dict] = [{"numero":n.get('numero'),"id":n.get('id_nota')} for n in dados_notas_parceladas]
                 if not notas_parceladas:
                     raise Exception("Nenhuma nota parcelada encontrada para agrupar títulos.")
+                data_formatada:str = data.strftime('%d/%m/%Y') if data else datetime.now().strftime('%d/%m/%Y')
                 bot = Bot(empresa_id=self.dados_ecommerce.get('empresa_id'))
-                if not await bot.rotina_contas_receber(lista_notas=notas_parceladas):
+                if not await bot.rotina_contas_receber(lista_notas=notas_parceladas,data_vcto=data_formatada):
                     raise Exception("Erro ao agrupar títulos parcelados via Bot.")
             await crudLog.atualizar(id=self.log_id,sucesso=True)
             return True                
