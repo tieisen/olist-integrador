@@ -404,8 +404,8 @@ class Faturamento:
         lista_produtos_busca:list[int] = [int(item.get('codprod')) for item in lista_itens]
         estoque_atual:list[dict] = await estoque.buscar_saldo_ecommerce_por_lote(lista_produtos=lista_produtos_busca)
         if not estoque_atual:
-            print("Saldo de estoque atual não encontrado.")
-            return lista_produtos_baixa        
+            # Produto sem controle de lote
+            return lista_itens        
         try:
             for item in lista_itens:
                 primeiro_loop:bool=True
