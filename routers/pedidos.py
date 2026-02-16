@@ -29,6 +29,8 @@ async def integrar(body:PedidoEmpresa) -> list[dict]:
     """
     res:dict={}
     res = await receber_pedido_lote(codemp=body.codemp)
+    if not res:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Resposta inesperada do serviço de integração de pedidos.")
     if not res.get('status'):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
     
