@@ -26,14 +26,14 @@ class Financeiro:
         self.dados_empresa:dict = None
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
 
-    async def buscar_contas_shopee(self, ecommerce_id:int=None, dias:int=1) -> bool:
+    async def buscar_contas_shopee(self, ecommerce_id:int=None, dias:int=1, dt_fim:str=None) -> bool:
         
-        dt_inicio = (datetime.now() - timedelta(days=dias)).strftime('%Y-%m-%d')
-        dt_fim = datetime.now().strftime('%Y-%m-%d')        
+        dt_fim = datetime.now() if not dt_fim else datetime.strptime(dt_fim, '%Y-%m-%d')
+        dt_inicio = (dt_fim - timedelta(days=dias))
         dados_contas:list[dict] = []
 
         pag_shopee = PagamentoShopee(empresa_id=self.empresa_id,ecommerce_id=ecommerce_id)
-        dados_contas = await pag_shopee.get_income_detail(date_from=dt_inicio,date_to=dt_fim)
+        dados_contas = await pag_shopee.get_income_detail(date_from=dt_inicio.strftime('%Y-%m-%d'),date_to=dt_fim.strftime('%Y-%m-%d'))
         if dados_contas:
             for conta in dados_contas:
                 time.sleep(self.req_time_sleep)
