@@ -179,7 +179,7 @@ class Bot:
         if WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable(self.driver.find_element(By.ID, "btn-download"))):
             btn_download = self.driver.find_element(By.ID, "btn-download")
             btn_download.click()
-            time.sleep(30)
+            time.sleep(10)
             return True
         else:
             logger.error("Erro no botao download")
