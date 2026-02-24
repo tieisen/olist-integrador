@@ -138,7 +138,7 @@ async def inicializar_tarefas():
     for job_id, func, trigger, params in jobs:
         if job_id not in jobs_existentes:
             scheduler.add_job(func, trigger, id=job_id, replace_existing=True, max_instances=1, coalesce=True, **params)
-            logger.info(f"Job registrado: {job_id}")
+            # logger.info(f"Job registrado: {job_id}")
 
 # CONTROLE DO AGENDADOR
 async def iniciar_agendador():
