@@ -221,7 +221,7 @@ class Pedido:
                 "CODEMP":  {"$": self.dados_empresa.get('snk_codemp_fornecedor')},
                 "CODPARC":  {"$": self.dados_empresa.get('snk_codparc')},
                 "CODNAT":  {"$": "0"},
-                "CODTIPVENDA":  {"$": "11"},
+                "CODTIPVENDA":  {"$": self.dados_empresa.get('snk_codtipvenda')},
                 "CODTIPOPER":  {"$": self.dados_empresa.get('snk_top_baixa_estoque')},
                 "CODVEND":  {"$": self.dados_empresa.get('snk_codvend')},
                 "CODOBSPADRAO":  {"$": "0"},
