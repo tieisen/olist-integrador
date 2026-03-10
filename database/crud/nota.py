@@ -1,5 +1,5 @@
 from database.database import AsyncSessionLocal
-from database.models import Nota, Pedido
+from database.models import Nota, Pedido, Ecommerce
 from database.crud import pedido
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
@@ -206,6 +206,90 @@ async def salvar_dados_conta_shopee(cod_pedido:str,dados_conta:dict) -> bool:
             await session.commit()
             return True  
 
+async def salvarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.is_(None),                   
+                   Nota.pedido_.has(Pedido.cod_pedido == codPedido))
+        )
+        nota = result.scalar_one_or_none()
+        if not nota:
+            logger.error(f"Nota do pedido {codPedido} não encontrada.")
+            return False
+        elif nota.dh_baixa_financeiro:
+            logger.info(f"Conta do pedido {codPedido} já foi baixada.")
+            return True
+        elif nota.income_data:
+            logger.info(f"Conta do pedido {codPedido} já foi importada.")
+            return True
+        else:
+            try:
+                setattr(nota, 'income_data', dadosConta)
+            except Exception as e:
+                logger.error(f"Erro ao importar dados da conta do pedido {codPedido}: {e}")
+                return False            
+            await session.commit()
+            return True  
+
+async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.is_(None),                   
+                   Nota.pedido_.has(Pedido.cod_pedido == codPedido))
+        )
+        nota = result.scalar_one_or_none()
+        if not nota:
+            logger.error(f"Nota do pedido {codPedido} não encontrada.")
+            return False
+        elif nota.dh_baixa_financeiro:
+            logger.info(f"Conta do pedido {codPedido} já foi baixada.")
+            return True
+        elif nota.income_data.get('released_amount') != 0.0:
+            logger.info(f"Conta do pedido {codPedido} já foi importada.")
+            return True
+        else:
+            dados_conta = nota.income_data
+            dados_conta['released_amount'] = dadosConta.get('released_amount')
+            dados_conta['fee_shopee'] = dados_conta['amount_paid'] - dadosConta.get('released_amount') if dadosConta.get('released_amount') > 0 else 0.0
+            try:
+                setattr(nota, 'income_data', dados_conta)
+            except Exception as e:
+                logger.error(f"Erro ao importar dados da conta do pedido {codPedido}: {e}")
+                return False            
+            await session.commit()
+            return True  
+
+async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None) -> list[dict]:
+        if not any([empresa_id,ecommerce_id]):
+            raise ValueError("Parâmetro não informado")
+                
+        async with AsyncSessionLocal() as session:            
+            filtros = []
+            if empresa_id:
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)),
+                               Nota.dh_cancelamento.is_(None),
+                               Nota.income_data.get('released_amount') > 0.0)
+            elif ecommerce_id:
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id),
+                               Nota.dh_cancelamento.is_(None),
+                               Nota.income_data.get('released_amount') > 0.0)
+            else:
+                raise ValueError("Parâmetro não informado")
+            
+            query = select(Nota)
+            if filtros:
+                query = query.where(*filtros)                           
+            result = await session.execute(query)           
+            notas = result.scalars().all()
+            
+        dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                      retorno=notas)
+        return dados_nota              
+
 async def validar_pedido_atendido(id_pedido:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -280,6 +364,22 @@ async def buscar_financeiro_baixar(ecommerce_id:int) -> list[dict]:
                    Nota.id_financeiro.isnot(None),
                    Nota.dh_baixa_financeiro.is_(None),
                    Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
+        )
+        notas = result.scalars().all()
+    dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                  retorno=notas)
+    return dados_nota 
+
+async def buscarFinanceiroLancarShopee(ecommerce_id:int) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.is_(None),
+                   Nota.id_financeiro.is_(None),
+                   Nota.dh_baixa_financeiro.is_(None),
+                   Nota.income_data.is_(None),
+                   Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
+            .order_by(Nota.numero)
         )
         notas = result.scalars().all()
     dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
