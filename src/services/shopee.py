@@ -17,15 +17,15 @@ REDIRECT_URL = os.getenv('OLIST_REDIRECT_URI')
 
 class Autenticacao:
 
-    def __init__(self,ecommerce_id:int=None,empresa_id:int=None):
-        self.ecommerce_id = ecommerce_id
-        self.empresa_id = empresa_id
+    def __init__(self,ecommerceId:int=None,empresaId:int=None):
+        self.ecommerce_id = ecommerceId
+        self.empresa_id = empresaId
         self.dados_empresa:dict={}
         self.dados_shopee:dict={}
         self.access_token:str=None
 
     @carrega_dados_shopee
-    async def shop_auth(self):
+    async def shopAuth(self):
         timest:int = int(time.time())
         partner_id:int = self.dados_shopee.get("partner_id")
         partner_key:str = self.dados_shopee.get("partner_key")
@@ -38,7 +38,7 @@ class Autenticacao:
         print(url)
 
     @carrega_dados_shopee
-    async def get_token_shop_level(self,code:str):
+    async def getTokenShopLevel(self,code:str):
         timest:int = int(time.time())
         partner_id:int = self.dados_shopee.get("partner_id")
         shop_id:int = self.dados_shopee.get("shop_id")
@@ -58,7 +58,8 @@ class Autenticacao:
             return False
 
     @carrega_dados_shopee
-    async def refresh_token_shop_level(self,refresh_token:str):
+    async def refreshTokenShopLevel(self,refreshToken:str):
+        refresh_token:str = refreshToken
         timest:int = int(time.time())
         partner_id:int = self.dados_shopee.get("partner_id")
         shop_id:int = self.dados_shopee.get("shop_id")
@@ -71,7 +72,6 @@ class Autenticacao:
         url = HOST_URL + PATH_REFRESH_TOKEN + "?partner_id=%s&timestamp=%s&sign=%s" % (partner_id, timest, sign)
         headers = {"Content-Type": "application/json"}
         resp = requests.post(url, json=body, headers=headers)
-        # print(f"Refresh status: {resp.status_code}")
         if resp.ok:
             ret = json.loads(resp.content)
             return ret
@@ -79,12 +79,13 @@ class Autenticacao:
             return False
 
     @carrega_dados_shopee
-    async def salvar_token(self, dados_token: dict) -> bool:
+    async def salvarToken(self, dadosToken: dict) -> bool:
         """
         Salva o token no banco de dados
             :param dados_token: dicionário com os dados do token
             :return bool: status da operação
         """
+        dados_token:dict = dadosToken
         try:
             access_token = dados_token['access_token']
             refresh_token = dados_token['refresh_token']
@@ -106,7 +107,7 @@ class Autenticacao:
         return True
     
     @carrega_dados_shopee
-    async def buscar_token_salvo(self):
+    async def buscarTokenSalvo(self):
         """
         Busca último token salvo no banco de dados
             :return str: último token de acesso
@@ -131,7 +132,6 @@ class Autenticacao:
             logger.error(msg)
             return -1
         else:
-            # print("Nenhuma condição encontrada buscar_token_salvo")
             return None
         
     @carrega_dados_shopee
@@ -142,33 +142,26 @@ class Autenticacao:
         """         
         try:
             if code:
-                new_token = await self.get_token_shop_level(code)
+                new_token = await self.getTokenShopLevel(code)
                 if new_token:
-                    await self.salvar_token(new_token)
+                    await self.salvarToken(new_token)
                     return new_token['access_token']
             
-            # print("Buscando token salvo")
-            tnk = await self.buscar_token_salvo()
-            # print(f"tnk: {tnk}")
+            tnk = await self.buscarTokenSalvo()
             if not tnk:
-                # print("Nenhum token encontrado")
                 return False
             elif isinstance(tnk,str):
-                # print("Token encontrado")
                 return tnk
             elif isinstance(tnk,list):
-                # print("Refresh token encontrado")
-                new_token = await self.refresh_token_shop_level(tnk[0])
+                new_token = await self.refreshTokenShopLevel(tnk[0])
                 if new_token:
-                    await self.salvar_token(new_token)
+                    await self.salvarToken(new_token)
                     return new_token['access_token']
             elif tnk == -1:
-                # print("Refresh token expirado")
-                await self.shop_auth()
+                await self.shopAuth()
                 print(f"Acesse o link para autorizar o acesso. Após, execute novamente a função autenticar informando o código de autorização.")
                 return True
             else:
-                # print("Nenhuma condição encontrada")
                 return False
         except Exception as e:
             msg = f"Erro na autenticação: {e}"
@@ -178,14 +171,14 @@ class Autenticacao:
 
 class Pagamento:
     
-    def __init__(self, auth_instance: 'Autenticacao' = None, ecommerce_id:int=None,empresa_id:int=None):
-        self.ecommerce_id = auth_instance.ecommerce_id if auth_instance else  ecommerce_id
-        self.empresa_id = auth_instance.empresa_id if auth_instance else  empresa_id
-        self.auth_instance = auth_instance or Autenticacao(ecommerce_id=self.ecommerce_id,empresa_id=self.empresa_id)        
+    def __init__(self, auth_instance: 'Autenticacao' = None, ecommerceId:int=None,empresaId:int=None):
+        self.ecommerce_id = auth_instance.ecommerce_id if auth_instance else  ecommerceId
+        self.empresa_id = auth_instance.empresa_id if auth_instance else  empresaId
+        self.auth_instance = auth_instance or Autenticacao(ecommerceId=self.ecommerce_id,empresaId=self.empresa_id)        
         self.dados_shopee = auth_instance.dados_shopee if auth_instance else None        
 
     @carrega_dados_shopee
-    async def get_income_detail(self, date_from:str, date_to:str, income_status:int=1, page_size:int=100) -> list[dict]:
+    async def getIncomeDetail(self, dateFrom:str, dateTo:str, incomeStatus:int=1, pageSize:int=100) -> list[dict]:
         access_token = await self.auth_instance.autenticar()
         timest:int = int(time.time())
         partner_id:int = self.dados_shopee.get("partner_id")
@@ -196,7 +189,7 @@ class Pagamento:
         partner_key_encoded = partner_key.encode()
         sign = hmac.new(partner_key_encoded, base_string_encoded, hashlib.sha256).hexdigest()
         common_params = "partner_id=%s&timestamp=%s&access_token=%s&shop_id=%s&sign=%s" % (partner_id,timest,access_token,shop_id,sign)
-        req_params = "date_from=%s&date_to=%s&income_status=%s&page_size=%s" % (date_from,date_to,income_status,page_size)
+        req_params = "date_from=%s&date_to=%s&income_status=%s&page_size=%s" % (dateFrom,dateTo,incomeStatus,pageSize)
         url = HOST_URL + PATH_INCOME_DETAIL + "?" + common_params + "&" + req_params
         headers = {"Content-Type": "application/json"}
         return await paginar_shopee(url=url,headers=headers)
