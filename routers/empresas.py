@@ -32,9 +32,9 @@ async def criar(empresa: EmpresaCreate) -> bool:
     Cadastra empresa
     """
     try:
-        sucesso = await crud.criar(**empresa.model_dump())
-        if not sucesso:
+        empresa_id = await crud.criar(**empresa.model_dump())
+        if not empresa_id:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="Erro ao criar empresa")
-        return sucesso
+        return True
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=str(e))
