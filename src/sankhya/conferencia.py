@@ -95,7 +95,7 @@ class Conferencia:
                         "offsetPage": "0",
                         "criteria": {
                             "expression": {
-                                "$": "this.NUNOTAORIG = ?"
+                                "$": "this.NUNOTAORIG = ? AND this.STATUS = 'F'"
                             },
                             "parameter": [
                                 {
