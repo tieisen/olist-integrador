@@ -263,20 +263,43 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
             await session.commit()
             return True  
 
+async def buscaPendenteIncomeData(idNota:int=None,listIdNota:list[int]=None) -> list[dict]:
+    
+        filtros = [Nota.income_data.is_(None),
+                   Nota.dh_cancelamento.is_(None)]
+        if idNota:
+            filtros.append(Nota.id_nota == idNota)
+        elif listIdNota:
+            filtros.append(Nota.id_nota.in_(listIdNota))            
+        else:
+            raise ValueError("Parâmetro não informado")
+                
+        async with AsyncSessionLocal() as session:            
+            query = select(Nota).where(*filtros)     
+            result = await session.execute(query)           
+            notas = result.scalars().all()
+            
+        dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                      retorno=notas)
+        return dados_nota 
+
 async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None) -> list[dict]:
+        
         if not any([empresa_id,ecommerce_id]):
             raise ValueError("Parâmetro não informado")
                 
         async with AsyncSessionLocal() as session:            
             filtros = []
             if empresa_id:
-                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)),
-                               Nota.dh_cancelamento.is_(None),
-                               Nota.income_data.get('released_amount') > 0.0)
+                filtros+=[Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)),
+                          Nota.dh_cancelamento.is_(None),
+                          (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
+                          Nota.income_data['released_amount'].as_float() > 0.0]
             elif ecommerce_id:
-                filtros.append(Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id),
-                               Nota.dh_cancelamento.is_(None),
-                               Nota.income_data.get('released_amount') > 0.0)
+                filtros+=[Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id),
+                          Nota.dh_cancelamento.is_(None),
+                          (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
+                          Nota.income_data['released_amount'].as_float() > 0.0]
             else:
                 raise ValueError("Parâmetro não informado")
             
@@ -285,7 +308,7 @@ async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None
                 query = query.where(*filtros)                           
             result = await session.execute(query)           
             notas = result.scalars().all()
-            
+        
         dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                       retorno=notas)
         return dados_nota              
