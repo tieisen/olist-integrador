@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from src.scheduler.jobs.financeiro import integrar_financeiro, integrar_recebimentos_shopee
+from src.scheduler.jobs.financeiro import consultarRecebimentosShopee, integrar
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -7,7 +7,7 @@ router = APIRouter()
 
 class FinanceiroModel(BaseModel):
     codemp:int
-    data:str
+    data:str|None=None
 
 class FinanceiroShopeeModel(BaseModel):
     codemp:int
@@ -16,21 +16,20 @@ class FinanceiroShopeeModel(BaseModel):
 async def processar_shopee(financeiro:FinanceiroShopeeModel) -> bool:    
     """
     Busca os recebimentos na API da Shopee.
-    Baixa títulos pendentes.
     """
-    if not await integrar_recebimentos_shopee(codemp=financeiro.codemp):
+    if not await consultarRecebimentosShopee(codemp=financeiro.codemp):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar recebimentos da Shopee")
     return True
 
-@router.post("/baixar")
-async def baixar_contas(financeiro:FinanceiroModel) -> bool:
+@router.post("/integrar")
+async def integrar(financeiro:FinanceiroModel) -> bool:
     """
-    Baixa contas a receber com base no relatório de custos do e-commerce.
+    Processa e lança títulos a receber e taxas no Olist.
     """
     try:
         financeiro.data = datetime.strptime(financeiro.data, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Formato de data inválido. Use 'YYYY-MM-DD'. Data informada: {financeiro.data}")
-    if not await integrar_financeiro(data=financeiro.data,codemp=financeiro.codemp):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao baixar contas a receber")
+    if not await integrar(dtFim=financeiro.data,codemp=financeiro.codemp):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar títulos")
     return True
