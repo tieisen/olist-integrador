@@ -1,13 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 from src.scheduler.jobs.financeiro import consultarRecebimentosShopee, integrar
-from datetime import datetime
 from pydantic import BaseModel
 
 router = APIRouter()
 
 class FinanceiroModel(BaseModel):
     codemp:int
-    data:str|None=None
+    data:str | None = None
 
 class FinanceiroShopeeModel(BaseModel):
     codemp:int
@@ -22,14 +21,10 @@ async def processar_shopee(financeiro:FinanceiroShopeeModel) -> bool:
     return True
 
 @router.post("/integrar")
-async def integrar(financeiro:FinanceiroModel) -> bool:
+async def integrar_financeiro(financeiro:FinanceiroModel) -> bool:
     """
     Processa e lança títulos a receber e taxas no Olist.
     """
-    try:
-        financeiro.data = datetime.strptime(financeiro.data, "%Y-%m-%d")
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Formato de data inválido. Use 'YYYY-MM-DD'. Data informada: {financeiro.data}")
     if not await integrar(dtFim=financeiro.data,codemp=financeiro.codemp):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar títulos")
     return True
