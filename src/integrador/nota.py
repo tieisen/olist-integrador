@@ -57,12 +57,11 @@ class Nota:
                                        serie=str(dados_nota_olist.get('serie')),
                                        parcelado=eh_parcelado)
             if not ack:
-                msg = f"Erro ao atualizar status da nota"
+                msg = f"Erro ao atualizar status da nota. id_pedido: {dados_pedido.get('id_pedido')}, id_nota: {dados_nota_olist.get('id')}, numero: {dados_nota_olist.get('numero')}, serie: {dados_nota_olist.get('serie')}, parcelado: {eh_parcelado}"
                 raise Exception(msg)            
             return {"success": True, "dados_nota":dados_nota_olist, "__exception__": None}
         except Exception as e:
-            logger.error(f"Erro ao gerar NF: {e}")
-
+            logger.error(f"Erro: {e}")
             return {"success": False, "dados_nota": None, "__exception__": str(e)}
 
     @contexto
