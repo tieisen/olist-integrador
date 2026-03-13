@@ -262,7 +262,7 @@ class Faturamento:
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         parser_pedido = ParserPedido(id_loja=self.dados_ecommerce.get('id_loja'))
-        integra_des = IntegradorDespesa(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
+        integra_des = IntegradorDespesa(idLoja=self.dados_ecommerce.get('id_loja'),empresaId=self.dados_ecommerce.get('empresa_id'))
 
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
