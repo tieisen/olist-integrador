@@ -52,9 +52,11 @@ class Receita:
                 try:
                     ack = await crudNota.atualizarDadosContaShopee(codPedido=conta.get('order_sn'),dadosConta=conta)
                     if not ack:
-                        logger.error("Erro ao salvar dados da conta do pedido %s",conta.get('order_sn'))                    
+                        logger.error("Erro ao atualizar dados da conta do pedido %s",conta.get('order_sn'))                    
+                        logger.info("dadosConta: %s",conta)
                 except Exception as e:
                     logger.error("Erro ao salvar dados da conta do pedido %s: %s",conta.get('order_sn'),str(e))
+                    logger.info("dadosConta: %s",conta)
                     
         return True
 
@@ -256,6 +258,12 @@ class Despesa:
         
         if not any([dadosConta,dadosTransferencia]):
             raise ValueError("Dados incompletos")
+
+        if isinstance(dadosConta,list):
+            dadosConta = dadosConta[0]
+
+        if isinstance(dadosTransferencia,list):
+            dadosTransferencia = dadosTransferencia[0]
         
         if dadosConta:
             dados_pagamento:dict=dadosConta.get('income_data')
