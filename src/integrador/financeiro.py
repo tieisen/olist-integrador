@@ -1,308 +1,413 @@
 import os, time
-from datetime import datetime, timedelta, date
-from database.crud import log as crudLog
+from datetime import datetime, timedelta
 from database.crud import nota as crudNota
-from src.services.bot import Bot
 from src.services.shopee import Pagamento as PagamentoShopee
-from src.olist.financeiro import Financeiro as FinOlist
-from src.sankhya.nota import Nota as NotaSnk
-from src.parser.financeiro import Financeiro as ParseFin
-from src.utils.decorador import contexto, carrega_dados_ecommerce, carrega_dados_empresa, log_execucao
+from src.olist.financeiro import Receita as FinReceita, Despesa as FinDespesa
+from src.parser.financeiro import Receita as ParseReceita, Despesa as ParseDespesa
+from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
-from src.utils.buscar_arquivo import buscar_relatorio_custos
 load_env()
 logger = set_logger(__name__)
 
-class Financeiro:
+class Receita:
 
-    def __init__(self, empresa_id:int, id_loja:int=None):
-        self.id_loja = id_loja
-        self.empresa_id = empresa_id
-        self.codemp = None
-        self.log_id = None
-        self.contexto = 'financeiro'
+    def __init__(self, empresaId:int, idLoja:int=None):
+        self.id_loja:int = idLoja
+        self.empresa_id:int = empresaId
+        self.codemp:int = None
+        self.log_id:int = None
+        self.contexto:str = 'financeiro'
         self.dados_ecommerce:dict = None
         self.dados_empresa:dict = None
-        self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))
+        self.req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP', 1.5))
+        self.payload_lcto:dict = None
+        self.payload_baixa:dict = None    
+        self.id_nota:int = None
+        self.id_financeiro:int = None
+        self.cod_pedido:str = None
+        self.parse = ParseReceita()
+        self.finOlist = FinReceita(empresa_id=self.empresa_id)
 
-    async def buscar_contas_shopee(self, ecommerce_id:int=None, dias:int=1, dt_fim:str=None) -> bool:
+    async def calcularFinanceiroBlzWeb(self,codPedido:str,vlrNota:float) -> dict:
+        vlr_taxa:float = await self.parse.calculaComissaoBlzWeb(vlrPedido=vlrNota)
+        return {
+            "order_sn": codPedido,
+            "amount_paid": vlrNota,
+            "released_amount": round(vlrNota - vlr_taxa,2),
+            "fee_blz": vlr_taxa
+        }
+    
+    async def buscarContasShopee(self, ecommerceId:int=None, dias:int=1, dtFim:str=None) -> bool:
         
-        dt_fim = datetime.now() if not dt_fim else datetime.strptime(dt_fim, '%Y-%m-%d')
-        dt_inicio = (dt_fim - timedelta(days=dias))
+        dt_fim:datetime = datetime.now() if not dtFim else datetime.strptime(dtFim, '%Y-%m-%d')
+        dt_inicio:datetime = (dt_fim - timedelta(days=dias))
         dados_contas:list[dict] = []
 
-        pag_shopee = PagamentoShopee(empresa_id=self.empresa_id,ecommerce_id=ecommerce_id)
-        dados_contas = await pag_shopee.get_income_detail(date_from=dt_inicio.strftime('%Y-%m-%d'),date_to=dt_fim.strftime('%Y-%m-%d'))
+        pag_shopee = PagamentoShopee(empresaId=self.empresa_id,ecommerceId=ecommerceId)
+        dados_contas = await pag_shopee.getIncomeDetail(dateFrom=dt_inicio.strftime('%Y-%m-%d'),dateTo=dt_fim.strftime('%Y-%m-%d'))
         if dados_contas:
             for conta in dados_contas:
                 time.sleep(self.req_time_sleep)
                 try:
-                    ack = await crudNota.salvar_dados_conta_shopee(cod_pedido=conta.get('order_sn'),dados_conta=conta)
+                    ack = await crudNota.atualizarDadosContaShopee(codPedido=conta.get('order_sn'),dadosConta=conta)
                     if not ack:
-                        logger.error("Erro ao salvar dados da conta do pedido %s",conta.get('order_sn'))                    
+                        logger.error("Erro ao atualizar dados da conta do pedido %s",conta.get('order_sn'))                    
+                        logger.info("dadosConta: %s",conta)
                 except Exception as e:
                     logger.error("Erro ao salvar dados da conta do pedido %s: %s",conta.get('order_sn'),str(e))
+                    logger.info("dadosConta: %s",conta)
                     
         return True
 
-    @contexto
     @carrega_dados_ecommerce
-    async def baixar_conta_liquido(self,data_baixa:datetime,dados_conta:dict,dados_custo:dict,**kwargs) -> dict:
-        """
-        Faz a baixa do contas a receber referente à NF no Olist com base no relatório de custos
-            :param data_baixa: data da baixa
-            :param dados_conta: dicionário com os dados do lançamento do contas a receber
-            :param dados_custo: dicionário com os dados da planilha de custos do e-commerce
-            :return dict: dicionário com status e erro
-        """
+    async def formatarPayloadLcto(self, dadosConta:dict) -> bool:
+        
+        dados_pagamento:dict=dadosConta.get('income_data')        
+        id_cliente:int = dadosConta.get('id_cliente')
+        id_categoria_financeiro:int = self.dados_ecommerce.get('id_categoria_financeiro')
+        id_forma_recebimento:int = self.dados_ecommerce.get('id_forma_rec_padrao')
+        vlr_titulo:float = dados_pagamento.get('released_amount')
+        cod_pedido:str = dados_pagamento.get('order_sn')
+        dt_nf:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
+        dt_venc:str = datetime.now().strftime('%Y-%m-%d')
+        num_documento:str = str(dadosConta.get('numero'))
+        num_nf:str = str(dadosConta.get('numero'))
+        self.id_nota = dadosConta.get('id_nota')
+        
+        if not all([id_cliente,id_categoria_financeiro,vlr_titulo,cod_pedido,dt_nf,dt_venc,num_documento,num_nf,id_forma_recebimento]):
+            raise ValueError(f"Dados incompletos.")
+        
+        self.payload_lcto = await self.parse.lancamento(dtNf=dt_nf,
+                                                        dtVenc=dt_venc,
+                                                        vlrTitulo=vlr_titulo,
+                                                        numDocumento=num_documento,
+                                                        numNf=num_nf,
+                                                        codPedido=cod_pedido,
+                                                        idCliente=id_cliente,
+                                                        idCategoriaFinanceiro=id_categoria_financeiro,
+                                                        idFormaRecebimento=id_forma_recebimento)
+                                    
+        if not self.payload_lcto:
+            msg = f"Erro montar payload"
+            raise Exception(msg)   
+        
+        return True
 
-        if not self.log_id:
-            self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                              de='olist',
-                                              para='olist',
-                                              contexto=kwargs.get('_contexto'))
-        try:
-            parse = ParseFin()
-            finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-            payload = {}
-            payload = parse.olist_receber(dados_ecommerce=self.dados_ecommerce,
-                                          dados_conta=dados_conta,
-                                          dados_custo=dados_custo,
-                                          data=data_baixa.strftime('%d/%m/%Y'))
-            if not payload:
-                msg = f"Erro montar payload"
-                raise Exception(msg)
-            
-            if not await finOlist.baixar_receber(id=dados_conta.get('id'),payload=payload):
-                msg = f"Erro ao baixar contas a receber da nota"
-                raise Exception(msg)
-            
-            if not await crudNota.atualizar(cod_pedido=dados_custo.get('no_pedido_ecommerce'),dh_baixa_financeiro=datetime.now(),parcelado=False):
-                msg = f"Erro ao atualizar contas a receber da nota"
-                raise Exception(msg)
-            
-            return {"success": True, "__exception__": None}
-        except Exception as e:
-            logger.error("Erro ao baixar conta: %s",str(e))
-            return {"success": False, "__exception__": str(e)}  
+    @carrega_dados_ecommerce
+    async def formatarPayloadBaixa(self, dadosConta:dict) -> bool:
+        
+        dados_pagamento:dict=dadosConta.get('income_data')
+        id_categoria_financeiro:int = self.dados_ecommerce.get('id_categoria_financeiro')
+        id_conta_destino:int = self.dados_ecommerce.get('id_conta_destino')
+        vlr_pago:float = dados_pagamento.get('released_amount')
+        dt_recebimento:str = datetime.now().strftime('%Y-%m-%d')
+        self.id_financeiro = dadosConta.get('id_financeiro')
+        self.cod_pedido = dadosConta['income_data'].get('order_sn')
+        
+        if not all([id_conta_destino,dt_recebimento,vlr_pago,id_categoria_financeiro]):
+            raise ValueError("Dados incompletos.")
+        
+        self.payload_baixa = await self.parse.baixa(idContaDestino=id_conta_destino,
+                                                    dtRecebimento=dt_recebimento,
+                                                    vlrPago=vlr_pago,                                       
+                                                    idCategoriaFinanceiro=id_categoria_financeiro)
+
+        if not self.payload_baixa :
+            msg = f"Erro montar payload"
+            raise Exception(msg)
+        
+        return True
+
+    async def validaValorRecebimento(self, dadosConta:dict) -> dict:
+        
+        if dadosConta['income_data'].get('released_amount') > 0:
+            return True
+
+        # se o valor liberado é menor que zero, o pedido foi devolvido
+        if not await crudNota.atualizar(cod_pedido=dadosConta['income_data'].get('order_sn'),
+                                        parcelado=False,
+                                        dh_baixa_financeiro=datetime(2000,1,1)):
+            msg = f"Erro ao atualizar contas a receber da nota"
+            raise ValueError(msg)
+        return False
+
+    async def lancarConta(self,id_nota:int|None=None,payload:dict|None=None) -> bool:
+
+        id_financeiro:int = None
+        payload = self.payload_lcto if not payload else payload
+        id_nota = self.id_nota if not id_nota else id_nota        
+        
+        id_financeiro = await self.finOlist.lancar(payload=payload)
+        if not id_financeiro:
+            msg = f"Erro ao lançar título a receber"
+            raise Exception(msg)
+        
+        # Salva ID do financeiro
+        if not await crudNota.atualizar(id_nota=id_nota,id_financeiro=id_financeiro):
+            msg = f"Erro ao salvar ID do financeiro"
+            raise Exception(msg)            
+        
+        return True
+
+    async def baixarConta(self,idFinanceiro:int|None=None,codPedido:str|None=None,payload:dict|None=None) -> bool:
+
+        payload = self.payload_baixa if not payload else payload
+        idFinanceiro = self.id_financeiro if not idFinanceiro else idFinanceiro
+        codPedido = self.cod_pedido if not codPedido else codPedido
+        
+        if not await self.finOlist.baixar(id=idFinanceiro,payload=payload):
+            msg = f"Erro ao baixar contas a receber da nota"
+            raise Exception(msg)
+        
+        if not await crudNota.atualizar(cod_pedido=codPedido,
+                                        dh_baixa_financeiro=datetime.now(),
+                                        parcelado=False):
+            msg = f"Erro ao atualizar contas a receber da nota"
+            raise Exception(msg)            
+           
+        return True
+    
+    async def validaPrecisaProcessar(self,listaNotas:list[dict]) -> list[dict]:
+        
+        listaNotasProcessar:list[dict]=[]
+        for nota in listaNotas:            
+            if await crudNota.buscaPendenteIncomeData(idNota=nota.get('id')):
+                listaNotasProcessar.append(nota)
+        return listaNotasProcessar
+    
+    async def processarNotas(self,listaNotas:list[dict]) -> bool:
+
+        print("listaNotas",len(listaNotas))        
+        listaNotas = await self.validaPrecisaProcessar(listaNotas=listaNotas)
+        print("listaNotasProcessar",len(listaNotas))
+        for i, nota in enumerate(listaNotas):
+            try:
+                id_cliente:int = nota['cliente'].get('id')
+                id_nota:int = nota.get('id')
+                ecommerce_id:int = nota['ecommerce'].get('id',0)
+                cod_pedido:str = nota['ecommerce'].get('numeroPedidoEcommerce')
+                vlr_nota:float = nota.get('valor')
+                dados_financeiro:dict = None
+                
+                if not all([id_cliente,id_nota,ecommerce_id,cod_pedido,vlr_nota]):
+                    raise ValueError("Dados incompletos.")
+                
+                if ecommerce_id == 10940:
+                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrNota=vlr_nota)                
+                elif ecommerce_id in [9227,9265]:
+                    dados_financeiro = {
+                        "order_sn": cod_pedido,
+                        "amount_paid": vlr_nota,
+                        "released_amount": 0.0,
+                        "fee_shopee": 0.0
+                    }                
+                else:
+                    dados_financeiro = {
+                        "order_sn": cod_pedido,
+                        "amount_paid": vlr_nota
+                    }
+                    
+                print(f"->> Nota {nota.get('numero')}")
+                print(dados_financeiro)
+                
+                time.sleep(self.req_time_sleep)
+                await crudNota.atualizar(id_nota=id_nota,
+                                         id_cliente=id_cliente,
+                                         income_data=dados_financeiro)
+            except Exception as e:
+                logger.error("Erro ao processar nota %s: %s",nota.get('numero'),str(e))
+            finally:
+                pass
+        
+        return True     
+    
+class Despesa:
+
+    def __init__(self, empresaId:int, idLoja:int=None):
+        self.id_loja:int = idLoja
+        self.empresa_id:int = empresaId
+        self.codemp:int = None
+        self.log_id:int = None
+        self.contexto:str = 'financeiro'
+        self.dados_ecommerce:dict = None
+        self.dados_empresa:dict = None
+        self.req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP', 1.5))
+        self.payload_lcto:dict = None
+        self.payload_baixa:dict = None    
+        self.id_nota:int = None
+        self.id_financeiro:int = None
+        self.parse = ParseDespesa()
+        self.finDespesa = FinDespesa(empresa_id=self.empresa_id)          
 
     @carrega_dados_ecommerce
     @carrega_dados_empresa
-    async def lancar_conta_pagar_olist(self, nunota_nota:int) -> bool:
+    async def formatarPayloadLcto(self, dadosConta:dict|None=None, dadosTransferencia:dict|None=None) -> bool:
+        """_summary_
 
-        def calcula_vcto(dtNeg:str):
-            nonlocal dtVcto
-            try:
-                dtVcto = (datetime.strptime(dtNeg,'%d/%m/%Y') + timedelta(days=30)).strftime('%d/%m/%Y')
-            except Exception as e:
-                logger.error(f"Erro ao calcular data de vencimento do contas a pagar: {e}")
+        Args:
+            dadosConta (dict | None): _description_
+            dadosTransferencia (dict | None): _description_
 
-        def formata_data(data:str) -> str:
-            return datetime.strptime(data,'%d/%m/%Y').strftime('%Y-%m-%d')
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+            Exception: _description_
 
-        notaSnk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
-        finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-        parseFin = ParseFin()
-        dtVcto:str=''
+        Returns:
+            bool: _description_
+        """
+        
+        if not any([dadosConta,dadosTransferencia]):
+            raise ValueError("Dados incompletos")
 
-        try:
-            dados_nota_transferencia:dict = await notaSnk.buscar(nunota=nunota_nota)
-            if isinstance(dados_nota_transferencia,list):
-                dados_nota_transferencia = dados_nota_transferencia[0]
-            if not dados_nota_transferencia:
-                raise Exception(f"Erro ao buscar dados da nota de transferência {nunota_nota}")                
-            
-            calcula_vcto(dados_nota_transferencia.get('dtneg'))
-            payload:dict={}
-            try:
-                payload = parseFin.olist_pagar(dtNeg=formata_data(dados_nota_transferencia.get('dtneg')),
-                                               dtVcto=formata_data(dtVcto),
-                                               valor=dados_nota_transferencia.get('vlrnota'),
-                                               numDocumento=dados_nota_transferencia.get('numnota'),
-                                               historico=f"Ref. NF nº {dados_nota_transferencia.get('numnota')}. {dados_nota_transferencia.get('observacao')}",
-                                               dados_empresa=self.dados_empresa)
-            except Exception as e:
-                logger.error(f"Erro no parser: {e}")
-                print(f"Erro no parser: {e}")
-            finally:
-                pass
-            if not payload:
-                raise Exception(f"Erro ao montar payload")
+        if isinstance(dadosConta,list):
+            dadosConta = dadosConta[0]
+            if not isinstance(dadosConta,dict):
+                raise ValueError("Dados da conta devem ser um dicionário")
 
-            ack = await finOlist.lancar_pagar(payload=payload)
-            if not ack:
-                raise Exception(f"Erro ao lançar conta a pagar")
-
-            return True
-        except Exception as e:
-            logger.error(str(e))
-            return False
-
-    @contexto
-    @carrega_dados_ecommerce
-    async def agrupar_titulos_parcelados(self,data:datetime=None,**kwargs) -> bool:
-        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                          de='olist',
-                                          para='olist',
-                                          contexto=kwargs.get('_contexto'))
-        dados_notas_parceladas:list[dict] = await crudNota.buscar_financeiro_parcelado(ecommerce_id=self.dados_ecommerce.get('id'))
-        try:
-            if dados_notas_parceladas:        
-                notas_parceladas:list[dict] = [{"numero":n.get('numero'),"id":n.get('id_nota')} for n in dados_notas_parceladas]
-                if not notas_parceladas:
-                    raise Exception("Nenhuma nota parcelada encontrada para agrupar títulos.")
-                data_formatada:str = data.strftime('%d/%m/%Y') if data else datetime.now().strftime('%d/%m/%Y')
-                bot = Bot(empresa_id=self.dados_ecommerce.get('empresa_id'))
-                if not await bot.rotina_contas_receber(lista_notas=notas_parceladas,data_vcto=data_formatada):
-                    raise Exception("Erro ao agrupar títulos parcelados via Bot.")
-            await crudLog.atualizar(id=self.log_id,sucesso=True)
-            return True                
-        except Exception as e:
-            logger.error("Erro ao agrupar títulos parcelados: %s",str(e))
-            await crudLog.atualizar(id=self.log_id,sucesso=False)
-            return False
-    
-    @contexto
-    @carrega_dados_ecommerce
-    async def realizar_baixa_contas_receber(self,data_conta:date,relatorio_custos:list[dict],**kwargs) -> bool:
-
-        def filtra_loja(contas_dia:list[dict],id_loja:int) -> list[dict]:
-            if id_loja in [9227,9265]:
-                return [conta for conta in contas_dia if not str.strip(conta['cliente'].get('email'))]
-            elif id_loja == 10940:
-                return [conta for conta in contas_dia if "@grupoboticario.com.br" in conta['cliente'].get('email')]
+        if isinstance(dadosTransferencia,list):
+            dadosTransferencia = dadosTransferencia[0]
+            if not isinstance(dadosTransferencia,dict):
+                raise ValueError("Dados da transferência devem ser um dicionário")        
+        
+        if dadosConta:
+            dados_pagamento:dict=dadosConta.get('income_data')
+            vlr_titulo:float=0
+            if 'fee_shopee' in dados_pagamento:
+                vlr_titulo = dados_pagamento.get('fee_shopee')
+            elif 'fee_blz' in dados_pagamento:
+                vlr_titulo = dados_pagamento.get('fee_blz')
             else:
-                return []
+                vlr_titulo = dados_pagamento.get('amount_paid')            
+            cod_pedido:str = dados_pagamento.get('order_sn')
+            dt_neg:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
+            dt_venc:str = datetime.now().strftime('%Y-%m-%d')
+            num_documento:str = str(dadosConta.get('numero'))
+            id_fornecedor:int = self.dados_ecommerce.get('id_fornecedor_olist')
+            id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
+            id_forma_pgto:int = self.dados_ecommerce.get('id_forma_pgto_padrao')
+            historico:str = f"Taxa do e-commerce || Ref. a NF nº {num_documento}, Pedido #{cod_pedido}"
+            self.id_nota = dadosConta.get('id_nota')
+        
+        if dadosTransferencia:
+            dtneg:datetime = datetime.strptime(dadosTransferencia.get('dtneg'),'%d/%m/%Y')
+            vlr_titulo:float = dadosTransferencia.get('vlrnota')
+            dt_neg:str = dtneg.strftime('%Y-%m-%d')
+            dt_venc:str = (dtneg + timedelta(days=30)).strftime('%Y-%m-%d')
+            num_documento:str = str(dadosTransferencia.get('numnota'))
+            id_fornecedor:int = self.dados_empresa.get('olist_id_fornecedor_padrao')
+            id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_despesa_padrao')
+            id_forma_pgto:int = self.dados_ecommerce.get('id_forma_pgto_padrao')
+            historico:str = f"Ref. NF nº {dadosTransferencia.get('numnota')}. {dadosTransferencia.get('observacao')}"
+            self.id_nota = -1
+        
+        if not all([dt_neg,dt_venc,vlr_titulo,num_documento,id_fornecedor,id_categoria_despesa,historico,id_forma_pgto]):
+            raise ValueError(f"Dados incompletos. dt_neg: {dt_neg}, dt_venc: {dt_venc}, vlr_titulo: {vlr_titulo}, num_documento: {num_documento}, id_fornecedor: {id_fornecedor}, id_categoria_despesa: {id_categoria_despesa}, historico: {historico}, id_forma_pgto: {id_forma_pgto}")
+        
+        self.payload_lcto = await self.parse.lancamento(dtNeg=dt_neg,
+                                                        dtVcto=dt_venc,
+                                                        valor=vlr_titulo,
+                                                        numDocumento=num_documento,
+                                                        historico=historico,
+                                                        idFornecedor=id_fornecedor,
+                                                        idCategoriaDespesa=id_categoria_despesa,
+                                                        idFormaPgto=id_forma_pgto)
+                                    
+        if not self.payload_lcto:
+            msg = f"Erro montar payload"
+            raise Exception(msg)   
+        
+        return True
 
-        import re
-        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                          de='olist',
-                                          para='sankhya',
-                                          contexto=kwargs.get('_contexto'))        
-        REGEX = r"OC nº (\S+)"
-
-        fin_olist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-        contas_dia:list[dict] = await fin_olist.buscar_lista_receber_aberto(dt_emissao=data_conta.strftime('%Y-%m-%d'))
-        contas_dia = filtra_loja(contas_dia=contas_dia,id_loja=self.id_loja)
-        print(f"Contas a receber: {len(contas_dia)}")
-        if not contas_dia:
-            await crudLog.atualizar(id=self.log_id,sucesso=True)
-            return True
-        status_log:list[bool] = []
-        for conta in contas_dia:
-            codigo_pedido:str=''
-            try:
-                matches = re.search(REGEX, conta.get('historico'))
-                codigo_pedido=matches.group(1)
-                custo:dict = next((r for r in relatorio_custos if r.get("pedido_ecommerce") == codigo_pedido), None)
-                if not custo:
-                    msg = f"Erro ao encontrar custo para o pedido {codigo_pedido}"
-                    raise ValueError(msg)
-                status = await self.baixar_conta_liquido(data_baixa=data_conta,dados_conta=conta,dados_custo=custo)
-                status_log.append(status.get('success'))
-            except Exception as e:
-                logger.error("Erro ao baixar conta a receber do pedido %s: %s",codigo_pedido,str(e))
-                status_log.append(False)
-            finally:
-                time.sleep(self.req_time_sleep)
-        await crudLog.atualizar(id=self.log_id,sucesso=all(status_log))
-        return all(status_log)
-
-    @contexto
     @carrega_dados_ecommerce
-    async def baixar_contas_receber_shopee(self,**kwargs) -> bool:
-
-        self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
-                                          de='shopee',
-                                          para='olist',
-                                          contexto=kwargs.get('_contexto')) 
-
-        fin_olist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-        parse = ParseFin()
-        res:list[bool] = []
-        codigo_pedido:str=''
-        dados_conta:dict={}
-        payload:dict=None
-
-        contas_para_baixar:list[dict] = await crudNota.buscar_financeiro_baixar_shopee(ecommerce_id=self.dados_ecommerce.get('id'))
-        if not contas_para_baixar:
-            print("Nenhuma conta para baixar.")
-            return True
+    async def formatarPayloadBaixa(self, dadosConta:dict|None=None, dadosTransferencia:dict|None=None) -> bool:
         
-        for i, conta in enumerate(contas_para_baixar):            
-            codigo_pedido = conta['income_data'].get('order_sn')
-            print(f"{i+1}/{len(contas_para_baixar)}: Pedido {codigo_pedido}")
-            try:
-                if conta['income_data'].get('released_amount') < 0:
-                    ack = await fin_olist.marcar_devolvido(id=conta.get('id_financeiro'))
-                    if not ack:
-                        msg = f"Erro ao marcar conta como devolvida"
-                        raise ValueError(msg)
-                    
-                    ack = await crudNota.atualizar(cod_pedido=codigo_pedido,parcelado=False,dh_baixa_financeiro=datetime.now())
-                    if not ack:
-                        msg = f"Erro ao atualizar contas a receber da nota"
-                        raise ValueError(msg)
-                    
-                    print("Conta marcada como devolvida.")
-                    res.append(True)
-                    continue
-                
-                print("Buscando dados da conta...")
-                dados_conta = await fin_olist.buscar_receber(id=conta.get('id_financeiro'))
-                if not dados_conta:
-                    msg = f"Erro ao buscar dados da conta"
-                    raise ValueError(msg)
-                if dados_conta.get('situacao') == 'pago':
-                    print("Conta já foi paga.")
-                    res.append(True)
-                    continue
-
-                print("Montando payload...")
-                payload = parse.olist_receber_shopee(dados_ecommerce=self.dados_ecommerce,dados_conta=dados_conta,dados_recebimento=conta.get('income_data'))
-                if not payload:
-                    msg = f"Erro ao montar payload"
-                    raise ValueError(msg)
-                print("Baixando contas a receber...")
-                time.sleep(self.req_time_sleep)
-                ack = await fin_olist.baixar_receber(id=dados_conta.get('id'),payload=payload)
-                if not ack:
-                    msg = f"Erro ao baixar contas a receber"
-                    raise Exception(msg)
-                print("Atualizando base...")
-                if not await crudNota.atualizar(cod_pedido=codigo_pedido,parcelado=False,
-                                                dh_baixa_financeiro=datetime.now()):
-                    msg = f"Erro ao atualizar contas a receber da nota"
-                    raise Exception(msg)
-                res.append(True)
-            except Exception as e:
-                res.append(False)
-                msg = f"Erro ao baixar contas a receber do pedido {codigo_pedido}: {str(e)}"
-                print(msg)
-                logger.error(msg)
-                if dados_conta:
-                    logger.info(f"ID da conta: {dados_conta.get('id')}")
-                if payload:
-                    logger.info(f"Payload: {payload}")
-                codigo_pedido=''
-                payload=None               
-            finally:
-                print("")
-                time.sleep(self.req_time_sleep)
+        if not any([dadosConta,dadosTransferencia]):
+            raise ValueError("Dados incompletos")
         
-        return all(res)
+        id_categoria_despesa:int = None
+        id_conta_destino:int = None
+        vlr_pago:float = None
+        dt_recebimento:str = None
+        
+        if dadosConta:
+            dados_pagamento:dict=dadosConta.get('income_data')
+            id_categoria_despesa = self.dados_ecommerce.get('olist_id_categoria_taxa_padrao')
+            id_conta_destino = self.dados_ecommerce.get('id_conta_destino')
+            vlr_pago = dados_pagamento.get('released_amount')
+            dt_recebimento = datetime.now().strftime('%Y-%m-%d')
+            self.id_financeiro = dadosConta.get('id_financeiro')
+            
+        if dadosTransferencia:
+            id_categoria_despesa = self.dados_ecommerce.get('olist_id_categoria_despesa_padrao')
+            id_conta_destino = self.dados_ecommerce.get('id_conta_destino')
+            vlr_pago = dadosTransferencia.get('vlrnota')
+            dt_recebimento = datetime.now().strftime('%Y-%m-%d')
+
+        if not all([id_conta_destino,dt_recebimento,vlr_pago,id_categoria_despesa]):
+            raise ValueError("Dados incompletos")
+        
+        self.payload_baixa = await self.parse.baixa(idContaDestino=id_conta_destino,
+                                                    dtRecebimento=dt_recebimento,
+                                                    vlrPago=vlr_pago,
+                                                    idCategoriaDespesa=id_categoria_despesa)
+
+        if not self.payload_baixa:
+            msg = f"Erro montar payload"
+            raise Exception(msg)
+        
+        return True
+
+    @carrega_dados_ecommerce
+    async def lancarConta(self,id_nota:int|None=None,payload:dict|None=None) -> bool:
+
+        id_financeiro:int = None
+        payload = self.payload_lcto if not payload else payload
+        id_nota = self.id_nota if not id_nota else id_nota
+
+        if not all([payload,id_nota]):
+            raise ValueError("Dados incompletos")
+        
+        id_financeiro = await self.finDespesa.lancar(payload=payload)
+        if not id_financeiro:
+            msg = f"Erro ao lançar título a receber"
+            raise Exception(msg)
+        
+        if id_nota != -1:                
+            if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=id_financeiro):
+                msg = f"Erro ao salvar ID do financeiro"
+                raise Exception(msg)
+
+        self.payload_lcto = None
+        self.id_nota = None        
+        return True
+
+    @carrega_dados_ecommerce
+    async def ignorarTaxa(self,id_nota:int) -> bool:
+
+        id_nota = self.id_nota if not id_nota else id_nota
+        if await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=0):
+            msg = f"Erro ao salvar ID do financeiro"
+            raise Exception(msg)              
+        
+        return True
+
+    @carrega_dados_ecommerce
+    async def baixarConta(self,idFinanceiro:int|None=None,payload:dict|None=None) -> bool:
+
+        payload = self.payload_baixa if not payload else payload
+        idFinanceiro = self.id_financeiro if not idFinanceiro else idFinanceiro
+        
+        if not all([idFinanceiro,payload]):
+            raise ValueError("Dados incompletos")
+        
+        if not await self.finDespesa.baixar(id=idFinanceiro,payload=payload):
+            msg = f"Erro ao baixar contas a receber da nota"
+            raise Exception(msg)
+        
+        self.id_financeiro = None
+        self.payload_baixa = None       
+           
+        return True
     
-    @log_execucao
-    async def executar_baixa(self,data:date) -> bool:
-        parser = ParseFin()
-        relatorio_custos:list[dict] = buscar_relatorio_custos()
-        if not relatorio_custos:
-            logger.error("Relatório de custos não encontrado ou vazio.")
-            return False
-        relatorio_custos = parser.carregar_relatorio_olist(lista=relatorio_custos)
-        if not relatorio_custos:
-            await crudLog.atualizar(id=self.log_id,sucesso=True)
-            return True        
-        sucesso_baixa = await self.realizar_baixa_contas_receber(data_conta=data,relatorio_custos=relatorio_custos)
-        return sucesso_baixa

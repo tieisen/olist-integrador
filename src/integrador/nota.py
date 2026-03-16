@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from src.olist.nota import Nota as NotaOlist
-from src.olist.financeiro import Financeiro as FinOlist
+from src.olist.financeiro import Receita as FinOlist
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.nota import Nota as NotaSnk
 from database.crud import nota as crudNota
@@ -57,12 +57,11 @@ class Nota:
                                        serie=str(dados_nota_olist.get('serie')),
                                        parcelado=eh_parcelado)
             if not ack:
-                msg = f"Erro ao atualizar status da nota"
+                msg = f"Erro ao atualizar status da nota. id_pedido: {dados_pedido.get('id_pedido')}, id_nota: {dados_nota_olist.get('id')}, numero: {dados_nota_olist.get('numero')}, serie: {dados_nota_olist.get('serie')}, parcelado: {eh_parcelado}"
                 raise Exception(msg)            
             return {"success": True, "dados_nota":dados_nota_olist, "__exception__": None}
         except Exception as e:
-            logger.error(f"Erro ao gerar NF: {e}")
-
+            logger.error(f"Erro: {e}")
             return {"success": False, "dados_nota": None, "__exception__": str(e)}
 
     @contexto
@@ -115,8 +114,8 @@ class Nota:
         try:            
             # Busca contas a receber no Olist
             finOlist = FinOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
-            dados_financeiro = await finOlist.buscar_receber(serieNf=str(dados_nota.get('serie')),                                                                  
-                                                             numeroNf=str(dados_nota.get('numero')).zfill(6))
+            dados_financeiro = await finOlist.buscar(serieNf=str(dados_nota.get('serie')),                                                                  
+                                                     numeroNf=str(dados_nota.get('numero')).zfill(6))
             if not dados_financeiro:
                 msg = f"Erro ao buscar contas a receber da nota"
                 raise Exception(msg)

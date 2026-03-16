@@ -19,7 +19,6 @@ class Nota:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
 
-    @carrega_dados_ecommerce
     @token_olist
     async def buscar(self,id:int=None,numero:int=None,cod_pedido:str=None) -> dict:
         """
@@ -101,6 +100,23 @@ class Nota:
             logger.error("Nota cancelada")
             print("Nota cancelada")
             return False
+        
+    @token_olist
+    async def buscarData(self,data:str|None=None) -> list[dict]:
+        """
+        Lista as NFs de uma data.
+            :param data: Data da emissão da NF
+            :return list[dict]: dicionários com os dados das NFs
+        """
+        situacoes = [6,7]
+        lista_notas:list[dict]=[]
+        data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d') if not data else data
+        
+        for s in situacoes:
+            url = self.endpoint+f"/?tipo=S&situacao={s}&dataInicial={data}&dataFinal={data}"
+            lista_notas += await paginar_olist(token=self.token,url=url)
+        
+        return lista_notas   
     
     @carrega_dados_ecommerce
     @token_olist

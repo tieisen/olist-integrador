@@ -9,7 +9,7 @@ from src.sankhya.conferencia import Conferencia as ConfSnk
 from src.sankhya.nota import Nota as NotaSnk
 from src.integrador.nota import Nota as IntegradorNota
 from src.integrador.pedido import Pedido as IntegradorPedido
-from src.integrador.financeiro import Financeiro as IntegradorFinanceiro
+from src.integrador.financeiro import Despesa as IntegradorDespesa
 from src.parser.transferencia import Transferencia as ParserTransferencia
 from src.parser.pedido import Pedido as ParserPedido
 from src.olist.separacao import Separacao as SeparacaoOlist
@@ -242,11 +242,6 @@ class Faturamento:
             ack_separacao = await separacao.separar(id=pedido.get('id_separacao'))
             if not ack_separacao:
                 raise Exception(f"Erro na separação do pedido: {ack_separacao.get('__exception__')}")
-
-            # Recebe contas a receber do Olist
-            ack_conta = await integra_nota.receber_conta(ack_criacao.get('dados_nota'))
-            if not ack_conta.get('success'):
-                raise Exception(f"Erro ao receber conta: {ack_conta.get('__exception__')}")
             
             return {"success": True, "__exception__": None}
         except Exception as e:
@@ -267,7 +262,7 @@ class Faturamento:
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get('empresa_id'))
         parser_pedido = ParserPedido(id_loja=self.dados_ecommerce.get('id_loja'))
-        integra_fin = IntegradorFinanceiro(id_loja=self.dados_ecommerce.get('id_loja'),empresa_id=self.dados_ecommerce.get('empresa_id'))
+        integra_des = IntegradorDespesa(idLoja=self.dados_ecommerce.get('id_loja'),empresaId=self.dados_ecommerce.get('empresa_id'))
 
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
@@ -320,16 +315,21 @@ class Faturamento:
                 if ack is False:
                     msg = f"Erro ao confirmar nota {nunota_nota}"
                     raise Exception(msg)
-                
-                # Cria o contas a pagar no Olist
-                ack = await integra_fin.lancar_conta_pagar_olist(nunota_nota=nunota_nota)
-                if not ack:
-                    msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
-                    raise Exception(msg)
 
                 ack = await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
                 if ack is False:
                     msg = f"Erro ao atualizar hora da confirmação na base. {nunota_nota}"
+                    raise Exception(msg)                
+                
+                dados_transferencia:dict = await nota_snk.buscar(nunota=nunota_nota)
+                if not dados_transferencia:
+                    msg = f"Erro ao buscasr dados da nota de transferência {nunota_nota}"
+                    raise Exception(msg)
+                
+                # Cria o contas a pagar no Olist
+                await integra_des.formatarPayloadLcto(dadosTransferencia=dados_transferencia)
+                if not await integra_des.lancarConta():
+                    msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
                     raise Exception(msg)
             else:
                 # Atualiza base de dados

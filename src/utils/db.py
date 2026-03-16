@@ -32,7 +32,7 @@ def validar_criptografia(colunas_criptografadas:list[str], kwargs:dict) -> dict:
     cripto = Criptografia()
     try:
         for key, value in kwargs.items():
-            if key in colunas_criptografadas:
+            if key in colunas_criptografadas and value is not None:
                 kwargs[key] = cripto.criptografar(value).decode()
     except Exception as e:
         erro = f"Erro ao criptografar dados da coluna {key}. {e}"
@@ -49,7 +49,7 @@ def remover_criptografia(colunas_criptografadas:list[str], dados:dict) -> dict:
     cripto = Criptografia()
     try:
         for key, value in dados.items():
-            if key in colunas_criptografadas:
+            if key in colunas_criptografadas and value is not None:
                 dados[key] = cripto.descriptografar(value)
     except Exception as e:
         erro = f"Erro ao descriptografar dados da coluna {key}. {e}"
@@ -75,7 +75,7 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno) -> dict:
         :param retorno: retorno do SQLAlchemy
     """        
     if not retorno:
-        return False    
+        return []
     
     if isinstance(retorno,list):
         retorno_formatado = []

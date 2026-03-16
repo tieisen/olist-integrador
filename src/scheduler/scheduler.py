@@ -59,10 +59,22 @@ async def rotina_completa():
 async def rotina_financeiro_shopee():
     logger.info("Iniciando busca dos recebimentos da Shopee...")
     try:
-        await financeiro.integrar_recebimentos_shopee()
+        await financeiro.consultarRecebimentosShopee()
         logger.info("Rotina de recebimentos Shopee concluída.")
     except Exception as e:
         logger.exception(f"Erro na rotina de recebimentos Shopee: {e}")
+
+async def rotina_lancamentos_financeiro():
+    logger.info("Iniciando rotina de lançamentos de financeiro...")
+    try:
+        await financeiro.integrar()
+        logger.info("Rotina de lançamentos financeiros concluída.")
+    except Exception as e:
+        logger.exception(f"Erro na rotina de lançamentos financeiros: {e}")
+
+async def rotina_financeiro():
+    await rotina_financeiro_shopee()
+    await rotina_lancamentos_financeiro()
 
 async def rotina_devolucoes():
     logger.info("Iniciando sincronização de devoluções...")
@@ -131,7 +143,7 @@ async def inicializar_tarefas():
         ("sincronizar_tudo", rotina_completa, "cron", {"minute": "*/10", "hour": "0-5,10-23"}),        
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12,17"}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
-        ("financeiro_shopee", rotina_financeiro_shopee, "cron", {"hour": 7}),
+        ("financeiro", rotina_financeiro, "cron", {"hour": 7}),
         ("devolucoes", rotina_devolucoes, "cron", {"hour": 12, "minute": 30})
     ]
 

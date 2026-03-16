@@ -1,7 +1,9 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CheckConstraint, JSON
 from sqlalchemy.sql import text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, mapped_column
 from database.database import Base
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Empresa(Base):
 
@@ -122,6 +124,8 @@ class Ecommerce(Base):
     id_fornecedor_olist = Column(Integer, nullable=True)
     id_conta_destino = Column(Integer, default=0, nullable=False)
     id_categoria_financeiro = Column(Integer, default=0, nullable=False)
+    id_forma_pgto_padrao = Column(Integer, nullable=True)
+    id_forma_rec_padrao = Column(Integer, nullable=True)    
     id_deposito = Column(Integer, nullable=True)
     dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))    
@@ -174,7 +178,7 @@ class Nota(Base):
     dh_cancelamento = Column(DateTime(timezone=True), nullable=True)
     cancelado_sankhya = Column(Boolean, default=False)
     id_cliente = Column(Integer, nullable=True)
-    income_data = Column(JSON, nullable=True)
+    income_data = mapped_column(MutableDict.as_mutable(JSONB))
     pedido_id = Column(Integer, ForeignKey("pedido.id", ondelete="CASCADE"), nullable=False)
 
     pedido_ = relationship("Pedido", back_populates="nota_")
