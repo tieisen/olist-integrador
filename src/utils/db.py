@@ -75,7 +75,7 @@ def formatar_retorno(colunas_criptografadas:list[str], retorno) -> dict:
         :param retorno: retorno do SQLAlchemy
     """        
     if not retorno:
-        return False    
+        return []
     
     if isinstance(retorno,list):
         retorno_formatado = []
