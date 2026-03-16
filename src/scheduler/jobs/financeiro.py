@@ -22,7 +22,7 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
     try:
         for i, emp in enumerate(empresas):
             print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
-            logger.info(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
+            logger.info(f"Empresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             receita = Receita(empresaId=emp.get('id'))
             despesa = Despesa(empresaId=emp.get('id'))            
             notas = NotaOlist(empresa_id=emp.get('id'))
@@ -38,7 +38,7 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
             ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
             for j, ecom in enumerate(ecommerces):
                 print(f"\nE-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
-                logger.info(f"\nE-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
+                logger.info(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 receita.dados_ecommerce = None
                 receita.id_loja = ecom.get('id_loja')
                 despesa.dados_ecommerce = None                
