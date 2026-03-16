@@ -37,8 +37,11 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
                 receita.dados_ecommerce = None
                 receita.id_loja = ecom.get('id_loja')
                 despesa.dados_ecommerce = None                
-                despesa.id_loja = ecom.get('id_loja')             
-                    
+                despesa.id_loja = ecom.get('id_loja')  
+
+                if ('SHOPEE' in ecom.get('nome').upper()):
+                    await consultarRecebimentosShopee(codemp=emp.get('id'))
+
                 print(f"Buscando contas pendentes...")
                 lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'))
                 if not lista_nota_lcto:
