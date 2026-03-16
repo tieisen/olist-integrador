@@ -261,9 +261,13 @@ class Despesa:
 
         if isinstance(dadosConta,list):
             dadosConta = dadosConta[0]
+            if not isinstance(dadosConta,dict):
+                raise ValueError("Dados da conta devem ser um dicionário")
 
         if isinstance(dadosTransferencia,list):
             dadosTransferencia = dadosTransferencia[0]
+            if not isinstance(dadosTransferencia,dict):
+                raise ValueError("Dados da transferência devem ser um dicionário")        
         
         if dadosConta:
             dados_pagamento:dict=dadosConta.get('income_data')
