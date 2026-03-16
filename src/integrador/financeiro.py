@@ -66,6 +66,7 @@ class Receita:
         dados_pagamento:dict=dadosConta.get('income_data')        
         id_cliente:int = dadosConta.get('id_cliente')
         id_categoria_financeiro:int = self.dados_ecommerce.get('id_categoria_financeiro')
+        id_forma_recebimento:int = self.dados_ecommerce.get('id_forma_rec_padrao')
         vlr_titulo:float = dados_pagamento.get('released_amount')
         cod_pedido:str = dados_pagamento.get('order_sn')
         dt_nf:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
@@ -74,7 +75,7 @@ class Receita:
         num_nf:str = str(dadosConta.get('numero'))
         self.id_nota = dadosConta.get('id_nota')
         
-        if not all([id_cliente,id_categoria_financeiro,vlr_titulo,cod_pedido,dt_nf,dt_venc,num_documento,num_nf]):
+        if not all([id_cliente,id_categoria_financeiro,vlr_titulo,cod_pedido,dt_nf,dt_venc,num_documento,num_nf,id_forma_recebimento]):
             raise ValueError(f"Dados incompletos.")
         
         self.payload_lcto = await self.parse.lancamento(dtNf=dt_nf,
@@ -84,7 +85,8 @@ class Receita:
                                                         numNf=num_nf,
                                                         codPedido=cod_pedido,
                                                         idCliente=id_cliente,
-                                                        idCategoriaFinanceiro=id_categoria_financeiro)
+                                                        idCategoriaFinanceiro=id_categoria_financeiro,
+                                                        idFormaRecebimento=id_forma_recebimento)
                                     
         if not self.payload_lcto:
             msg = f"Erro montar payload"
@@ -284,6 +286,7 @@ class Despesa:
             num_documento:str = str(dadosConta.get('numero'))
             id_fornecedor:int = self.dados_ecommerce.get('id_fornecedor_olist')
             id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
+            id_forma_pgto:int = self.dados_ecommerce.get('id_forma_pgto_padrao')
             historico:str = f"Taxa do e-commerce || Ref. a NF nº {num_documento}, Pedido #{cod_pedido}"
             self.id_nota = dadosConta.get('id_nota')
         
@@ -295,11 +298,12 @@ class Despesa:
             num_documento:str = str(dadosTransferencia.get('numnota'))
             id_fornecedor:int = self.dados_empresa.get('olist_id_fornecedor_padrao')
             id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_despesa_padrao')
+            id_forma_pgto:int = self.dados_ecommerce.get('id_forma_pgto_padrao')
             historico:str = f"Ref. NF nº {dadosTransferencia.get('numnota')}. {dadosTransferencia.get('observacao')}"
             self.id_nota = -1
         
-        if not all([dt_neg,dt_venc,vlr_titulo,num_documento,id_fornecedor,id_categoria_despesa,historico]):
-            raise ValueError(f"Dados incompletos. dt_neg: {dt_neg}, dt_venc: {dt_venc}, vlr_titulo: {vlr_titulo}, num_documento: {num_documento}, id_fornecedor: {id_fornecedor}, id_categoria_despesa: {id_categoria_despesa}, historico: {historico}")
+        if not all([dt_neg,dt_venc,vlr_titulo,num_documento,id_fornecedor,id_categoria_despesa,historico,id_forma_pgto]):
+            raise ValueError(f"Dados incompletos. dt_neg: {dt_neg}, dt_venc: {dt_venc}, vlr_titulo: {vlr_titulo}, num_documento: {num_documento}, id_fornecedor: {id_fornecedor}, id_categoria_despesa: {id_categoria_despesa}, historico: {historico}, id_forma_pgto: {id_forma_pgto}")
         
         self.payload_lcto = await self.parse.lancamento(dtNeg=dt_neg,
                                                         dtVcto=dt_venc,
@@ -307,7 +311,8 @@ class Despesa:
                                                         numDocumento=num_documento,
                                                         historico=historico,
                                                         idFornecedor=id_fornecedor,
-                                                        idCategoriaDespesa=id_categoria_despesa)
+                                                        idCategoriaDespesa=id_categoria_despesa,
+                                                        idFormaPgto=id_forma_pgto)
                                     
         if not self.payload_lcto:
             msg = f"Erro montar payload"

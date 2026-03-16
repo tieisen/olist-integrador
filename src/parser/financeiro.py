@@ -30,7 +30,7 @@ class Receita:
         """ Calcula o valor da comissão do BLZ na Web (taxa fixa de envio + percentual sobre o valor do pedido) """
         return round(vlrPedido*self.comissao_blz+self.taxa_blz_envios,2)
 
-    async def lancamento(self,dtNf:str,dtVenc:str,vlrTitulo:float,numDocumento:str,numNf:str,codPedido:str,idCliente:int,idCategoriaFinanceiro:int) -> dict:
+    async def lancamento(self,dtNf:str,dtVenc:str,vlrTitulo:float,numDocumento:str,numNf:str,codPedido:str,idCliente:int,idCategoriaFinanceiro:int,idFormaRecebimento:int) -> dict:
         """_summary_
 
         Args:
@@ -60,7 +60,7 @@ class Receita:
                 "id": idCategoriaFinanceiro
             },
             "dataCompetencia": None,
-            "formaRecebimento": 347628914,
+            "formaRecebimento": idFormaRecebimento,
             "ocorrencia": "U",
             "diaVencimento": None,
             "diaSemanaVencimento": None,
@@ -115,7 +115,7 @@ class Despesa:
 
         return texto
     
-    async def lancamento(self,dtNeg:str,dtVcto:str,valor:float,numDocumento:str,idFornecedor:int,idCategoriaDespesa:int,historico:str) -> dict:
+    async def lancamento(self,dtNeg:str,dtVcto:str,valor:float,numDocumento:str,idFornecedor:int,idCategoriaDespesa:int,historico:str,idFormaPgto:int) -> dict:
         """
         Converte os dados no formato da API de Contas a Pagar do Olist.
             :param dtNeg: data da negociação no formato YYYY-MM-DD            
@@ -125,13 +125,6 @@ class Despesa:
             :param historico: texto da observação do título
             :return dict: dicionário com os dados no padrão Olist
         """
-
-        # if dados_empresa.get('id') == 5:
-        #     categoria = 746666005
-        # elif dados_empresa.get('id') == 1:
-        #     categoria = 367785383
-        # else:
-        #     categoria = None
 
         return {
             "data": dtNeg,
@@ -147,7 +140,7 @@ class Despesa:
             },
             "dataCompetencia": None,
             "ocorrencia": "U",
-            "formaPagamento": 15,
+            "formaPagamento": idFormaPgto,
             "diaVencimento": None,
             "quantidadeParcelas": 1,
             "diaSemanaVencimento": None

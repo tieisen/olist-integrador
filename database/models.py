@@ -124,6 +124,8 @@ class Ecommerce(Base):
     id_fornecedor_olist = Column(Integer, nullable=True)
     id_conta_destino = Column(Integer, default=0, nullable=False)
     id_categoria_financeiro = Column(Integer, default=0, nullable=False)
+    id_forma_pgto_padrao = Column(Integer, nullable=True)
+    id_forma_rec_padrao = Column(Integer, nullable=True)    
     id_deposito = Column(Integer, nullable=True)
     dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))    
