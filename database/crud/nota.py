@@ -234,35 +234,28 @@ async def salvarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
             return True  
 
 async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
-
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
             .where(Nota.dh_cancelamento.is_(None),                   
                    Nota.pedido_.has(Pedido.cod_pedido == codPedido))
         )
-        nota = result.scalar_one_or_none()
+        nota = result.scalar_one_or_none()        
         if not nota:
             logger.error(f"Nota do pedido {codPedido} não encontrada.")
             return False
-        elif nota.dh_baixa_financeiro:
+        if nota.dh_baixa_financeiro:
             logger.info(f"Conta do pedido {codPedido} já foi baixada.")
             return True
-        elif nota.income_data:
+        if nota.income_data:
             if nota.income_data.get('released_amount') != 0.0:
                 logger.info(f"Conta do pedido {codPedido} já foi importada.")
                 return True
-        else:
-            dados_conta = nota.income_data
-            dados_conta['released_amount'] = dadosConta.get('released_amount')
-            dados_conta['fee_shopee'] = dados_conta['amount_paid'] - dadosConta.get('released_amount') if dadosConta.get('released_amount') > 0 else 0.0
-            try:
-                setattr(nota, 'income_data', dados_conta)
-            except Exception as e:
-                logger.error(f"Erro ao importar dados da conta do pedido {codPedido}: {e}")
-                return False            
-            await session.commit()
-            return True  
+            
+        nota.income_data['released_amount'] = dadosConta.get('released_amount')
+        nota.income_data['fee_shopee'] = nota.income_data['amount_paid'] - dadosConta.get('released_amount') if dadosConta.get('released_amount') > 0 else 0.0        
+        await session.commit()
+        return True  
 
 async def buscaPendenteIncomeData(idNota:int=None,listIdNota:list[int]=None) -> list[dict]:
     
