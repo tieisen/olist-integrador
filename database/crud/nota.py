@@ -253,7 +253,7 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
                 return True
             
         nota.income_data['released_amount'] = dadosConta.get('released_amount')
-        nota.income_data['fee_shopee'] = nota.income_data['amount_paid'] - dadosConta.get('released_amount') if dadosConta.get('released_amount') > 0 else 0.0        
+        nota.income_data['fee_shopee'] = round(nota.income_data['amount_paid'] - dadosConta.get('released_amount'),2) if dadosConta.get('released_amount') > 0 else 0.0
         await session.commit()
         return True  
 
