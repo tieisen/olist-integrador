@@ -248,9 +248,10 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
         elif nota.dh_baixa_financeiro:
             logger.info(f"Conta do pedido {codPedido} já foi baixada.")
             return True
-        elif nota.income_data.get('released_amount') != 0.0:
-            logger.info(f"Conta do pedido {codPedido} já foi importada.")
-            return True
+        elif nota.income_data:
+            if nota.income_data.get('released_amount') != 0.0:
+                logger.info(f"Conta do pedido {codPedido} já foi importada.")
+                return True
         else:
             dados_conta = nota.income_data
             dados_conta['released_amount'] = dadosConta.get('released_amount')
