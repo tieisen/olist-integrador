@@ -154,6 +154,40 @@ class Autenticacao:
             return False
         
         return True
+    
+    @carrega_dados_empresa
+    async def salvar_token_atualizado(self, dados_token: dict) -> bool:
+        """
+        Salva o token no banco de dados
+            :param dados_token: dicionário com os dados do token
+            :return bool: status da operação
+        """
+        dados_atualizados:dict={}
+        try:
+            agora = datetime.now()
+            dados_atualizados['token'] = dados_token['access_token']
+            dados_atualizados['refresh_token'] = dados_token['refresh_token']
+            dados_atualizados['id_token'] = dados_token['id_token']
+            dados_atualizados['dh_solicitacao'] = agora
+            dados_atualizados['dh_expiracao_token'] = agora + timedelta(0,dados_token['expires_in'])
+            dados_atualizados['dh_expiracao_refresh_token'] = agora + timedelta(0,dados_token['refresh_expires_in'])            
+        except Exception as e:
+            logger.error("Erro ao formatar dados do token: %s",e)
+            return False
+        
+        if not dados_atualizados:
+            return False
+        if not all([True for v in dados_atualizados.keys() if v in ['token','refresh_token','id_token','dh_solicitacao','dh_expiracao_token','dh_expiracao_refresh_token']]):
+            return False
+        
+        ack = await crud.atualizar(empresa_id=self.dados_empresa.get('id'),
+                                   **dados_atualizados)
+        
+        if not ack:
+            logger.error("Erro ao salvar token")
+            return False
+        
+        return True
 
     @carrega_dados_empresa        
     async def atualizar_token(self, refresh_token:str) -> str:
@@ -167,7 +201,7 @@ class Autenticacao:
         if not novo_token:
             return False
         
-        ack = await self.salvar_token(novo_token)
+        ack = await self.salvar_token_atualizado(novo_token)
         if not ack:
             return False
         
