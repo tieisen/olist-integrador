@@ -57,7 +57,6 @@ class Empresa(Base):
     log_ = relationship("Log", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
     produto_ = relationship("Produto", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
     olist_ = relationship("Olist", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
-    sankhya_ = relationship("Sankhya", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
     ecommerce_ = relationship("Ecommerce", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
 
 class Produto(Base):
@@ -91,13 +90,12 @@ class Olist(Base):
 class Sankhya(Base):
     __tablename__ = "sankhya"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    dh_solicitacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    token = Column(String, nullable=False)
-    dh_expiracao_token = Column(DateTime(timezone=True), nullable=False)
-    empresa_id = Column(Integer, ForeignKey("empresa.id", ondelete="CASCADE"), nullable=False)
-
-    empresa_ = relationship("Empresa", back_populates="sankhya_")
+    app_id = Column(Integer, primary_key=True, index=True)
+    x_token = Column(String, nullable=False)
+    dh_solicitacao = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    token = Column(String, nullable=True)
+    dh_expiracao_token = Column(DateTime(timezone=True), nullable=True)
+    
 
 class Shopee(Base):
     __tablename__ = "shopee"

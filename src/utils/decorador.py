@@ -1,6 +1,6 @@
 import inspect, asyncio, time
 from functools import wraps
-from database.crud import ecommerce, empresa, shopee
+from database.crud import ecommerce, empresa, shopee, sankhya
 
 # EXTRAI CONTEXTO 
 def contexto(func):
@@ -75,6 +75,27 @@ def carrega_dados_shopee(func):
         # Garante que os dados da empresa estão carregados
         if not self.dados_shopee:
             await buscar_dados_shopee(self)
+        return await func(self, *args, **kwargs)
+    return wrapper
+
+# DADOS DO SANKHYA
+async def buscar_dados_snk(self):
+    res = await sankhya.buscar(app_id=self.app_id)
+    if isinstance(res, list):
+        self.dados_snk = res[0]
+    else:
+        self.dados_snk = res
+
+def carrega_dados_snk(func):
+    """
+    Carrega os dados do gateway Sankhya na memória.
+        :param func: função que recebe o decorador
+    """
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        # Garante que os dados da empresa estão carregados
+        if not self.dados_snk:
+            await buscar_dados_snk(self)
         return await func(self, *args, **kwargs)
     return wrapper
 

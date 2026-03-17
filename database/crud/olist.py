@@ -1,7 +1,5 @@
-import os
 from database.database import AsyncSessionLocal
 from database.models import Olist, Empresa
-from datetime import datetime, timedelta
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
@@ -52,6 +50,36 @@ async def buscar(empresa_id:int=None,codemp:int=None) -> dict:
                                     retorno=token)        
     return dados_token 
 
+async def atualizar(empresa_id:int=None,codemp:int=None,**kwargs) -> bool:
+
+    if not any([empresa_id,codemp]):
+        return False
+
+    if kwargs:
+        kwargs = validar_dados(modelo=Olist,
+                               kwargs=kwargs,
+                               colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS)
+        if not kwargs:
+            return False
+
+    async with AsyncSessionLocal() as session:
+        if empresa_id:
+            result = await session.execute(
+                select(Olist).where(Olist.empresa_id == empresa_id)
+            )
+
+        if codemp:
+            result = await session.execute(
+                select(Olist).where(Olist.empresa_.has(Empresa.snk_codemp == codemp))
+            )
+        token = result.scalar_one_or_none()
+        if not token:
+            return False
+        for key, value in kwargs.items():
+            setattr(token, key, value)
+        await session.commit()
+        return True
+
 async def excluir(id:int) -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -67,27 +95,4 @@ async def excluir(id:int) -> bool:
             return True
         except Exception as e:
             logger.error("Erro ao excluir token do banco de dados: %s", e)
-            return False
-
-async def excluir_cache() -> bool:    
-    try:
-        dias = int(os.getenv('DIAS_LIMPA_CACHE',7))
-    except Exception as e:
-        erro = f"Valor para intervalo de dias do cache não encontrado. {e}"
-        logger.error(erro)
-        return False    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            select(Olist).where(Olist.dh_solicitacao < (datetime.now()-timedelta(days=dias)))
-        )
-        tokens = result.scalars().all()
-        if not tokens:
-            return None
-        try:
-            for token in tokens:
-                await session.delete(token)
-            await session.commit()
-            return True
-        except Exception as e:
-            logger.error("Erro ao excluir tokens do banco de dados: %s", e)
             return False

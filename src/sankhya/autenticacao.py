@@ -1,6 +1,6 @@
-import os, json, requests
-from datetime import datetime, timedelta
-from src.utils.decorador import carrega_dados_empresa, interno
+import os, requests
+from datetime import datetime
+from src.utils.decorador import carrega_dados_snk
 from database.crud import sankhya as crud
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -9,49 +9,53 @@ logger = set_logger(__name__)
 
 class Autenticacao:
 
-    def __init__(self, codemp:int=None, empresa_id:int=None):
-        self.codemp:int = codemp
-        self.empresa_id:int = empresa_id
-        self.dados_empresa:dict = None        
-        self.headers:dict = None
-        self.url:str = os.getenv('SANKHYA_URL_TOKEN')
+    def __init__(self, app_id:int=None):
+        self.app_id:int = app_id or int(os.getenv('SANKHYA_APP_ID'))
+        self.url:str = os.getenv('SANKHYA_URL_AUTH')
+        self.dados_snk:dict = {}
 
-    @interno
-    def formatar_header(self):
-        """ Formata o header da requisição. """
-        self.headers = {
-            'token':self.dados_empresa.get('snk_token'),
-            'appkey':self.dados_empresa.get('snk_appkey'),
-            'username':self.dados_empresa.get('snk_admin_email'),
-            'password':self.dados_empresa.get('snk_admin_senha')
-        }
-
-    @interno
-    @carrega_dados_empresa
+    @carrega_dados_snk
     async def solicitar_token(self) -> dict:
         """ 
         Solicita um novo token. 
             :return dict: dicionário de retorno da API de autenticação.
         """
+        retorno:dict={}
+        
+        try:
+            x_token:str = self.dados_snk.get('x_token')
+            app_id:int = self.dados_snk.get('app_id')
+            
+            if not all([x_token, app_id]):
+                msg = "xToken ou App Id não encontrado"
+                raise ValueError(msg)
 
-        self.formatar_header()
+            header = {
+                'xToken': x_token
+            }
 
-        res = requests.post(
-            url=self.url,
-            headers=self.headers)
+            res = requests.post(
+                url=self.url+f"/{app_id}",
+                headers=header
+            )
+            
+            if res.status_code != 200:
+                msg = f"Erro {res.status_code} ao obter token: {res.text}"
+                raise ValueError(msg)
+                    
+            if not res.json().get('token'):
+                msg = "Token de acesso não encontrado na resposta"
+                raise ValueError(msg)
+            
+            retorno = res.json()
+        except Exception as e:
+            logger.error("Erro ao solicitar token: %s",e)
+        finally:
+            pass
         
-        if res.status_code != 200:
-            logger.error("Erro %s ao obter token: %s", res.status_code, res.text)
-            return {}
-        
-        if not res.json().get('bearerToken'):
-            logger.error("Token de acesso não encontrado na resposta")
-            return {}
-        
-        return res.json()
+        return retorno
     
-    @interno
-    @carrega_dados_empresa
+    @carrega_dados_snk
     async def salvar_token(self,dados_token:dict) -> bool:
         """
         Salva o token no banco de dados.
@@ -59,16 +63,13 @@ class Autenticacao:
             :return bool: status da operação.
         """
 
-        try:
-            token = json.dumps(dados_token.get('bearerToken'))
-            expire_date = datetime.now() + timedelta(minutes=self.dados_empresa.get('snk_timeout_token_min'))
-        except Exception as e:
-            logger.error("Erro ao formatar dados do token: %s",e)
-            return False
-                
-        ack = await crud.criar(empresa_id=self.dados_empresa.get('id'),
-                               token=token,
-                               dh_expiracao_token=expire_date)
+        token:str = dados_token.get('token')
+        request_date:datetime = datetime.now()
+        expire_date:datetime = datetime.strptime(dados_token.get('dhExpiracaoToken',''), "%Y-%m-%dT%H:%M:%S.%f")                
+        ack = await crud.atualizar(app_id=self.dados_snk.get('app_id'),
+                                   token=token,
+                                   dh_solicitacao=request_date,
+                                   dh_expiracao_token=expire_date)
         
         if not ack:
             logger.error("Erro ao salvar token criptografado")
@@ -76,27 +77,26 @@ class Autenticacao:
         
         return True
 
-    @interno
-    @carrega_dados_empresa
     async def buscar_token_salvo(self) -> str:
         """
         Busca o último token salvo no banco de dados.
             :return str: token descriptografado.
         """
-        dados_token = await crud.buscar(empresa_id=self.dados_empresa.get('id'))
+        dados_token = await crud.buscar(app_id=self.app_id)
 
         if not dados_token:
-            logger.error(f"Token não encontrado para a empresa {self.codemp}")
-            print(f"Token não encontrado para a empresa {self.codemp}")
+            logger.error(f"Token não encontrado")
             return None
 
-        if dados_token.get('dh_expiracao_token') > datetime.now():            
-            return dados_token.get('token')
-        else:            
+        if (not dados_token.get('token')) or (not dados_token.get('dh_expiracao_token')):
+            logger.error(f"Token não encontrado")
             return None
+    
+        if dados_token.get('dh_expiracao_token') <= datetime.now():            
+            return None
+        
+        return dados_token.get('token')
 
-    @interno
-    @carrega_dados_empresa
     async def login(self) -> str:
         """
         Executa rotina de autenticação.
@@ -111,9 +111,8 @@ class Autenticacao:
         if not ack:
             return ''
         
-        return token.get('bearerToken')
+        return token.get('token')
 
-    @carrega_dados_empresa
     async def autenticar(self) -> str:
         """
         Busca último token salvo ou executa a rotina de autenticação.

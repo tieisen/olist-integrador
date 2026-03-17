@@ -19,7 +19,7 @@ def token_olist(func):
     return wrapper    
 
 async def buscar_token_snk(self):
-    token = await AuthSnk(codemp=self.codemp,empresa_id=self.empresa_id).autenticar()
+    token = await AuthSnk().autenticar()
     self.token = token.strip('"')
 
 def token_snk(func):
