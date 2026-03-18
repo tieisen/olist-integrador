@@ -140,11 +140,11 @@ async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
     jobs = [
-        ("sincronizar_tudo", rotina_completa, "cron", {"minute": "*/10", "hour": "0-5,10-23"}),        
+        ("sincronizar_tudo", rotina_completa, "cron", {"minute": 15}),
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12,17"}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
-        ("financeiro", rotina_financeiro, "cron", {"hour": 7}),
-        ("devolucoes", rotina_devolucoes, "cron", {"hour": 12, "minute": 30})
+        ("financeiro", rotina_financeiro, "cron", {"hour": 0, "minute": 5}),
+        ("devolucoes", rotina_devolucoes, "cron", {"hour": 12, "minute": 30}),
     ]
 
     for job_id, func, trigger, params in jobs:
@@ -161,5 +161,3 @@ async def iniciar_agendador():
 
 async def encerrar_agendador():
     scheduler.shutdown(wait=False)
-    logger.info("APScheduler encerrado.")    
-    print("APScheduler encerrado.")

@@ -21,23 +21,17 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
     empresas = await empresa.buscar(codemp=codemp)
     try:
         for i, emp in enumerate(empresas):
-            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             logger.info(f"Empresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             receita = Receita(empresaId=emp.get('id'))
             despesa = Despesa(empresaId=emp.get('id'))            
             notas = NotaOlist(empresa_id=emp.get('id'))
             
-            print("Buscando notas emitidas...")
             lista_notas_emitidas = await notas.buscarData(data=dtFim)
-            print(f"Notas emitidas: {len(lista_notas_emitidas)}")
-            
-            print("Processando notas emitidas...")
             logger.info("Processando notas emitidas...")
             await receita.processarNotas(listaNotas=lista_notas_emitidas)
 
             ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
             for j, ecom in enumerate(ecommerces):
-                print(f"\nE-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 logger.info(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 receita.dados_ecommerce = None
                 receita.id_loja = ecom.get('id_loja')
@@ -45,12 +39,10 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
                 despesa.id_loja = ecom.get('id_loja')  
 
                 if ('SHOPEE' in ecom.get('nome').upper()):
-                    logger.info("Consultando recebimentos Shopee...")
                     await consultarRecebimentosShopee(codemp=emp.get('id'))
 
-                print(f"Buscando contas pendentes...")
                 logger.info(f"Buscando contas pendentes...")
-                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'))                
+                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'))
                 logger.info(f"Contas pendentes: {len(lista_nota_lcto)}")
                 if not lista_nota_lcto:
                     continue
@@ -61,13 +53,10 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
                             continue
                         
                     time.sleep(receita.req_time_sleep)
-                    print(f"->> Nota {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}: ({n+1}/{len(lista_nota_lcto)})".upper())
+                    # print(f"->> Nota {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}: ({n+1}/{len(lista_nota_lcto)})".upper())
                     if not nota_lcto.get('id_financeiro'):
-                        print(f"Formatando payload receita...")
                         await receita.formatarPayloadLcto(dadosConta=nota_lcto)
-                        print(f"Lançando receita...")
                         await receita.lancarConta()
-                        print(f"RECEITA OK!!")
                     
                     if len(str(ecom.get('id_loja'))) >= 9:
                         # Funcionários ou Parfum
@@ -75,11 +64,8 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
                         continue
                     
                     if not nota_lcto.get('id_financeiro_taxa'):
-                        print(f"Formatando payload despesa...")
                         await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
-                        print(f"Lançando despesa...")                    
                         await despesa.lancarConta()
-                        print(f"DESPESA OK!!")
         
         retorno['status'] = True        
     except Exception as e:        
@@ -94,9 +80,6 @@ async def consultarRecebimentosShopee(codemp:int=None) -> dict:
     retorno:dict={}
     empresas:list[dict]=[]
     emp:dict={}
-
-    print(":::::::::::::::::::: RECEBIMENTOS SHOPEE ::::::::::::::::::::")    
-
     empresas = await empresa.buscar(codemp=codemp)
     try:
         for i, emp in enumerate(empresas):
@@ -108,7 +91,6 @@ async def consultarRecebimentosShopee(codemp:int=None) -> dict:
                 if 'SHOPEE' in ecom.get('nome').upper():
                     loja_shopee = await shopee.buscar(ecommerce_id=ecom.get('id'))
                     if loja_shopee:
-                        print("Buscando contas do Shopee...")
                         await receita.buscarContasShopee(ecommerceId=ecom.get('id'))
             retorno = {
                 "status": True,

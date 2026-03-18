@@ -92,7 +92,7 @@ class Autenticacao:
             logger.error(f"Token não encontrado")
             return None
     
-        if dados_token.get('dh_expiracao_token') <= (datetime.now() - timedelta(seconds=30)):
+        if dados_token.get('dh_expiracao_token') <= (datetime.now() - timedelta(seconds=60)):
             return None
         
         return dados_token.get('token')
