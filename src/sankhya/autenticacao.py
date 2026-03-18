@@ -1,5 +1,5 @@
 import os, requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_snk
 from database.crud import sankhya as crud
 from src.utils.log import set_logger
@@ -92,7 +92,7 @@ class Autenticacao:
             logger.error(f"Token não encontrado")
             return None
     
-        if dados_token.get('dh_expiracao_token') <= datetime.now():            
+        if dados_token.get('dh_expiracao_token') <= (datetime.now() - timedelta(seconds=30)):
             return None
         
         return dados_token.get('token')
