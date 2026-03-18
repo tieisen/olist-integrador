@@ -52,7 +52,7 @@ async def buscar(empresa_id:int=None, id_loja:int=None, ecommerce_id:int=None):
                 select(Ecommerce)
                 .where(Ecommerce.id_loja == id_loja)
             )
-        elif id:
+        elif ecommerce_id:
             result = await session.execute(
                 select(Ecommerce)
                 .where(Ecommerce.id == ecommerce_id)
