@@ -599,21 +599,21 @@ class Faturamento:
             return True
         
         pedidos_faturar = list(set([p.get("nunota") for p in pedidos_faturar]))
-        conf_snk = ConfSnk(codemp=self.codemp,empresa_id=self.dados_ecommerce.get('empresa_id'))
+        # conf_snk = ConfSnk(codemp=self.codemp,empresa_id=self.dados_ecommerce.get('empresa_id'))
 
         for i, pedido in enumerate(pedidos_faturar):
-            if pedido != -1:          
-                time.sleep(self.req_time_sleep)
-                # Valida status da conferência dos pedidos
-                ack_validacao:dict = await conf_snk.buscar(nunota=pedido)
-                if not ack_validacao:
-                    logger.info(f"Pedido {pedido} não conferido.")
-                    continue
-                elif ack_validacao.get('status') != 'F':
-                    logger.info(f"Conferência do pedido {pedido} não foi concluída ou com divergências.")
-                    continue
-                else:
-                    pass
+            # if pedido != -1:          
+            #     time.sleep(self.req_time_sleep)
+            #     # Valida status da conferência dos pedidos
+            #     ack_validacao:dict = await conf_snk.buscar(nunota=pedido)
+            #     if not ack_validacao:
+            #         logger.info(f"Pedido {pedido} não conferido.")
+            #         continue
+            #     elif ack_validacao.get('status') != 'F':
+            #         logger.info(f"Conferência do pedido {pedido} não foi concluída ou com divergências.")
+            #         continue
+            #     else:
+            #         pass
             # Fatura pedido no Sankhya
             print(f"Faturando pedido {pedido} ({i+1}/{len(pedidos_faturar)})")                
             ack_pedido = await self.faturar_sankhya(nunota=pedido,loja_unica=loja_unica)
