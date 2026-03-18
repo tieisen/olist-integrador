@@ -1,6 +1,8 @@
 from database.database import AsyncSessionLocal
 from database.models import Nota, Pedido, Ecommerce
 from database.crud import pedido
+from datetime import datetime
+from sqlalchemy import cast, Date
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
@@ -277,11 +279,13 @@ async def buscaPendenteIncomeData(idNota:int=None,listIdNota:list[int]=None) -> 
                                       retorno=notas)
         return dados_nota 
 
-async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None) -> list[dict]:
+async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None,data:str=None) -> list[dict]:
         
         if not any([empresa_id,ecommerce_id]):
             raise ValueError("Parâmetro não informado")
-                
+        
+        data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
+
         async with AsyncSessionLocal() as session:            
             filtros = []
             if empresa_id:
@@ -296,6 +300,9 @@ async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None
                           Nota.income_data['released_amount'].as_float() > 0.0]
             else:
                 raise ValueError("Parâmetro não informado")
+            
+            if data:
+                filtros.append(cast(Nota.dh_emissao, Date) == data)
             
             query = select(Nota)
             if filtros:
