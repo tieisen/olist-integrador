@@ -1,7 +1,7 @@
+import time
 from database.crud import empresa, ecommerce, shopee, nota
 from src.olist.nota import Nota as NotaOlist
 from src.integrador.financeiro import Receita, Despesa
-import time
 from src.utils.log import set_logger
 logger = set_logger(__name__)
 
@@ -42,7 +42,7 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
                     await consultarRecebimentosShopee(codemp=emp.get('id'))
 
                 logger.info(f"Buscando contas pendentes...")
-                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'))
+                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
                 logger.info(f"Contas pendentes: {len(lista_nota_lcto)}")
                 if not lista_nota_lcto:
                     continue
