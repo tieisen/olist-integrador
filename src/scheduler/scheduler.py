@@ -143,7 +143,7 @@ async def inicializar_tarefas():
         ("sincronizar_tudo", rotina_completa, "cron", {"minute": "*/10", "hour": "0-5,10-23"}),        
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12,17"}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
-        ("financeiro", rotina_financeiro, "cron", {"hour": 7}),
+        ("financeiro", rotina_financeiro, "cron", {"hour": 0, "minute": 5}),
         ("devolucoes", rotina_devolucoes, "cron", {"hour": 12, "minute": 30})
     ]
 
