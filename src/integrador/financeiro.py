@@ -1,5 +1,6 @@
 import os, time
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from database.crud import nota as crudNota
 from src.services.shopee import Pagamento as PagamentoShopee
 from src.olist.financeiro import Receita as FinReceita, Despesa as FinDespesa
@@ -60,6 +61,38 @@ class Receita:
                     
         return True
 
+    def calcularDataVctoShopee(self,dataBase:datetime) -> datetime:
+        nova_data:datetime = None
+        # 0=segunda ... 2=quarta
+        alvo = 2
+        dias_ate = (alvo - dataBase.weekday() + 7) % 7
+        nova_data = dataBase + timedelta(days=dias_ate)
+        return nova_data
+    
+    def calcularDataVctoBlz(self,dataBase:datetime) -> datetime:        
+        nova_data:datetime = None
+        nova_data = dataBase + relativedelta(months=1)
+        nova_data = nova_data.replace(day=9)
+        return nova_data
+    
+    @carrega_dados_ecommerce
+    async def calcularVcto(self,dataBase:datetime=None) -> str:
+        
+        ecommerce:str=self.dados_ecommerce.get('nome').upper()
+        data_vcto:datetime=None
+        
+        if not dataBase:
+            dataBase = datetime.today()
+        
+        if 'SHOPEE' in str(ecommerce).upper():
+            data_vcto = self.calcularDataVctoShopee(dataBase=dataBase)
+            return data_vcto.strftime('%Y-%m-%d')
+        elif 'BELEZA' in str(ecommerce).upper():
+            data_vcto = self.calcularDataVctoBlz(dataBase=dataBase)
+            return data_vcto.strftime('%Y-%m-%d')
+        else:
+            return ''
+
     @carrega_dados_ecommerce
     async def formatarPayloadLcto(self, dadosConta:dict) -> bool:
         
@@ -70,13 +103,13 @@ class Receita:
         vlr_titulo:float = dados_pagamento.get('released_amount')
         cod_pedido:str = dados_pagamento.get('order_sn')
         dt_nf:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
-        dt_venc:str = datetime.now().strftime('%Y-%m-%d')
+        dt_venc:str = await self.calcularVcto(dataBase=dadosConta.get('dh_emissao'))
         num_documento:str = str(dadosConta.get('numero'))
         num_nf:str = str(dadosConta.get('numero'))
         self.id_nota = dadosConta.get('id_nota')
         
         if not all([id_cliente,id_categoria_financeiro,vlr_titulo,cod_pedido,dt_nf,dt_venc,num_documento,num_nf,id_forma_recebimento]):
-            raise ValueError(f"Dados incompletos.")
+            raise ValueError(f"Dados incompletos. id_cliente: {id_cliente}, id_categoria_financeiro: {id_categoria_financeiro}, vlr_titulo: {vlr_titulo}, cod_pedido: {cod_pedido}, dt_nf: {dt_nf}, dt_venc: {dt_venc}, num_documento: {num_documento}, num_nf: {num_nf}, id_forma_recebimento: {id_forma_recebimento}")
         
         self.payload_lcto = await self.parse.lancamento(dtNf=dt_nf,
                                                         dtVenc=dt_venc,
@@ -178,9 +211,7 @@ class Receita:
     
     async def processarNotas(self,listaNotas:list[dict]) -> bool:
 
-        print("listaNotas",len(listaNotas))        
         listaNotas = await self.validaPrecisaProcessar(listaNotas=listaNotas)
-        print("listaNotasProcessar",len(listaNotas))
         for i, nota in enumerate(listaNotas):
             try:
                 id_cliente:int = nota['cliente'].get('id')
@@ -207,9 +238,6 @@ class Receita:
                         "order_sn": cod_pedido,
                         "amount_paid": vlr_nota
                     }
-                    
-                print(f"->> Nota {nota.get('numero')}")
-                print(dados_financeiro)
                 
                 time.sleep(self.req_time_sleep)
                 await crudNota.atualizar(id_nota=id_nota,
@@ -239,6 +267,38 @@ class Despesa:
         self.id_financeiro:int = None
         self.parse = ParseDespesa()
         self.finDespesa = FinDespesa(empresa_id=self.empresa_id)          
+
+    def calcularDataVctoShopee(self,dataBase:datetime) -> datetime:
+        nova_data:datetime = None
+        # 0=segunda ... 2=quarta
+        alvo = 2
+        dias_ate = (alvo - dataBase.weekday() + 7) % 7
+        nova_data = dataBase + timedelta(days=dias_ate)
+        return nova_data
+    
+    def calcularDataVctoBlz(self,dataBase:datetime) -> datetime:        
+        nova_data:datetime = None
+        nova_data = dataBase + relativedelta(months=1)
+        nova_data = nova_data.replace(day=9)
+        return nova_data
+    
+    @carrega_dados_ecommerce
+    async def calcularVcto(self,dataBase:datetime=None) -> str:
+        
+        ecommerce:str=self.dados_ecommerce.get('nome').upper()
+        data_vcto:datetime=None
+        
+        if not dataBase:
+            dataBase = datetime.today()
+        
+        if 'SHOPEE' in str(ecommerce).upper():
+            data_vcto = self.calcularDataVctoShopee(dataBase=dataBase)
+            return data_vcto.strftime('%Y-%m-%d')
+        elif 'BELEZA' in str(ecommerce).upper():
+            data_vcto = self.calcularDataVctoBlz(dataBase=dataBase)
+            return data_vcto.strftime('%Y-%m-%d')
+        else:
+            return ''
 
     @carrega_dados_ecommerce
     @carrega_dados_empresa
@@ -282,7 +342,7 @@ class Despesa:
                 vlr_titulo = dados_pagamento.get('amount_paid')            
             cod_pedido:str = dados_pagamento.get('order_sn')
             dt_neg:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
-            dt_venc:str = datetime.now().strftime('%Y-%m-%d')
+            dt_venc:str = await self.calcularVcto(dataBase=dadosConta.get('dh_emissao'))
             num_documento:str = str(dadosConta.get('numero'))
             id_fornecedor:int = self.dados_ecommerce.get('id_fornecedor_olist')
             id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
