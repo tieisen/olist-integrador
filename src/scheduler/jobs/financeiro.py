@@ -5,7 +5,7 @@ from src.integrador.financeiro import Receita, Despesa
 from src.utils.log import set_logger
 logger = set_logger(__name__)
 
-async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
+async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None) -> dict:
 
     retorno:dict={
             "status": False,
@@ -30,7 +30,11 @@ async def integrar(codemp:int|None=None,dtFim:str|None=None) -> dict:
             logger.info("Processando notas emitidas...")
             await receita.processarNotas(listaNotas=lista_notas_emitidas)
 
-            ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+            if idLoja:
+                ecommerces = await ecommerce.buscar(id_loja=idLoja)
+            else:
+                ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+                
             for j, ecom in enumerate(ecommerces):
                 logger.info(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 receita.dados_ecommerce = None
