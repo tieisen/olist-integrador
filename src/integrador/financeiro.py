@@ -66,6 +66,8 @@ class Receita:
         # 0=segunda ... 2=quarta
         alvo = 2
         dias_ate = (alvo - dataBase.weekday() + 7) % 7
+        if dias_ate == 0:
+            dias_ate = 7
         nova_data = dataBase + timedelta(days=dias_ate)
         return nova_data
     
@@ -273,6 +275,8 @@ class Despesa:
         # 0=segunda ... 2=quarta
         alvo = 2
         dias_ate = (alvo - dataBase.weekday() + 7) % 7
+        if dias_ate == 0:
+            dias_ate = 7
         nova_data = dataBase + timedelta(days=dias_ate)
         return nova_data
     
