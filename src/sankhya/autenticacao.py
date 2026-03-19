@@ -1,4 +1,4 @@
-import os, requests
+import os, requests, asyncio
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_snk
 from database.crud import sankhya as crud
@@ -6,6 +6,7 @@ from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
 logger = set_logger(__name__)
+_lock_autenticacao = asyncio.Lock()
 
 class Autenticacao:
 
@@ -112,21 +113,27 @@ class Autenticacao:
             return ''
         
         return token.get('token')
-
+        
     async def autenticar(self) -> str:
         """
         Busca último token salvo ou executa a rotina de autenticação.
             :return str: token descriptografado.
         """
+                
         try:
             token = await self.buscar_token_salvo()
             if token:
-                # Token válido salvo na base
                 return token
-            else:
-                # Token não existe ou expirou
+
+            async with _lock_autenticacao:
+
+                token = await self.buscar_token_salvo()
+                if token:
+                    return token
+
                 token_login = await self.login()
                 return token_login
+
         except Exception as e:
-            logger.error("Erro na autenticacao: %s",e)
-            return ''
+            logger.error("Erro na autenticacao: %s", e)
+            return ''        

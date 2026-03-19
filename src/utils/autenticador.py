@@ -29,8 +29,11 @@ def token_snk(func):
     """        
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
-        await buscar_token_snk(self)
-        return await func(self, *args, **kwargs)
+        try:
+            await buscar_token_snk(self)
+            return await func(self, *args, **kwargs)
+        finally:
+            self.token = None
     return wrapper
 
 async def buscar_token_shopee(self):
