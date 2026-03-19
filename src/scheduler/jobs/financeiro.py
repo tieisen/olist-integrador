@@ -79,7 +79,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
     
     return retorno
 
-async def consultarRecebimentosShopee(codemp:int=None) -> dict:
+async def consultarRecebimentosShopee(codemp:int=None,dtFim:str=None) -> dict:
 
     retorno:dict={}
     empresas:list[dict]=[]
@@ -95,7 +95,7 @@ async def consultarRecebimentosShopee(codemp:int=None) -> dict:
                 if 'SHOPEE' in ecom.get('nome').upper():
                     loja_shopee = await shopee.buscar(ecommerce_id=ecom.get('id'))
                     if loja_shopee:
-                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'))
+                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'),dtFim=dtFim)
             retorno = {
                 "status": True,
                 "exception": None
