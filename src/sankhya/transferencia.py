@@ -2,7 +2,7 @@ import os, requests
 from datetime import datetime
 from src.utils.formatter import Formatter
 from src.utils.decorador import interno, carrega_dados_empresa
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -42,7 +42,7 @@ class Transferencia:
         """
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    @token_snk
+    @tokenSnk
     async def criar(self,cabecalho:dict,itens:list=None) -> tuple:
         """
         Cria uma nota de transferência.
@@ -101,7 +101,7 @@ class Transferencia:
             logger.error("Erro ao lançar nota de transferência. %s",res.json())
             return False, None
 
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int=None,itens:bool=False) -> tuple[bool,dict]:
         """
         Busca uma nota de transferência.
@@ -180,7 +180,7 @@ class Transferencia:
             logger.error("Erro ao buscar dados da nota de transferência vigente. %s",res.json())            
             return False, {}
 
-    @token_snk
+    @tokenSnk
     async def confirmar(self,nunota:int) -> bool:
         """
         Confirma uma nota de transferência.
@@ -228,7 +228,7 @@ class Itens(Transferencia):
             "SEQUENCIA", "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    @token_snk
+    @tokenSnk
     async def lancar(self,nunota:int,dados_item:dict) -> bool:
         """
         Lança um item na nota de transferência.
@@ -271,7 +271,7 @@ class Itens(Transferencia):
             logger.error("Erro ao lançar item da nota de transferência. Nunota %s. %s",nunota,res.json())      
             return False
 
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int) -> list[dict]:
         """
         Busca os itens da nota de transferência.
@@ -316,7 +316,7 @@ class Itens(Transferencia):
         res = await paginar_snk(token=self.token, url=url, payload=payload)
         return res
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def busca_valor_transferencia(self,codprod:int=None,lista_itens:list=None) -> float | list[dict]:
         """

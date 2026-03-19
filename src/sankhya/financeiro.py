@@ -1,5 +1,5 @@
 import os, requests
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -16,7 +16,7 @@ class Financeiro:
         self.formatter = Formatter()
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP', 1.5))        
 
-    @token_snk
+    @tokenSnk
     async def buscar(self,nufin:int=None,nunota:int=None,numnota:int=None) -> list[dict]:
         """
         Busca um registro financeiro ou todos os registros financeiros de uma nota.
@@ -126,12 +126,3 @@ class Financeiro:
                 logger.error("Erro ao buscar financeiro. %s",res.json())
             return False
         
-    @token_snk
-    async def lancar(self,dados:dict) -> int:
-        """
-        Cria um registro de financeiro.
-            :param dados: dicionário com os dados do registro financeiro
-            :return int: número único do registro financeiro
-        """        
-        
-        pass

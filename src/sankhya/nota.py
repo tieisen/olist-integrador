@@ -1,6 +1,6 @@
 import os, requests
 from src.utils.decorador import carrega_dados_empresa, interno
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -39,7 +39,7 @@ class Nota:
         """        
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
 
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int=None,id_olist:int=None,codpedido:str=None,pendentes:bool=False,offset:int=0,itens:bool=False) -> dict:
         """
         Busca uma nota de venda.
@@ -159,7 +159,7 @@ class Nota:
         else:
             return False
 
-    @token_snk
+    @tokenSnk
     async def confirmar(self,nunota:int) -> bool:
         """
         Confirma uma nota de venda.
@@ -196,7 +196,7 @@ class Nota:
             print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
             return False
 
-    @token_snk
+    @tokenSnk
     async def informar_numero_e_chavenfe(self,nunota:int=None,chavenfe:str=None,numero:str=None,id_nota:int=None) -> bool:
         """
         Informa dados da NFe na nota de venda do Sankhya.
@@ -252,7 +252,7 @@ class Nota:
             logger.error("Erro informar dados da NFe na nota de venda do Sankhya. Nunota %s. Nota %s. %s",nunota,numero,res.json())
             return False
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def devolver(self,nunota:int,itens:list) -> int:
         """
@@ -300,7 +300,7 @@ class Nota:
             logger.error("Erro ao devolver pedidos. Nunota %s. %s",nunota,res.text)
             return False
         
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def devolver_sem_lote(self,dados_cabecalho:dict,dados_itens:list[dict]) -> int:
         """
@@ -344,7 +344,7 @@ class Nota:
             logger.error("Erro ao lançar NFD. %s",res.text)
             return False
 
-    @token_snk
+    @tokenSnk
     async def alterar_observacao(self,nunota:int,observacao:str) -> bool:
         """
         Altera a observação de uma nota de devolução.
@@ -390,7 +390,7 @@ class Nota:
             logger.error("Erro ao informar campo observacao. Nunota %s. %s",nunota,res.text)
             return False
 
-    @token_snk
+    @tokenSnk
     async def excluir(self,nunota:int) -> bool:
         """
         Exclui uma nota de venda.
@@ -437,7 +437,7 @@ class Itens(Nota):
             "STATUSNOTA", "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int) -> dict:
         """
         Busca os itens da nota de venda.

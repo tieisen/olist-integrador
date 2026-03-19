@@ -1,4 +1,5 @@
 import os, requests, asyncio
+from functools import wraps
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_snk
 from database.crud import sankhya as crud
@@ -136,4 +137,19 @@ class Autenticacao:
 
         except Exception as e:
             logger.error("Erro na autenticacao: %s", e)
-            return ''        
+            return ''
+
+def tokenSnk(func):
+    """
+    Executa rotina de autenticacao
+        :param func: função que recebe o decorador
+    """        
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        try:        
+            token = await Autenticacao().autenticar()                
+            self.token = token
+            return await func(self, *args, **kwargs)
+        finally:
+            self.token = None
+    return wrapper        

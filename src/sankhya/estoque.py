@@ -1,6 +1,6 @@
 import os, requests
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.decorador import carrega_dados_empresa, interno
-from src.utils.autenticador import token_snk
 from src.utils.formatter import Formatter
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
@@ -19,7 +19,7 @@ class Estoque:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
         self.formatter = Formatter()
     
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def buscar(self,codprod:int=None,lista_produtos:list[int]=None) -> dict | list[dict]:
         """
@@ -68,7 +68,7 @@ class Estoque:
             return False
     
     @carrega_dados_empresa
-    @token_snk
+    @tokenSnk
     async def buscar_alteracoes(self) -> list[dict]:
         """
         Busca a lista de produtos com movimentação de estoque.
@@ -117,7 +117,7 @@ class Estoque:
         return res
     
     @carrega_dados_empresa
-    @token_snk
+    @tokenSnk
     async def remover_alteracoes(self,codprod:int=None,lista_produtos:list=None) -> bool:
         """
         Remove os produtos atualizados da fila de atualização.
@@ -220,7 +220,7 @@ class Estoque:
 
         return query
 
-    @token_snk
+    @tokenSnk
     async def buscar_saldo_por_lote(self,codprod:int=None,controle:str=None,lista_produtos:list[dict]=None) -> list[dict]:
         """
         Busca saldo de estoque atual desmembrado por lote.
@@ -287,7 +287,7 @@ class Estoque:
 
         return query
     
-    @token_snk
+    @tokenSnk
     async def buscar_saldo_por_local(self,codprod:int=None,lista_produtos:list[int]=None) -> dict:
         """
         Busca saldo de estoque atual por local.
@@ -346,7 +346,7 @@ class Estoque:
 
         return query
     
-    @token_snk
+    @tokenSnk
     async def buscar_saldo_ecommerce_por_lote(self,lista_produtos:list[int]) -> list[dict]:
         """
         Busca saldo de estoque atual no local ECOMMERCE, desmembrado por lote.

@@ -1,5 +1,5 @@
 import os, requests
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
@@ -15,7 +15,7 @@ class Faturamento:
         self.empresa_id = empresa_id
         self.formatter = Formatter()
 
-    @token_snk
+    @tokenSnk
     async def buscar_itens(self,nunota:int=None) -> list[dict]:
         """
         Busca lista de itens conferidos no dia ou de um pedido.

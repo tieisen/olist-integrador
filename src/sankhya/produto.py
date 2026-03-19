@@ -1,7 +1,7 @@
 import os, requests, time
 from src.utils.decorador import carrega_dados_empresa
 from src.utils.buscar_arquivo import buscar_script
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.formatter import Formatter
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -20,7 +20,7 @@ class Produto:
         self.tabela:str = os.getenv('SANKHYA_TABELA_PRODUTO')
         self.campos_atualiza_snk:list[str] = [ "ID", "IDPRODPAI", "ATIVO" ]
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def buscar(self,codprod:int=None,idprod:int=None) -> dict:
         """
@@ -79,7 +79,7 @@ class Produto:
             dados[f'{self.campos_atualiza_snk.index(str.upper(i))}'] = f'{payload.get(i)}'
         return dados
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def atualizar(self,codprod:int,payload:dict) -> bool:
         """
@@ -126,7 +126,7 @@ class Produto:
             logger.error("Erro ao atualizar produto. Cód. %s. %s",codprod,res.text)
             return False        
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def buscar_alteracoes(self) -> dict:
         """ Busca a lista de alterações nos cadastros de produtos integrados. """        
@@ -194,7 +194,7 @@ class Produto:
         
         return todos_resultados
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def excluir_alteracoes(self,codprod:int=None,lista_produtos:list=None) -> bool:
         """

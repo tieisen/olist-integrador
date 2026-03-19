@@ -1,7 +1,7 @@
 import os, requests
 from datetime import datetime
 from src.utils.decorador import carrega_dados_empresa, interno
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.formatter import Formatter
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
@@ -37,7 +37,7 @@ class Conferencia:
 
         return int(payload['responseBody']['result'][0][0])
 
-    @token_snk
+    @tokenSnk
     async def buscar_aguardando_conferencia(self,id_loja:int=None) -> list[dict]:
         """
         Busca pedidos de venda com status de aguardando conferência.
@@ -70,7 +70,7 @@ class Conferencia:
             logger.error("Erro ao buscar status dos pedidos. %s",res.text)
             return False
     
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int) -> list[dict]:
         """
         Busca conferência pelo número único do pedido de venda.
@@ -124,7 +124,7 @@ class Conferencia:
             logger.error("Erro ao buscar dados da conferência do pedido %s. %s",nunota,res.json().get('statusMessage'))
             return False
 
-    @token_snk
+    @tokenSnk
     async def criar(self,nunota:int) -> bool:
         """
         Cria uma conferência vinculada ao pedido de venda.
@@ -176,7 +176,7 @@ class Conferencia:
             logger.error("Erro ao criar conferência do pedido %s. %s",nunota,res.json().get('statusMessage'))
             return False
 
-    @token_snk
+    @tokenSnk
     async def vincular_pedido(self,nunota:int,nuconf:int) -> bool:
         """
         Vincula a conferência criada ao pedido de venda.            
@@ -226,7 +226,7 @@ class Conferencia:
             logger.error("Erro ao vincular conferência ao pedido #%s. %s",nunota,res.text)
             return False
 
-    @token_snk
+    @tokenSnk
     async def insere_itens(self,dados_item:list[dict]) -> bool:
         """
         Insere itens na conferência.
@@ -261,7 +261,7 @@ class Conferencia:
             logger.error("Erro ao inserir item(ns) na conferência. %s",res.text)
             return False
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def concluir(self,nuconf:int) -> bool:
         """

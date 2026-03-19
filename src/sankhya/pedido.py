@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 from src.sankhya.nota import Nota
 from src.utils.decorador import interno, carrega_dados_empresa
-from src.utils.autenticador import token_snk
+from src.sankhya.autenticacao import tokenSnk
 from src.utils.formatter import Formatter
 from src.utils.buscar_arquivo import buscar_script
 from src.utils.log import set_logger
@@ -42,7 +42,7 @@ class Pedido:
         """        
         return int(payload.get('responseBody').get('pk').get('NUNOTA').get('$'))
     
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int=None,id_olist:int=None,codpedido:str=None,itens:bool=False) -> dict:
         """
         Busca um pedido de venda.
@@ -146,7 +146,7 @@ class Pedido:
                 logger.error("Erro ao buscar pedido. Pedido %s. %s",codpedido,res.text)        
             return False
     
-    @token_snk
+    @tokenSnk
     async def buscar_nunota_nota(self,nunota:int) -> dict:
         """
         Busca o número único da nota de venda de um pedido faturado.
@@ -200,7 +200,7 @@ class Pedido:
         
         return dados_nota
 
-    @token_snk
+    @tokenSnk
     async def buscar_cidade(self,ibge:int) -> dict:
         """
         Busca código Sankhya e UF da cidade.
@@ -252,7 +252,7 @@ class Pedido:
             logger.error("Erro ao buscar dados de localização da cidade %s. %s",ibge,res.text)
             return False
 
-    @token_snk
+    @tokenSnk
     async def lancar(self,dados_cabecalho:dict,dados_itens:list) -> int:
         """
         Cria um pedido de venda.
@@ -295,7 +295,7 @@ class Pedido:
             logger.error("Erro ao lançar pedido #%s. %s",dados_cabecalho.get('AD_MKP_NUMPED'),res.text)
             return False
 
-    @token_snk
+    @tokenSnk
     async def confirmar(self,nunota:int) -> bool:
         """
         Confirma um pedido de venda.
@@ -331,7 +331,7 @@ class Pedido:
         logger.error("Erro ao confirmar pedido. Nunota %s. %s",nunota,res.text)
         return False
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def faturar(self,nunota:int,dt_fatur:str=None) -> tuple[bool,int]:
         """
@@ -398,7 +398,7 @@ class Pedido:
             logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
             return False, None
 
-    @token_snk
+    @tokenSnk
     @carrega_dados_empresa
     async def atualizar_local(self,nunota:int,payload:list[dict]) -> bool:
         """
@@ -438,7 +438,7 @@ class Pedido:
             logger.error(msg)
             return False 
 
-    @token_snk
+    @tokenSnk
     async def excluir(self,nunota:int) -> bool:
         """
         Exclui um pedido de venda
@@ -483,7 +483,7 @@ class Itens(Pedido):
             "USOPROD", "VLRDESC", "VLRTOT", "VLRUNIT"
         ]            
 
-    @token_snk
+    @tokenSnk
     async def buscar(self,nunota:int=None,pedido_ecommerce:str=None) -> dict:
         """
         Busca os itens do pedido de venda.
