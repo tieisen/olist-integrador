@@ -5,7 +5,7 @@ from src.integrador.financeiro import Receita, Despesa
 from src.utils.log import set_logger
 logger = set_logger(__name__)
 
-async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None) -> dict:
+async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None,dias:int=0) -> dict:
 
     retorno:dict={
             "status": False,
@@ -26,7 +26,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
             despesa = Despesa(empresaId=emp.get('id'))            
             notas = NotaOlist(empresa_id=emp.get('id'))
             
-            lista_notas_emitidas = await notas.buscarData(data=dtFim)
+            lista_notas_emitidas = await notas.buscarData(data=dtFim,dias=dias)
             logger.info("Processando notas emitidas...")
             await receita.processarNotas(listaNotas=lista_notas_emitidas)
 
@@ -43,7 +43,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                 despesa.id_loja = ecom.get('id_loja')  
 
                 if ('SHOPEE' in ecom.get('nome').upper()):
-                    await consultarRecebimentosShopee(codemp=emp.get('id'))
+                    await consultarRecebimentosShopee(codemp=emp.get('id'),dtFim=dtFim,dias=dias)
 
                 logger.info(f"Buscando contas pendentes...")
                 lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
@@ -79,7 +79,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
     
     return retorno
 
-async def consultarRecebimentosShopee(codemp:int=None,dtFim:str=None) -> dict:
+async def consultarRecebimentosShopee(codemp:int=None,dtFim:str=None,dias:int=0) -> dict:
 
     retorno:dict={}
     empresas:list[dict]=[]
@@ -95,7 +95,7 @@ async def consultarRecebimentosShopee(codemp:int=None,dtFim:str=None) -> dict:
                 if 'SHOPEE' in ecom.get('nome').upper():
                     loja_shopee = await shopee.buscar(ecommerce_id=ecom.get('id'))
                     if loja_shopee:
-                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'),dtFim=dtFim)
+                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'),dtFim=dtFim,dias=dias)
             retorno = {
                 "status": True,
                 "exception": None

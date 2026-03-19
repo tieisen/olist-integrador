@@ -102,7 +102,7 @@ class Nota:
             return False
         
     @token_olist
-    async def buscarData(self,data:str|None=None) -> list[dict]:
+    async def buscarData(self,data:str|None=None,dias:int=0) -> list[dict]:
         """
         Lista as NFs de uma data.
             :param data: Data da emissão da NF
@@ -110,10 +110,12 @@ class Nota:
         """
         situacoes = [6,7]
         lista_notas:list[dict]=[]
-        data = (datetime.today()-timedelta(days=1)).strftime('%Y-%m-%d') if not data else data
+        dt:datetime = datetime.today() if not data else datetime.strptime(data, '%Y-%m-%d')
+        dt_ini:str = dt.strftime('%Y-%m-%d')
+        dt_fim:str = (dt-timedelta(days=dias)).strftime('%Y-%m-%d')
         
         for s in situacoes:
-            url = self.endpoint+f"/?tipo=S&situacao={s}&dataInicial={data}&dataFinal={data}"
+            url = self.endpoint+f"/?tipo=S&situacao={s}&dataInicial={dt_ini}&dataFinal={dt_fim}"
             lista_notas += await paginar_olist(token=self.token,url=url)
         
         return lista_notas   
