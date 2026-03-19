@@ -1,4 +1,5 @@
-import os, requests
+import os, requests, asyncio
+from functools import wraps
 from datetime import datetime,timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -11,6 +12,7 @@ from src.utils.log import set_logger
 from src.utils.load_env import load_env
 load_env()
 logger = set_logger(__name__)
+_lock_autenticacao = asyncio.Lock()
 
 class Autenticacao:
 
@@ -264,15 +266,36 @@ class Autenticacao:
                 # Token válido salvo na base
                 return token
             
-            if isinstance(token,list):
-                # Token expirado. Solicita novo token
-                novo_token = await self.atualizar_token(refresh_token=token[0])
-                return novo_token
+            async with _lock_autenticacao:            
+                token = await self.buscar_token_salvo()
+                if isinstance(token,str):
+                    # Token válido salvo na base
+                    return token
+                
+                if isinstance(token,list):
+                    # Token expirado. Solicita novo token
+                    novo_token = await self.atualizar_token(refresh_token=token[0])
+                    return novo_token
 
-            if not token:
-                # Token não existe ou expirou o refresh token
-                token_login = await self.primeiro_login()
-                return token_login
+                if not token:
+                    # Token não existe ou expirou o refresh token
+                    token_login = await self.primeiro_login()
+                    return token_login
         except Exception as e:
             logger.error("Erro na autenticacao: %s",e)
             return ''
+
+def tokenOlist(func):
+    """
+    Executa rotina de autenticacao
+        :param func: função que recebe o decorador
+    """        
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        try:
+            token = await Autenticacao(codemp=self.codemp,empresa_id=self.empresa_id).autenticar()                
+            self.token = token
+            return await func(self, *args, **kwargs)
+        finally:
+            self.token = None
+    return wrapper             

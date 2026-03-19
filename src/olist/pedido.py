@@ -2,7 +2,7 @@ import os, time, requests
 from src.olist.produto import Produto
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_empresa
-from src.utils.autenticador import token_olist
+from src.olist.autenticacao import tokenOlist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.busca_paginada import paginar_olist
@@ -19,7 +19,7 @@ class Pedido:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_PEDIDOS')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int=None,codigo:str=None,numero:int=None,cancelados:bool=False) -> dict | list[dict]:
         """
         Busca os dados do pedido.
@@ -87,7 +87,7 @@ class Pedido:
                 logger.error("Erro %s: %s pedido %s", res.status_code, res.text, codigo)
             return False
 
-    @token_olist
+    @tokenOlist
     async def atualizar_nunota(self,id:int,nunota:int,observacao:str=None) -> bool:
         """
         Envia número único do pedido de venda do Sankhya para os pedidos no Olist.
@@ -127,7 +127,7 @@ class Pedido:
             return False        
         return True
 
-    @token_olist
+    @tokenOlist
     async def adicionar_texto_erro(self,id:int,observacao:str,texto_erro:str) -> bool:
         """
         Envia informação de erro no pedido.
@@ -166,7 +166,7 @@ class Pedido:
             return False        
         return True
 
-    @token_olist
+    @tokenOlist
     async def remover_nunota(self,id:int,nunota:int=None) -> bool:
         """
         Remove número único do pedido de venda do Sankhya dos pedidos no Olist.
@@ -230,7 +230,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def remover_texto_erro(self,id:int) -> bool:
         """
         Envia informação de erro no pedido.
@@ -292,7 +292,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def buscar_marcadores(self,id:int) -> bool:
         """
         Lista marcadores do pedido.
@@ -323,7 +323,7 @@ class Pedido:
 
         return dados_marcadores
 
-    @token_olist
+    @tokenOlist
     async def marcar_integrado(self,id:int) -> bool:
         """
         Adiciona um marcador no pedido integrado.
@@ -358,7 +358,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def marcar_parfum(self,id:int) -> bool:
         """
         Adiciona um marcador no pedido integrado.
@@ -393,7 +393,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def marcar_erro(self,id:int) -> bool:
         """
         Adiciona um marcador no pedido integrado.
@@ -428,7 +428,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def desmarcar_integrado(self,id:int) -> bool:
         """
         Remove um marcador no pedido integrado.
@@ -467,7 +467,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def desmarcar_erro(self,id:int) -> bool:
         """
         Remove um marcador no pedido integrado.
@@ -506,7 +506,7 @@ class Pedido:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def gerar_nf(self,id:int) -> dict:
         """
         Gera a NF do pedido de venda.
@@ -539,7 +539,7 @@ class Pedido:
 
         return res.json()
 
-    @token_olist
+    @tokenOlist
     async def validar_kit(self,id:int,item_no_pedido:dict) -> tuple[bool,dict]:
         """
         Valida se o item do pedido é um kit ou um SKU e faz o desmembramento.
@@ -592,7 +592,7 @@ class Pedido:
             logger.error("Produto %s ID %s não é kit nem variação.", dados_kit.get('descricao'), id)
             return False, {}
         
-    @token_olist
+    @tokenOlist
     @carrega_dados_empresa
     async def buscar_novos(self,atual:bool = True) -> tuple[bool, list[dict]]:
         """

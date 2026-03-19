@@ -1,7 +1,7 @@
 import os, time, requests
 from datetime import datetime, timedelta
 from src.utils.decorador import carrega_dados_ecommerce
-from src.utils.autenticador import token_olist
+from src.olist.autenticacao import tokenOlist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.busca_paginada import paginar_olist
@@ -19,7 +19,7 @@ class Nota:
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_NOTAS')
 
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int=None,numero:int=None,cod_pedido:str=None) -> dict:
         """
         Busca os dados da nota fiscal.
@@ -101,7 +101,7 @@ class Nota:
             print("Nota cancelada")
             return False
         
-    @token_olist
+    @tokenOlist
     async def buscarData(self,data:str|None=None,dias:int=0) -> list[dict]:
         """
         Lista as NFs de uma data.
@@ -121,7 +121,7 @@ class Nota:
         return lista_notas   
     
     @carrega_dados_ecommerce
-    @token_olist
+    @tokenOlist
     async def buscar_canceladas(self,data:str=None,tipo:str='S') -> list[dict]:
         """
         Busca os dados das notas fiscais canceladas.
@@ -140,7 +140,7 @@ class Nota:
         return await paginar_olist(token=self.token,url=url)
     
     @carrega_dados_ecommerce
-    @token_olist
+    @tokenOlist
     async def buscar_devolucoes(self,data:str=None) -> list[dict]:
         """
         Busca os dados das notas fiscais de devolução.
@@ -159,7 +159,7 @@ class Nota:
         return await paginar_olist(token=self.token,url=url)
     
     @carrega_dados_ecommerce
-    @token_olist
+    @tokenOlist
     async def buscar_legado(self,id:int=None,cod_pedido:str=None) -> dict:
         """
         Busca os dados e o XML da nota fiscal.
@@ -277,7 +277,7 @@ class Nota:
             return False
 
     @carrega_dados_ecommerce
-    @token_olist
+    @tokenOlist
     async def emitir(self,id:int) -> dict:
         """
         Autoriza NFe na Sefaz

@@ -1,5 +1,5 @@
 import os, requests
-from src.utils.autenticador import token_olist
+from src.olist.autenticacao import tokenOlist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.busca_paginada import paginar_olist
@@ -14,7 +14,7 @@ class Separacao:
         self.token = None
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_SEPARACAO')
 
-    @token_olist
+    @tokenOlist
     async def listar(self) -> list[dict]:
         """
         Busca lista de pedidos com status Aguardando separação e Em separação.
@@ -31,7 +31,7 @@ class Separacao:
 
         return lista if status else status        
 
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int) -> dict:
         """
         Busca os dados de uma separação.
@@ -59,7 +59,7 @@ class Separacao:
         
         return res.json()
     
-    @token_olist
+    @tokenOlist
     async def separar(self,id:int) -> bool:
         """
         Atualiza o status da separação de um pedido para Separado.
@@ -90,7 +90,7 @@ class Separacao:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def concluir(self,id:int) -> bool:
         """
         Atualiza o status da separação de um pedido para Embalada (checkout).

@@ -1,6 +1,6 @@
 import os, json, requests
 from datetime import datetime, timedelta
-from src.utils.autenticador import token_olist
+from src.olist.autenticacao import tokenOlist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.busca_paginada import paginar_olist
@@ -16,7 +16,7 @@ class Produto:
         self.endpoint = os.getenv('OLIST_API_URL') + os.getenv('OLIST_ENDPOINT_PRODUTOS')
         self.tempo_busca_alter_prod = int(os.getenv('OLIST_TEMPO_BUSCA_ALTER_PROD',30))
 
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int=None,sku:int=None) -> dict:
         """
         Busca os dados do produto no Olist.
@@ -76,7 +76,7 @@ class Produto:
                 logger.error(msg)
             return False
 
-    @token_olist
+    @tokenOlist
     async def incluir(self,data:dict) -> tuple[bool,dict]:
         """
         Inclui um novo produto no Olist.
@@ -114,7 +114,7 @@ class Produto:
             logger.error(erro)
             return False, {erro}
 
-    @token_olist
+    @tokenOlist
     async def atualizar(self,id:int=None,idprodpai:int=None,data:dict=None) -> bool:
         """
         Atualiza um produto no Olist.
@@ -153,7 +153,7 @@ class Produto:
             logger.info(json.dumps(data))
             return False
 
-    @token_olist
+    @tokenOlist
     async def buscar_todos(self) -> list[dict]:
         """
         Busca os dados de todos os produtos no Olist.
@@ -161,7 +161,7 @@ class Produto:
         """
         return await paginar_olist(token=self.token,url=self.endpoint)
     
-    @token_olist
+    @tokenOlist
     async def buscar_alteracoes(self,todo_historico:bool=False) -> list[dict]:
         """
         Busca lista de produtos com alteração no cadastro no último período.

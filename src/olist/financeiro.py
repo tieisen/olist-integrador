@@ -1,6 +1,6 @@
 import os, time, requests
 from datetime import datetime
-from src.utils.autenticador import token_olist
+from src.olist.autenticacao import tokenOlist
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
 from src.utils.busca_paginada import paginar_olist
@@ -16,7 +16,7 @@ class Receita:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO_RECEBER')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int=None,serieNf:str=None,numeroNf:str=None,id_nota:int=None) -> dict:
         """
         Busca o registro de contas a receber
@@ -66,7 +66,7 @@ class Receita:
         else:
             return res.json().get('itens')
 
-    @token_olist
+    @tokenOlist
     async def buscarMarcadores(self,id:int) -> bool:
         """
         Lista marcadores do título de recebimento.
@@ -97,7 +97,7 @@ class Receita:
 
         return dados_marcadores
 
-    @token_olist
+    @tokenOlist
     async def listarReceberAberto(self,dt_emissao:str=None) -> list[dict]:
         """
         Busca a lista de contas a receber em aberto pela data
@@ -109,7 +109,7 @@ class Receita:
         url = self.endpoint+f"/?situacao=aberto&dataInicialEmissao={dt_emissao}&dataFinalEmissao={dt_emissao}"
         return await paginar_olist(token=self.token,url=url)
 
-    @token_olist
+    @tokenOlist
     async def marcarDevolvido(self,id:int) -> bool:
         """
         Adiciona um marcador no título de recebimento.
@@ -144,7 +144,7 @@ class Receita:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def desmarcarDevolvido(self,id:int) -> bool:
         """
         Remove um marcador no título de recebimento.
@@ -183,7 +183,7 @@ class Receita:
         
         return True
 
-    @token_olist
+    @tokenOlist
     async def baixar(self,id:int,payload:dict) -> bool:
         """
         Realiza o recebimento/baixa do registro de contas a receber gerado pela NF
@@ -217,7 +217,7 @@ class Receita:
 
         return True        
 
-    @token_olist
+    @tokenOlist
     async def lancar(self,payload:dict) -> int:
         """
         Cria um registro de contas a receber
@@ -260,7 +260,7 @@ class Despesa:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_FINANCEIRO_PAGAR')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))        
 
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int) -> dict:
         """
         Busca o registro de contas a pagar
@@ -290,7 +290,7 @@ class Despesa:
 
         return retorno
 
-    @token_olist
+    @tokenOlist
     async def lancar(self,payload:dict) -> int:
         """
         Cria um registro de contas a pagar
@@ -323,7 +323,7 @@ class Despesa:
 
         return id
 
-    @token_olist
+    @tokenOlist
     async def baixar(self,id:int,payload:dict) -> bool:
         """
         Realiza o recebimento/baixa do registro de contas a pagar gerado pela NF

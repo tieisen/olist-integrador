@@ -1,5 +1,5 @@
 import os, time, requests
-from src.utils.autenticador import token_olist
+from src.olist.autenticacao import tokenOlist
 from src.parser.estoque import Estoque as ParserEstoque
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -15,7 +15,7 @@ class Estoque:
         self.endpoint = os.getenv('OLIST_API_URL')+os.getenv('OLIST_ENDPOINT_ESTOQUES')
         self.req_time_sleep = float(os.getenv('REQ_TIME_SLEEP',1.5))
         
-    @token_olist
+    @tokenOlist
     async def buscar(self,id:int=None,lista_produtos:list[int]=None) -> list[dict]:
         """
         Busca estoque atual dos produtos
@@ -68,7 +68,7 @@ class Estoque:
         
         return result
     
-    @token_olist
+    @tokenOlist
     async def enviar_saldo(self,id:int=None,data:dict=None,lista_dados:list=None) -> list[dict]:
         """
         Atualiza o estoque do produto no Olist
