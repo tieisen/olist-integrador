@@ -105,7 +105,7 @@ class Receita:
         vlr_titulo:float = dados_pagamento.get('released_amount')
         cod_pedido:str = dados_pagamento.get('order_sn')
         dt_nf:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
-        dt_venc:str = await self.calcularVcto(dataBase=dadosConta.get('dh_emissao'))
+        dt_venc:str = await self.calcularVcto()
         num_documento:str = str(dadosConta.get('numero'))
         num_nf:str = str(dadosConta.get('numero'))
         self.id_nota = dadosConta.get('id_nota')
@@ -346,7 +346,7 @@ class Despesa:
                 vlr_titulo = dados_pagamento.get('amount_paid')            
             cod_pedido:str = dados_pagamento.get('order_sn')
             dt_neg:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
-            dt_venc:str = await self.calcularVcto(dataBase=dadosConta.get('dh_emissao'))
+            dt_venc:str = await self.calcularVcto()
             num_documento:str = str(dadosConta.get('numero'))
             id_fornecedor:int = self.dados_ecommerce.get('id_fornecedor_olist')
             id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
