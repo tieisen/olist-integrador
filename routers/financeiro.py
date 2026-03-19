@@ -8,6 +8,7 @@ class FinanceiroModel(BaseModel):
     codemp:int
     idLoja:int | None = None
     data:str | None = None
+    dias:int = 0
 
 class FinanceiroShopeeModel(BaseModel):
     codemp:int
@@ -26,6 +27,6 @@ async def integrar_financeiro(financeiro:FinanceiroModel) -> bool:
     """
     Processa e lança títulos a receber e taxas no Olist.
     """
-    if not await integrar(dtFim=financeiro.data,codemp=financeiro.codemp,idLoja=financeiro.idLoja):
+    if not await integrar(dtFim=financeiro.data,codemp=financeiro.codemp,idLoja=financeiro.idLoja,dias=financeiro.dias):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar títulos")
     return True
