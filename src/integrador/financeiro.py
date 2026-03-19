@@ -39,7 +39,7 @@ class Receita:
             "fee_blz": vlr_taxa
         }
     
-    async def buscarContasShopee(self, ecommerceId:int=None, dias:int=1, dtFim:str=None) -> bool:
+    async def buscarContasShopee(self, ecommerceId:int=None, dias:int=0, dtFim:str=None) -> bool:
         
         dt_fim:datetime = datetime.now() if not dtFim else datetime.strptime(dtFim, '%Y-%m-%d')
         dt_inicio:datetime = (dt_fim - timedelta(days=dias))
