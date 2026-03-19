@@ -140,7 +140,7 @@ async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
     jobs = [
-        ("sincronizar_tudo", rotina_completa, "cron", {"minute": 15}),
+        ("sincronizar_tudo", rotina_completa, "interval", {"minutes": 15}),
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12,17"}),
         ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
         ("financeiro", rotina_financeiro, "cron", {"hour": 0, "minute": 5}),
