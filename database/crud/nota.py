@@ -291,18 +291,20 @@ async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None
             if empresa_id:
                 filtros+=[Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)),
                           Nota.dh_cancelamento.is_(None),
+                          Nota.dh_baixa_financeiro.is_(None),
                           (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
                           Nota.income_data['released_amount'].as_float() > 0.0]
             elif ecommerce_id:
                 filtros+=[Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id),
                           Nota.dh_cancelamento.is_(None),
+                          Nota.dh_baixa_financeiro.is_(None),
                           (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
                           Nota.income_data['released_amount'].as_float() > 0.0]
             else:
                 raise ValueError("Parâmetro não informado")
             
             if data:
-                filtros.append(cast(Nota.dh_emissao, Date) == data)
+                filtros.append(cast(Nota.dh_emissao, Date) <= data)
             
             query = select(Nota)
             if filtros:
