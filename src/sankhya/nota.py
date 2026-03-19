@@ -137,13 +137,13 @@ class Nota:
         dados_nota = await paginar_snk(token=self.token,url=url,payload=payload)
         if not dados_nota:
             if nunota:
-                logger.error("Erro ao buscar nota. Nunota %s. %s",nunota)
+                logger.error("Erro ao buscar nota. Nunota %s.",nunota)
             elif id_olist:
-                logger.error("Erro ao buscar nota. ID %s. %s",id_olist)
+                logger.error("Erro ao buscar nota. ID %s.",id_olist)
             elif codpedido:
-                logger.error("Erro ao buscar nota. Pedido %s. %s",codpedido)
+                logger.error("Erro ao buscar nota. Pedido %s.",codpedido)
             elif pendentes:
-                logger.error("Erro ao buscar notas pendentes. %s")
+                logger.error("Erro ao buscar notas pendentes.")
             else:
                 pass
             return False            
