@@ -67,11 +67,14 @@ class Autenticacao:
 
         token:str = dados_token.get('token')
         request_date:datetime = datetime.now()
-        expire_date:datetime = datetime.strptime(dados_token.get('dhExpiracaoToken',''), "%Y-%m-%dT%H:%M:%S.%f")                
+        expire_date:datetime = datetime.strptime(dados_token.get('dhExpiracaoToken',''), "%Y-%m-%dT%H:%M:%S.%f")
+        expire_date_ajustado = expire_date - timedelta(seconds=60)
+        # logger.info(f"Expiração da API: {expire_date}")
+        # logger.info(f"Salvando token com expiração: {expire_date_ajustado}")
         ack = await crud.atualizar(app_id=self.dados_snk.get('app_id'),
                                    token=token,
                                    dh_solicitacao=request_date,
-                                   dh_expiracao_token=expire_date)
+                                   dh_expiracao_token=expire_date_ajustado)
         
         if not ack:
             logger.error("Erro ao salvar token criptografado")
@@ -84,20 +87,30 @@ class Autenticacao:
         Busca o último token salvo no banco de dados.
             :return str: token descriptografado.
         """
+        
+        agora:datetime = datetime.now().replace(microsecond=0)
+        expiracao_token:datetime = None
+        token:str = ''
         dados_token = await crud.buscar(app_id=self.app_id)
 
         if not dados_token:
-            logger.error(f"Token não encontrado")
-            return None
+            logger.error(f"Dados do token não encontrado")
+            return token
 
-        if (not dados_token.get('token')) or (not dados_token.get('dh_expiracao_token')):
+        expiracao_token = dados_token.get('dh_expiracao_token').replace(microsecond=0) if dados_token.get('dh_expiracao_token') else None
+        token = dados_token.get('token')
+
+        # logger.info(f"Data atual: {agora} | Type: {type(agora)}")
+        # logger.info(f"Data expiração: {expiracao_token} | Type: {type(expiracao_token)}")
+
+        if (not token) or (not expiracao_token):
             logger.error(f"Token não encontrado")
-            return None
-    
-        if dados_token.get('dh_expiracao_token') <= (datetime.now() - timedelta(seconds=60)):
-            return None
+            return token
+
+        if expiracao_token <= agora:
+            token = ''
         
-        return dados_token.get('token')
+        return token
 
     async def login(self) -> str:
         """
@@ -116,22 +129,29 @@ class Autenticacao:
         return token.get('token')
         
     async def autenticar(self) -> str:
-        """
-        Busca último token salvo ou executa a rotina de autenticação.
-            :return str: token descriptografado.
-        """
-                
+
+        # import os
+        # logger.info(f"PID: {os.getpid()}")
+
         try:
             token = await self.buscar_token_salvo()
+            # logger.info(f"Token encontrado: {bool(token)}")            
             if token:
+                # logger.info("Token válido (fora do lock)")
                 return token
+
+            # logger.info("Entrando no lock...")
 
             async with _lock_autenticacao:
 
+                # logger.info("Dentro do lock")
                 token = await self.buscar_token_salvo()
+                # logger.info(f"Token encontrado: {bool(token)}")                
                 if token:
+                    # logger.info("Token válido (dentro do lock)")
                     return token
 
+                # logger.info("Gerando novo token...")
                 token_login = await self.login()
                 return token_login
 
