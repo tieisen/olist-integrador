@@ -223,13 +223,17 @@ class Autenticacao:
             logger.error(f"Token não encontrado para a empresa {self.codemp or self.empresa_id}")
             return None
 
-        if dados_token.get('dh_expiracao_token') > datetime.now():            
+        agora = datetime.now().replace(microsecond=0)
+        expiracao_token = dados_token.get('dh_expiracao_token').replace(microsecond=0)
+        expiracao_refresh_token = dados_token.get('dh_expiracao_refresh_token').replace(microsecond=0)
+
+        if expiracao_token > agora:            
             return dados_token.get('token')
         
-        if dados_token.get('dh_expiracao_refresh_token') > datetime.now():
+        if expiracao_refresh_token > agora:
             return [dados_token.get('refresh_token')]
 
-        if dados_token.get('dh_expiracao_refresh_token') < datetime.now():            
+        if expiracao_refresh_token < agora:
             return None     
 
     @carrega_dados_empresa
