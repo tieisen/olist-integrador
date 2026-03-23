@@ -140,17 +140,14 @@ async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
     jobs = [
-        ("sincronizar_tudo", rotina_completa, "interval", {"minutes": 15}),
+        ("sincronizar_tudo", rotina_completa, "cron", {"hour": "0-7,10-23", "minute": 15}),
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12"}),
-        # ("limpar_cache", rotina_cache, "cron", {"day": "1,15", "hour": 23}),
         ("financeiro", rotina_financeiro, "cron", {"hour": 0, "minute": 5}),
-        # ("devolucoes", rotina_devolucoes, "cron", {"hour": 12, "minute": 30}),
     ]
 
     for job_id, func, trigger, params in jobs:
         if job_id not in jobs_existentes:
             scheduler.add_job(func, trigger, id=job_id, replace_existing=True, max_instances=1, coalesce=True, **params)
-            # logger.info(f"Job registrado: {job_id}")
 
 # CONTROLE DO AGENDADOR
 async def iniciar_agendador():
