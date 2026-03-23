@@ -43,7 +43,8 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                 despesa.id_loja = ecom.get('id_loja')  
 
                 if ('SHOPEE' in ecom.get('nome').upper()):
-                    await consultarRecebimentosShopee(codemp=emp.get('id'),dtFim=dtFim,dias=dias)
+                    logger.info("Processando recebimentos Shopee...")
+                    await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dtFim=dtFim,dias=dias)
 
                 logger.info(f"Buscando contas pendentes...")
                 lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
