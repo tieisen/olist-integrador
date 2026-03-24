@@ -56,25 +56,13 @@ async def rotina_completa():
     await rotina_estoque()
     await rotina_pedidos()
 
-async def rotina_financeiro_shopee():
-    logger.info("Iniciando busca dos recebimentos da Shopee...")
-    try:
-        await financeiro.consultarRecebimentosShopee()
-        logger.info("Rotina de recebimentos Shopee concluída.")
-    except Exception as e:
-        logger.exception(f"Erro na rotina de recebimentos Shopee: {e}")
-
 async def rotina_lancamentos_financeiro():
     logger.info("Iniciando rotina de lançamentos de financeiro...")
     try:
-        await financeiro.integrar()
+        await financeiro.integrar(dias=1)
         logger.info("Rotina de lançamentos financeiros concluída.")
     except Exception as e:
         logger.exception(f"Erro na rotina de lançamentos financeiros: {e}")
-
-async def rotina_financeiro():
-    await rotina_financeiro_shopee()
-    await rotina_lancamentos_financeiro()
 
 async def rotina_devolucoes():
     logger.info("Iniciando sincronização de devoluções...")
@@ -142,7 +130,7 @@ async def inicializar_tarefas():
     jobs = [
         ("sincronizar_tudo", rotina_completa, "cron", {"hour": "0-7,10-23", "minute": "*/10"}),
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12"}),
-        ("financeiro", rotina_financeiro, "cron", {"hour": 0, "minute": 5}),
+        ("financeiro", rotina_lancamentos_financeiro, "cron", {"hour": 0, "minute": 5}),
     ]
 
     for job_id, func, trigger, params in jobs:
