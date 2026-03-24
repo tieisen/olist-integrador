@@ -67,7 +67,11 @@ class Produto:
                 continue
 
             # Item de imposto
-            if int(alteracao.get('sku')) == 1:
+            try:
+                if int(alteracao.get('sku')) == 1:
+                    continue
+            except ValueError:
+                logger.warning(f"SKU inválido: {alteracao.get('sku')}")
                 continue
             
             # Valida se o produto tem registro na base
