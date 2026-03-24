@@ -24,13 +24,13 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
     empresas = await empresa.buscar(codemp=codemp)
     try:
         for i, emp in enumerate(empresas):
-            logger.info(f"Empresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
+            # print(f"Empresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
             receita = Receita(empresaId=emp.get('id'))
             despesa = Despesa(empresaId=emp.get('id'))            
             notas = NotaOlist(empresa_id=emp.get('id'))
             
             lista_notas_emitidas = await notas.buscarData(data=dtFim,dias=dias)
-            logger.info("Processando notas emitidas...")
+            # print("Processando notas emitidas...")
             await receita.processarNotas(listaNotas=lista_notas_emitidas)
 
             if idLoja:
@@ -39,27 +39,29 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                 ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
                 
             for j, ecom in enumerate(ecommerces):
-                logger.info(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
+                # print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 receita.dados_ecommerce = None
                 receita.id_loja = ecom.get('id_loja')
                 despesa.dados_ecommerce = None                
                 despesa.id_loja = ecom.get('id_loja')  
 
                 if ('SHOPEE' in ecom.get('nome').upper()):
-                    logger.info("Processando recebimentos Shopee...")
+                    # print("Processando recebimentos Shopee...")
                     await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dtFim=dtFim,dias=dias)
                     
-                    logger.info("Validando estornos...")
+                    # print("Validando estornos...")
                     lista_estornos = await nota.buscarEstornoPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
                     logger.info(f"Estornos pendentes: {len(lista_estornos)}")
+                    # print(f"Estornos pendentes: {len(lista_estornos)}")
                     if lista_estornos:
                         for n, estorno in enumerate(lista_estornos):
                             time.sleep(receita.req_time_sleep)
                             await despesa.buscarEstornoShopee(orderSn=estorno.get('income_data').get('order_sn'))                            
 
-                logger.info(f"Buscando contas pendentes...")
+                # print(f"Buscando contas pendentes...")
                 lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
                 logger.info(f"Contas pendentes: {len(lista_nota_lcto)}")
+                # print(f"Contas pendentes: {len(lista_nota_lcto)}")
                 if not lista_nota_lcto:
                     continue
                 
@@ -73,24 +75,32 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                     if not nota_lcto.get('id_financeiro'):
                         await receita.formatarPayloadLcto(dadosConta=nota_lcto)
                         await receita.lancarConta()
+                        # print(f"Conta lançada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
                     
                     if len(str(ecom.get('id_loja'))) >= 8:
                         # Funcionários ou Parfum
                         await despesa.ignorarTaxa(id_nota=nota_lcto.get('id'))
+                        # print(f"Taxa ignorada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
                         continue
                     
+                    time.sleep(receita.req_time_sleep)
                     if not nota_lcto.get('id_financeiro_taxa'):
                         await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
                         await despesa.lancarConta()
-                    
-                    if nota_lcto.get('income_data',{}).get('fee_frete',0):
+                        # print(f"Conta de despesa lançada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
+
+                    time.sleep(receita.req_time_sleep)
+                    if 'fee_frete' in nota_lcto.get('income_data',{}) and not nota_lcto.get('id_financeiro_frete'):
                         await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
                         await despesa.lancarConta()
+                        # print(f"Conta de frete lançada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
         
         retorno['status'] = True        
     except Exception as e:        
         retorno['exception'] = str(e)
     finally:
+        logger.info(f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}")
+        # print(f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}")
         pass
     
     return retorno
