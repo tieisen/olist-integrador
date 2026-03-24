@@ -55,7 +55,7 @@ class Receita:
             "contato": {
                 "id": idCliente
             },
-            "historico": f"Ref. a NF nº {numNf}, Pedido #{codPedido}",
+            "historico": f"Ref. ao Pedido #{codPedido}, NF nº {numNf}",
             "categoria": {
                 "id": idCategoriaFinanceiro
             },
