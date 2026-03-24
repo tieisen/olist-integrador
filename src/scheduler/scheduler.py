@@ -11,6 +11,10 @@ import os
 load_env()
 logger = set_logger(__name__)
 
+MINUTOS_JOB_PADRAO = int(os.getenv("MINUTOS_JOB_PADRAO"))
+if not MINUTOS_JOB_PADRAO:
+    raise ValueError("MINUTOS_JOB_PADRAO não encontrado no arquivo de ambiente")
+
 # CONFIGURAÇÃO DO JOBSTORE
 DATABASE_URL = os.getenv("ALEMBIC_URL")
 DB_NAME = os.getenv("DB_NAME")
@@ -128,7 +132,7 @@ async def inicializar_tarefas():
     jobs_existentes = [job.id for job in scheduler.get_jobs()]
 
     jobs = [
-        ("sincronizar_tudo", rotina_completa, "cron", {"hour": "0-7,10-23", "minute": "*/10"}),
+        ("sincronizar_tudo", rotina_completa, "cron", {"hour": "0-7,10-23", "minute": f"*/{MINUTOS_JOB_PADRAO}"}),
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12"}),
         ("financeiro", rotina_lancamentos_financeiro, "cron", {"hour": 0, "minute": 5}),
     ]
