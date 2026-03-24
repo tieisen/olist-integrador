@@ -259,6 +259,28 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
         await session.commit()
         return True  
 
+async def atualizarDadosContaEstornoShopee(codPedido:str,vlrLiquido:float,vlrFrete:float,vlrTaxa:float) -> bool:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Nota)
+            .where(Nota.dh_cancelamento.is_(None),                   
+                   Nota.pedido_.has(Pedido.cod_pedido == codPedido))
+        )
+        nota = result.scalar_one_or_none()        
+        if not nota:
+            logger.error(f"Nota do pedido {codPedido} não encontrada.")
+            return False
+        if nota.dh_baixa_financeiro:
+            logger.info(f"Conta do pedido {codPedido} já foi baixada.")
+            return True
+            
+        nota.income_data['released_amount'] = vlrLiquido
+        nota.income_data['fee_shopee'] = vlrTaxa
+        nota.income_data['fee_frete'] = vlrFrete
+        
+        await session.commit()
+        return True  
+
 async def buscaPendenteIncomeData(idNota:int=None,listIdNota:list[int]=None) -> list[dict]:
     
         filtros = [Nota.income_data.is_(None),
@@ -287,24 +309,47 @@ async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None
         data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
 
         async with AsyncSessionLocal() as session:            
-            filtros = []
+            filtros = [ Nota.dh_cancelamento.is_(None),
+                        Nota.dh_baixa_financeiro.is_(None),
+                        (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
+                        Nota.income_data['released_amount'].as_float() > 0.0,
+                        (cast(Nota.dh_emissao, Date) <= data)]
             if empresa_id:
-                filtros+=[Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)),
-                          Nota.dh_cancelamento.is_(None),
-                          Nota.dh_baixa_financeiro.is_(None),
-                          (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
-                          Nota.income_data['released_amount'].as_float() > 0.0]
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)))
             elif ecommerce_id:
-                filtros+=[Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id),
-                          Nota.dh_cancelamento.is_(None),
-                          Nota.dh_baixa_financeiro.is_(None),
-                          (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
-                          Nota.income_data['released_amount'].as_float() > 0.0]
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_id == ecommerce_id))
             else:
                 raise ValueError("Parâmetro não informado")
             
-            if data:
-                filtros.append(cast(Nota.dh_emissao, Date) <= data)
+            query = select(Nota)
+            if filtros:
+                query = query.where(*filtros)                           
+            result = await session.execute(query)           
+            notas = result.scalars().all()
+        
+        dados_nota = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                      retorno=notas)
+        return dados_nota              
+
+async def buscarEstornoPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None,data:str=None) -> list[dict]:
+        
+        if not any([empresa_id,ecommerce_id]):
+            raise ValueError("Parâmetro não informado")
+        
+        data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
+
+        async with AsyncSessionLocal() as session:            
+            filtros = [ Nota.dh_cancelamento.is_(None),
+                        Nota.dh_baixa_financeiro.is_(None),
+                        (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
+                        Nota.income_data['released_amount'].as_float() < 0.0,
+                        (cast(Nota.dh_emissao, Date) <= data)]
+            if empresa_id:
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)))
+            elif ecommerce_id:
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.ecommerce_id == ecommerce_id)))
+            else:
+                raise ValueError("Parâmetro não informado")
             
             query = select(Nota)
             if filtros:
