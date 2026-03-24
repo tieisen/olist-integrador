@@ -13,6 +13,7 @@ PATH_AUTH = os.getenv('SHOPEE_PATH_AUTH')
 PATH_TOKEN = os.getenv('SHOPEE_PATH_TOKEN')
 PATH_REFRESH_TOKEN = os.getenv('SHOPEE_PATH_REFRESH_TOKEN')
 PATH_INCOME_DETAIL = os.getenv('SHOPEE_PATH_INCOME_DETAIL')
+PATH_ESCROW_DETAIL = os.getenv('SHOPEE_PATH_ESCROW_DETAIL')
 REDIRECT_URL = os.getenv('OLIST_REDIRECT_URI')
 
 class Autenticacao:
@@ -193,3 +194,27 @@ class Pagamento:
         url = HOST_URL + PATH_INCOME_DETAIL + "?" + common_params + "&" + req_params
         headers = {"Content-Type": "application/json"}
         return await paginar_shopee(url=url,headers=headers)
+
+    @carrega_dados_shopee
+    async def getEscrowDetail(self, orderSn:str) -> list[dict]:
+        access_token = await self.auth_instance.autenticar()
+        timest:int = int(time.time())
+        partner_id:int = self.dados_shopee.get("partner_id")
+        shop_id:int = self.dados_shopee.get("shop_id")
+        partner_key:str = self.dados_shopee.get("partner_key")        
+        base_string = "%s%s%s%s%s" % (partner_id, PATH_ESCROW_DETAIL, timest, access_token, shop_id)
+        base_string_encoded = base_string.encode()
+        partner_key_encoded = partner_key.encode()
+        sign = hmac.new(partner_key_encoded, base_string_encoded, hashlib.sha256).hexdigest()
+        common_params = "partner_id=%s&timestamp=%s&access_token=%s&shop_id=%s&sign=%s" % (partner_id,timest,access_token,shop_id,sign)
+        req_params = "order_sn=%s" % (orderSn)
+        url = HOST_URL + PATH_ESCROW_DETAIL + "?" + common_params + "&" + req_params
+        headers = {"Content-Type": "application/json"}
+        
+        resp = requests.post(
+            url=url,
+            headers=headers
+        )
+        if not resp.ok:
+            return []
+        return json.loads(resp.content)
