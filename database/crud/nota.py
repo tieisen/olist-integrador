@@ -247,11 +247,11 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
             logger.error(f"Nota do pedido {codPedido} não encontrada.")
             return False
         if nota.dh_baixa_financeiro:
-            logger.info(f"Conta do pedido {codPedido} já foi baixada.")
+            # logger.info(f"Conta do pedido {codPedido} já foi baixada.")
             return True
         if nota.income_data:
             if nota.income_data.get('released_amount') != 0.0:
-                logger.info(f"Conta do pedido {codPedido} já foi importada.")
+                # logger.info(f"Conta do pedido {codPedido} já foi importada.")
                 return True
             
         nota.income_data['released_amount'] = dadosConta.get('released_amount')
@@ -347,7 +347,7 @@ async def buscarEstornoPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|No
             if empresa_id:
                 filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)))
             elif ecommerce_id:
-                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.ecommerce_id == ecommerce_id)))
+                filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.id == ecommerce_id)))
             else:
                 raise ValueError("Parâmetro não informado")
             
