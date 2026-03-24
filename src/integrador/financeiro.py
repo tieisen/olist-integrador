@@ -216,25 +216,25 @@ class Receita:
         listaNotas = await self.validaPrecisaProcessar(listaNotas=listaNotas)
         for i, nota in enumerate(listaNotas):
             try:
-                id_cliente:int = nota['cliente'].get('id')
+                id_cliente:int = nota.get('cliente', {}).get('id')
                 id_nota:int = nota.get('id')
-                ecommerce_id:int = nota['ecommerce'].get('id',0)
-                cod_pedido:str = nota['ecommerce'].get('numeroPedidoEcommerce')
-                vlr_nota:float = nota.get('valor')
+                ecommerce_nome:str = nota.get('ecommerce', {}).get('nome')
+                cod_pedido:str = nota.get('ecommerce', {}).get('numeroPedidoEcommerce')
+                vlr_nota:float = round(nota.get('valor', 0) + nota.get('valorDesconto', 0), 2)
                 dados_financeiro:dict = None
                 
-                if not all([id_cliente,id_nota,ecommerce_id,cod_pedido,vlr_nota]):
+                if not all([id_cliente,id_nota,ecommerce_nome,cod_pedido,vlr_nota]):
                     raise ValueError("Dados incompletos.")
                 
-                if ecommerce_id == 10940:
-                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrNota=vlr_nota)                
-                elif ecommerce_id in [9227,9265]:
+                if ('SHOPEE' in ecommerce_nome.upper()):
                     dados_financeiro = {
                         "order_sn": cod_pedido,
                         "amount_paid": vlr_nota,
                         "released_amount": 0.0,
                         "fee_shopee": 0.0
-                    }                
+                    } 
+                elif ('BELEZA' in ecommerce_nome.upper()):
+                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrNota=vlr_nota)                
                 else:
                     dados_financeiro = {
                         "order_sn": cod_pedido,
@@ -340,6 +340,10 @@ class Despesa:
                     
         return True
 
+    def validaDespesaFrete(self,dadosConta:dict):
+        self.eh_frete = True if ('fee_frete' in dadosConta.get('income_data',{})) and (not dadosConta.get('id_financeiro_frete')) and (not dadosConta.get('income_data',{}).get('id_financeiro')) else False
+        return        
+
     @carrega_dados_ecommerce
     @carrega_dados_empresa
     async def formatarPayloadLcto(self, dadosConta:dict|None=None, dadosTransferencia:dict|None=None) -> bool:
@@ -373,11 +377,12 @@ class Despesa:
         
         if dadosConta:
             
-            self.eh_frete:bool = True if 'fee_frete' in dados_pagamento else False
             dados_pagamento:dict=dadosConta.get('income_data')
             vlr_titulo:float=0
             id_categoria_despesa:int=0
             historico:str=''
+            cod_pedido:str = dados_pagamento.get('order_sn')
+            self.validaDespesaFrete(dadosConta=dadosConta)
             
             if self.eh_frete:
                 vlr_titulo = dados_pagamento.get('fee_frete')
@@ -392,9 +397,8 @@ class Despesa:
                 id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
                 historico = f"Taxa do e-commerce || Ref. ao Pedido #{cod_pedido}"
             else:
-                vlr_titulo = dados_pagamento.get('amount_paid')
-                
-            cod_pedido:str = dados_pagamento.get('order_sn')
+                vlr_titulo = dados_pagamento.get('amount_paid')                
+            
             dt_neg:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
             dt_venc:str = await self.calcularVcto()
             num_documento:str = str(dadosConta.get('numero'))
@@ -487,10 +491,12 @@ class Despesa:
             raise Exception(msg)
         
         if self.eh_frete:
+            # logger.info(f"Salvando ID do financeiro do frete: {id_financeiro}")
             if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_frete=id_financeiro):
                 msg = f"Erro ao salvar ID do financeiro do frete"
                 raise Exception(msg)        
         elif id_nota != -1:            
+            # logger.info(f"Salvando ID do financeiro da taxa: {id_financeiro}")
             if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=id_financeiro):
                 msg = f"Erro ao salvar ID do financeiro da taxa"
                 raise Exception(msg)
