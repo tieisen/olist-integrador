@@ -13,6 +13,10 @@ class FinanceiroModel(BaseModel):
 class FinanceiroShopeeModel(BaseModel):
     codemp:int
 
+class FinanceiroResponse(BaseModel):
+    status: bool
+    exception: str | None = None
+
 @router.post("/processar-shopee")
 async def processar_shopee(financeiro:FinanceiroShopeeModel) -> bool:    
     """
@@ -22,11 +26,12 @@ async def processar_shopee(financeiro:FinanceiroShopeeModel) -> bool:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar recebimentos da Shopee")
     return True
 
-@router.post("/integrar")
-async def integrar_financeiro(financeiro:FinanceiroModel) -> bool:
+@router.post("/integrar", status_code=status.HTTP_200_OK, response_model=FinanceiroResponse)
+async def integrar_financeiro(financeiro:FinanceiroModel) -> FinanceiroResponse:
     """
     Processa e lança títulos a receber e taxas no Olist.
     """
-    if not await integrar(dtFim=financeiro.data,codemp=financeiro.codemp,idLoja=financeiro.idLoja,dias=financeiro.dias):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar títulos")
-    return True
+    res:dict = await integrar(dtFim=financeiro.data,codemp=financeiro.codemp,idLoja=financeiro.idLoja,dias=financeiro.dias)
+    if not res.get('status'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao processar títulos: {res.get('exception')}")
+    return res
