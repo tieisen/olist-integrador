@@ -23,7 +23,7 @@ class Receita:
         self.dados_empresa:dict = None
         self.req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP', 1.5))
         self.payload_lcto:dict = None
-        self.payload_baixa:dict = None    
+        self.payload_baixa:dict = None
         self.id_nota:int = None
         self.id_financeiro:int = None
         self.cod_pedido:str = None
@@ -264,7 +264,8 @@ class Despesa:
         self.dados_empresa:dict = None
         self.req_time_sleep:float = float(os.getenv('REQ_TIME_SLEEP', 1.5))
         self.payload_lcto:dict = None
-        self.payload_baixa:dict = None    
+        self.payload_baixa:dict = None
+        self.eh_frete:bool = False 
         self.id_nota:int = None
         self.id_financeiro:int = None
         self.parse = ParseDespesa()
@@ -303,6 +304,41 @@ class Despesa:
             return data_vcto.strftime('%Y-%m-%d')
         else:
             return ''
+    
+    @carrega_dados_ecommerce
+    async def buscarEstornoShopee(self, orderSn:str, ecommerceId:int=None) -> bool:
+        
+        escrow_details:list[dict] = []
+        conta:dict = {}
+        vlr_total_pedido:float = 0.0
+        vlr_liquido:float = 0.0
+        vlr_taxa:float = 0.0
+        vlr_frete:float = 0.0
+
+        pag_shopee = PagamentoShopee(empresaId=self.empresa_id,ecommerceId=ecommerceId or self.dados_ecommerce.get('id'))
+        escrow_details = await pag_shopee.getEscrowDetail(orderSn=orderSn)
+        conta = escrow_details.get('response',{}).get('order_income',{})
+        if not conta.get('order_adjustment'):
+            return False
+
+        vlr_total_pedido = conta.get('buyer_total_amount',0) - conta.get('buyer_transaction_fee',0)
+        vlr_liquido = conta.get('escrow_amount_after_adjustment',0)
+        vlr_frete = conta.get('actual_shipping_fee',0)
+        vlr_taxa = round(vlr_total_pedido - vlr_liquido - vlr_frete,2)
+
+        try:
+            ack = await crudNota.atualizarDadosContaEstornoShopee(codPedido=orderSn,
+                                                                  vlrLiquido=vlr_liquido,
+                                                                  vlrFrete=vlr_frete,
+                                                                  vlrTaxa=vlr_taxa)
+            if not ack:
+                logger.error("Erro ao atualizar dados do estorno do pedido %s",conta.get('order_sn'))                    
+                logger.info("dadosConta: %s",conta)
+        except Exception as e:
+            logger.error("Erro ao salvar dados do estorno do pedido %s: %s",conta.get('order_sn'),str(e))
+            logger.info("dadosConta: %s",conta)
+                    
+        return True
 
     @carrega_dados_ecommerce
     @carrega_dados_empresa
@@ -336,22 +372,34 @@ class Despesa:
                 raise ValueError("Dados da transferência devem ser um dicionário")        
         
         if dadosConta:
+            
+            self.eh_frete:bool = True if 'fee_frete' in dados_pagamento else False
             dados_pagamento:dict=dadosConta.get('income_data')
             vlr_titulo:float=0
-            if 'fee_shopee' in dados_pagamento:
+            id_categoria_despesa:int=0
+            historico:str=''
+            
+            if self.eh_frete:
+                vlr_titulo = dados_pagamento.get('fee_frete')
+                id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_frete_padrao')
+                historico = f"Taxa do frete || Ref. a devolução do Pedido #{cod_pedido}"
+            elif 'fee_shopee' in dados_pagamento:
                 vlr_titulo = dados_pagamento.get('fee_shopee')
+                id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
+                historico = f"Taxa do e-commerce || Ref. ao Pedido #{cod_pedido}"
             elif 'fee_blz' in dados_pagamento:
                 vlr_titulo = dados_pagamento.get('fee_blz')
+                id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
+                historico = f"Taxa do e-commerce || Ref. ao Pedido #{cod_pedido}"
             else:
-                vlr_titulo = dados_pagamento.get('amount_paid')            
+                vlr_titulo = dados_pagamento.get('amount_paid')
+                
             cod_pedido:str = dados_pagamento.get('order_sn')
             dt_neg:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
             dt_venc:str = await self.calcularVcto()
             num_documento:str = str(dadosConta.get('numero'))
             id_fornecedor:int = self.dados_ecommerce.get('id_fornecedor_olist')
-            id_categoria_despesa:int = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
             id_forma_pgto:int = self.dados_ecommerce.get('id_forma_pgto_padrao')
-            historico:str = f"Taxa do e-commerce || Ref. a NF nº {num_documento}, Pedido #{cod_pedido}"
             self.id_nota = dadosConta.get('id_nota')
         
         if dadosTransferencia:
@@ -435,16 +483,22 @@ class Despesa:
         
         id_financeiro = await self.finDespesa.lancar(payload=payload)
         if not id_financeiro:
-            msg = f"Erro ao lançar título a receber"
+            msg = f"Erro ao lançar título a pagar"
             raise Exception(msg)
         
-        if id_nota != -1:                
+        if self.eh_frete:
+            if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_frete=id_financeiro):
+                msg = f"Erro ao salvar ID do financeiro do frete"
+                raise Exception(msg)        
+        elif id_nota != -1:            
             if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=id_financeiro):
-                msg = f"Erro ao salvar ID do financeiro"
+                msg = f"Erro ao salvar ID do financeiro da taxa"
                 raise Exception(msg)
 
         self.payload_lcto = None
-        self.id_nota = None        
+        self.id_nota = None
+        self.eh_frete = False
+
         return True
 
     @carrega_dados_ecommerce
@@ -452,7 +506,7 @@ class Despesa:
 
         id_nota = self.id_nota if not id_nota else id_nota
         if await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=0):
-            msg = f"Erro ao salvar ID do financeiro"
+            msg = f"Erro ao ignorar taxa da nota"
             raise Exception(msg)              
         
         return True
