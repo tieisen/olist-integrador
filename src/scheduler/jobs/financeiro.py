@@ -17,6 +17,9 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
     ecom:dict={}
     lista_notas_emitidas:list[dict]=[]
     lista_nota_lcto:list[dict]=[]
+    lista_estornos:list[dict]=[]
+    receita:Receita=None
+    despesa:Despesa=None
 
     empresas = await empresa.buscar(codemp=codemp)
     try:
@@ -45,6 +48,14 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                 if ('SHOPEE' in ecom.get('nome').upper()):
                     logger.info("Processando recebimentos Shopee...")
                     await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dtFim=dtFim,dias=dias)
+                    
+                    logger.info("Validando estornos...")
+                    lista_estornos = await nota.buscarEstornoPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
+                    logger.info(f"Estornos pendentes: {len(lista_estornos)}")
+                    if lista_estornos:
+                        for n, estorno in enumerate(lista_estornos):
+                            time.sleep(receita.req_time_sleep)
+                            await despesa.buscarEstornoShopee(orderSn=estorno.get('income_data').get('order_sn'))                            
 
                 logger.info(f"Buscando contas pendentes...")
                 lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
@@ -63,12 +74,16 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                         await receita.formatarPayloadLcto(dadosConta=nota_lcto)
                         await receita.lancarConta()
                     
-                    if len(str(ecom.get('id_loja'))) >= 9:
+                    if len(str(ecom.get('id_loja'))) >= 8:
                         # Funcionários ou Parfum
                         await despesa.ignorarTaxa(id_nota=nota_lcto.get('id'))
                         continue
                     
                     if not nota_lcto.get('id_financeiro_taxa'):
+                        await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
+                        await despesa.lancarConta()
+                    
+                    if nota_lcto.get('income_data',{}).get('fee_frete',0):
                         await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
                         await despesa.lancarConta()
         
