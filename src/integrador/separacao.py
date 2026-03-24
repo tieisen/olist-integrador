@@ -37,14 +37,17 @@ class Separacao:
             :param lista_pedidos: lista de dicionários com os dados dos pedidos
             :return list[dict]: lista de dicionários com os dados dos pedidos do E-commerce
         """
-
-        regex = r"^37\w{7}" # Parfum e Funcionários são vendedores, então o ID da loja vai começar com 37 seguido de 7 dígitos. Os demais são ecommerces, então o ID da loja é o ID do ecommerce.
-        test_str = str(self.id_loja)
-        matches = re.search(regex, test_str)
-        if matches:
-            return [p for p in lista_pedidos if p['ecommerce'].get('id') == 0]
-        else:
-            return [p for p in lista_pedidos if p['ecommerce'].get('id') == self.id_loja]
+        try:
+            regex = r"^\d{9}" # Parfum e Funcionários são vendedores, então o ID da loja vai ter 9 dígitos. Os demais são ecommerces, então o ID da loja é o ID do ecommerce.
+            test_str = str(self.id_loja)
+            matches = re.search(regex, test_str)
+            if matches:
+                return [p for p in lista_pedidos if p.get('ecommerce') and p['ecommerce'].get('id') == 0]
+            else:
+                return [p for p in lista_pedidos if p.get('ecommerce') and p['ecommerce'].get('id') == self.id_loja]
+        except ValueError as e:
+            logger.error(f"Erro ao validar loja: {e}")
+            return []
 
     @contexto
     @log_execucao
