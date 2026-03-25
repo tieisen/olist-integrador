@@ -134,7 +134,7 @@ async def inicializar_tarefas():
     jobs = [
         ("sincronizar_tudo", rotina_completa, "cron", {"hour": "0-7,10-23", "minute": f"*/{MINUTOS_JOB_PADRAO}"}),
         ("notificar_erros", rotina_notificacao, "cron", {"hour": "12"}),
-        ("financeiro", rotina_lancamentos_financeiro, "cron", {"hour": 0, "minute": 5}),
+        ("financeiro", rotina_lancamentos_financeiro, "cron", {"hour": "1"}),
     ]
 
     for job_id, func, trigger, params in jobs:
