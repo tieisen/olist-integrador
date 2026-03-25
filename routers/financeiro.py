@@ -7,8 +7,9 @@ router = APIRouter()
 class FinanceiroModel(BaseModel):
     codemp:int
     idLoja:int | None = None
-    data:str | None = None
+    dataFim:str | None = None
     dias:int = 0
+    processaShopee:bool = True
 
 class FinanceiroShopeeModel(BaseModel):
     codemp:int
@@ -31,7 +32,7 @@ async def integrar_financeiro(financeiro:FinanceiroModel) -> FinanceiroResponse:
     """
     Processa e lança títulos a receber e taxas no Olist.
     """
-    res:dict = await integrar(dtFim=financeiro.data,codemp=financeiro.codemp,idLoja=financeiro.idLoja,dias=financeiro.dias)
+    res:dict = await integrar(**financeiro.model_dump())
     if not res.get('status'):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao processar títulos: {res.get('exception')}")
     return res
