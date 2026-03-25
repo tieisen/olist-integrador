@@ -5,7 +5,7 @@ from src.integrador.financeiro import Receita, Despesa
 from src.utils.log import set_logger
 logger = set_logger(__name__)
 
-async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None,dias:int=0) -> dict:
+async def integrar(codemp:int|None=None,idLoja:int|None=None,dataFim:str|None=None,dias:int=0,processaShopee:bool=True) -> dict:
 
     retorno:dict={
             "status": False,
@@ -29,7 +29,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
             despesa = Despesa(empresaId=emp.get('id'))            
             notas = NotaOlist(empresa_id=emp.get('id'))
             
-            lista_notas_emitidas = await notas.buscarData(data=dtFim,dias=dias)
+            lista_notas_emitidas = await notas.buscarData(data=dataFim,dias=dias)
             # print("Processando notas emitidas...")
             await receita.processarNotas(listaNotas=lista_notas_emitidas)
 
@@ -45,12 +45,12 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                 despesa.dados_ecommerce = None                
                 despesa.id_loja = ecom.get('id_loja')  
 
-                if ('SHOPEE' in ecom.get('nome').upper()):
+                if processaShopee and ('SHOPEE' in ecom.get('nome').upper()):
                     # print("Processando recebimentos Shopee...")
-                    await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dtFim=dtFim,dias=dias)
+                    await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dtFim=dataFim,dias=dias)
                     
                     # print("Validando estornos...")
-                    lista_estornos = await nota.buscarEstornoPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
+                    lista_estornos = await nota.buscarEstornoPendenteLcto(ecommerce_id=ecom.get('id'),data=dataFim)
                     logger.info(f"Estornos pendentes: {len(lista_estornos)}")
                     # print(f"Estornos pendentes: {len(lista_estornos)}")
                     if lista_estornos:
@@ -59,7 +59,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
                             await despesa.buscarEstornoShopee(orderSn=estorno.get('income_data').get('order_sn'))                            
 
                 # print(f"Buscando contas pendentes...")
-                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dtFim)
+                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dataFim)
                 logger.info(f"Contas pendentes: {len(lista_nota_lcto)}")
                 # print(f"Contas pendentes: {len(lista_nota_lcto)}")
                 if not lista_nota_lcto:
@@ -105,7 +105,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dtFim:str|None=None
     
     return retorno
 
-async def consultarRecebimentosShopee(codemp:int=None,dtFim:str=None,dias:int=0) -> dict:
+async def consultarRecebimentosShopee(codemp:int=None,dataFim:str=None,dias:int=0) -> dict:
 
     retorno:dict={}
     empresas:list[dict]=[]
@@ -121,7 +121,7 @@ async def consultarRecebimentosShopee(codemp:int=None,dtFim:str=None,dias:int=0)
                 if 'SHOPEE' in ecom.get('nome').upper():
                     loja_shopee = await shopee.buscar(ecommerce_id=ecom.get('id'))
                     if loja_shopee:
-                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'),dtFim=dtFim,dias=dias)
+                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'),dtFim=dataFim,dias=dias)
             retorno = {
                 "status": True,
                 "exception": None
