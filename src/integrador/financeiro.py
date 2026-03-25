@@ -29,6 +29,7 @@ class Receita:
         self.cod_pedido:str = None
         self.parse = ParseReceita()
         self.finOlist = FinReceita(empresa_id=self.empresa_id)
+        self.data_vcto:datetime = None
 
     async def calcularFinanceiroBlzWeb(self,codPedido:str,vlrNota:float) -> dict:
         vlr_taxa:float = await self.parse.calculaComissaoBlzWeb(vlrPedido=vlrNota)
@@ -66,15 +67,17 @@ class Receita:
         # 0=segunda ... 2=quarta
         alvo = 2
         dias_ate = (alvo - dataBase.weekday() + 7) % 7
-        if dias_ate == 0:
-            dias_ate = 7
+        # if dias_ate == 0:
+        #     dias_ate = 7
         nova_data = dataBase + timedelta(days=dias_ate)
+        self.data_vcto = nova_data
         return nova_data
     
-    def calcularDataVctoBlz(self,dataBase:datetime) -> datetime:        
+    def calcularDataVctoBlz(self,dataBase:datetime) -> datetime:
         nova_data:datetime = None
         nova_data = dataBase + relativedelta(months=1)
         nova_data = nova_data.replace(day=9)
+        self.data_vcto = nova_data
         return nova_data
     
     @carrega_dados_ecommerce
@@ -102,7 +105,7 @@ class Receita:
         id_cliente:int = dadosConta.get('id_cliente')
         id_categoria_financeiro:int = self.dados_ecommerce.get('id_categoria_financeiro')
         id_forma_recebimento:int = self.dados_ecommerce.get('id_forma_rec_padrao')
-        vlr_titulo:float = dados_pagamento.get('released_amount')
+        vlr_titulo:float = dados_pagamento.get('amount_paid')
         cod_pedido:str = dados_pagamento.get('order_sn')
         dt_nf:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
         dt_venc:str = await self.calcularVcto()
@@ -179,7 +182,7 @@ class Receita:
             raise Exception(msg)
         
         # Salva ID do financeiro
-        if not await crudNota.atualizar(id_nota=id_nota,id_financeiro=id_financeiro):
+        if not await crudNota.atualizar(id_nota=id_nota,id_financeiro=id_financeiro,dh_baixa_financeiro=self.data_vcto):
             msg = f"Erro ao salvar ID do financeiro"
             raise Exception(msg)            
         
@@ -199,7 +202,10 @@ class Receita:
                                         dh_baixa_financeiro=datetime.now(),
                                         parcelado=False):
             msg = f"Erro ao atualizar contas a receber da nota"
-            raise Exception(msg)            
+            raise Exception(msg)    
+
+        self.id_financeiro = None
+        self.payload_baixa = None                 
            
         return True
     
@@ -269,22 +275,25 @@ class Despesa:
         self.id_nota:int = None
         self.id_financeiro:int = None
         self.parse = ParseDespesa()
-        self.finDespesa = FinDespesa(empresa_id=self.empresa_id)          
+        self.finDespesa = FinDespesa(empresa_id=self.empresa_id)
+        self.data_vcto:datetime = None        
 
     def calcularDataVctoShopee(self,dataBase:datetime) -> datetime:
         nova_data:datetime = None
         # 0=segunda ... 2=quarta
         alvo = 2
         dias_ate = (alvo - dataBase.weekday() + 7) % 7
-        if dias_ate == 0:
-            dias_ate = 7
+        # if dias_ate == 0:
+        #     dias_ate = 7
         nova_data = dataBase + timedelta(days=dias_ate)
+        self.data_vcto = nova_data        
         return nova_data
     
-    def calcularDataVctoBlz(self,dataBase:datetime) -> datetime:        
+    def calcularDataVctoBlz(self,dataBase:datetime) -> datetime:
         nova_data:datetime = None
         nova_data = dataBase + relativedelta(months=1)
         nova_data = nova_data.replace(day=9)
+        self.data_vcto = nova_data
         return nova_data
     
     @carrega_dados_ecommerce
@@ -497,7 +506,7 @@ class Despesa:
                 raise Exception(msg)        
         elif id_nota != -1:            
             # logger.info(f"Salvando ID do financeiro da taxa: {id_financeiro}")
-            if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=id_financeiro):
+            if not await crudNota.atualizar(id_nota=id_nota,id_financeiro_taxa=id_financeiro,dh_baixa_financeiro=self.data_vcto):
                 msg = f"Erro ao salvar ID do financeiro da taxa"
                 raise Exception(msg)
 
