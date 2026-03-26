@@ -47,7 +47,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dataFim:str|None=No
 
                 if processaShopee and ('SHOPEE' in ecom.get('nome').upper()):
                     # print("Processando recebimentos Shopee...")
-                    await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dtFim=dataFim,dias=dias)
+                    await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dataFim=dataFim,dias=dias)
                     
                     # print("Validando estornos...")
                     lista_estornos = await nota.buscarEstornoPendenteLcto(ecommerce_id=ecom.get('id'),data=dataFim)
@@ -114,8 +114,7 @@ async def consultarRecebimentosShopee(codemp:int=None,dataFim:str=None,dias:int=
     try:
         for i, emp in enumerate(empresas):
             print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
-            receita = Receita(empresaId=emp.get('id'))            
-            
+            receita = Receita(empresaId=emp.get('id'))
             ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
             for j, ecom in enumerate(ecommerces):
                 if 'SHOPEE' in ecom.get('nome').upper():
