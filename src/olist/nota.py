@@ -111,8 +111,8 @@ class Nota:
         situacoes = [6,7]
         lista_notas:list[dict]=[]
         dt:datetime = datetime.today() if not data else datetime.strptime(data, '%Y-%m-%d')
-        dt_ini:str = dt.strftime('%Y-%m-%d')
-        dt_fim:str = (dt-timedelta(days=dias)).strftime('%Y-%m-%d')
+        dt_fim:str = dt.strftime('%Y-%m-%d')
+        dt_ini:str = (dt-timedelta(days=dias)).strftime('%Y-%m-%d')
         
         for s in situacoes:
             url = self.endpoint+f"/?tipo=S&situacao={s}&dataInicial={dt_ini}&dataFinal={dt_fim}"
