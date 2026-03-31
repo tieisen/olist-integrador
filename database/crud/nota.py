@@ -7,6 +7,7 @@ from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from datetime import timedelta
 load_env()
 logger = set_logger(__name__)
 
@@ -339,13 +340,14 @@ async def buscarEstornoPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|No
             raise ValueError("Parâmetro não informado")
         
         data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
+        data_limite_estorno = data - timedelta(days=20)
 
         async with AsyncSessionLocal() as session:
             filtros = [ Nota.dh_cancelamento.is_(None),
                         Nota.dh_baixa_financeiro.is_(None),
                         (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
                         Nota.income_data['released_amount'].as_float() <= 0.0,
-                        (cast(Nota.dh_emissao, Date) <= data)]
+                        (cast(Nota.dh_emissao, Date) >= data_limite_estorno)]
             if empresa_id:
                 filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)))
             elif ecommerce_id:
