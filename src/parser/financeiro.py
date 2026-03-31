@@ -30,7 +30,7 @@ class Receita:
         """ Calcula o valor da comissão do BLZ na Web (taxa fixa de envio + percentual sobre o valor do pedido) """
         return round(vlrPedido*self.comissao_blz+self.taxa_blz_envios,2)
 
-    async def lancamento(self,dtNf:str,dtVenc:str,vlrTitulo:float,numDocumento:str,numNf:str,codPedido:str,idCliente:int,idCategoriaFinanceiro:int,idFormaRecebimento:int) -> dict:
+    async def lancamento(self,dtNf:str,dtVenc:str,vlrTitulo:float,numDocumento:str,numNf:str,codPedido:str,idCliente:int,idCategoriaFinanceiro:int,idFormaRecebimento:int,motivoAjuste:str=None) -> dict:
         """_summary_
 
         Args:
@@ -55,7 +55,7 @@ class Receita:
             "contato": {
                 "id": idCliente
             },
-            "historico": f"Ref. ao Pedido #{codPedido}, NF nº {numNf}",
+            "historico": f"Ref. ao Pedido #{codPedido}, NF nº {numNf}"+(f" || Motivo do ajuste: {motivoAjuste}" if motivoAjuste else ''),
             "categoria": {
                 "id": idCategoriaFinanceiro
             },
