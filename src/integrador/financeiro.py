@@ -324,18 +324,18 @@ class Despesa:
         vlr_taxa:float = 0.0
         vlr_frete:float = 0.0
         motivo_estorno:str = None
-
+        
         pag_shopee = PagamentoShopee(empresaId=self.empresa_id,ecommerceId=ecommerceId or self.dados_ecommerce.get('id'))
         escrow_details = await pag_shopee.getEscrowDetail(orderSn=orderSn)
         conta = escrow_details.get('response',{}).get('order_income',{})
         if not conta.get('order_adjustment'):
             return False
-
+        
         vlr_total_pedido = conta.get('buyer_total_amount',0) - conta.get('buyer_transaction_fee',0)
         vlr_liquido = conta.get('escrow_amount_after_adjustment',0)
         vlr_frete = conta.get('actual_shipping_fee',0)
         vlr_taxa = round(vlr_total_pedido - vlr_liquido - vlr_frete,2)
-        motivo_estorno = conta.get('order_adjustment',{}).get('adjustment_reason')
+        motivo_estorno = conta.get('order_adjustment',[])[0].get('adjustment_reason')
 
         try:
             ack = await crudNota.atualizarDadosContaEstornoShopee(codPedido=orderSn,
