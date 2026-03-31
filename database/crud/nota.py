@@ -259,7 +259,7 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
         await session.commit()
         return True  
 
-async def atualizarDadosContaEstornoShopee(codPedido:str,vlrLiquido:float,vlrFrete:float,vlrTaxa:float) -> bool:
+async def atualizarDadosContaEstornoShopee(codPedido:str,vlrLiquido:float,vlrFrete:float,vlrTaxa:float,motivoEstorno:str='') -> bool:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Nota)
@@ -277,6 +277,8 @@ async def atualizarDadosContaEstornoShopee(codPedido:str,vlrLiquido:float,vlrFre
         nota.income_data['released_amount'] = vlrLiquido
         nota.income_data['fee_shopee'] = vlrTaxa
         nota.income_data['fee_frete'] = vlrFrete
+        if motivoEstorno:
+            nota.income_data['adjustment_reason'] = motivoEstorno
         
         await session.commit()
         return True  
@@ -292,7 +294,7 @@ async def buscaPendenteIncomeData(idNota:int=None,listIdNota:list[int]=None) -> 
         else:
             raise ValueError("Parâmetro não informado")
                 
-        async with AsyncSessionLocal() as session:            
+        async with AsyncSessionLocal() as session:
             query = select(Nota).where(*filtros)     
             result = await session.execute(query)           
             notas = result.scalars().all()
@@ -308,7 +310,7 @@ async def buscarPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|None=None
         
         data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
 
-        async with AsyncSessionLocal() as session:            
+        async with AsyncSessionLocal() as session:
             filtros = [ Nota.dh_cancelamento.is_(None),
                         Nota.dh_baixa_financeiro.is_(None),
                         (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
@@ -338,11 +340,11 @@ async def buscarEstornoPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|No
         
         data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
 
-        async with AsyncSessionLocal() as session:            
+        async with AsyncSessionLocal() as session:
             filtros = [ Nota.dh_cancelamento.is_(None),
                         Nota.dh_baixa_financeiro.is_(None),
                         (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
-                        Nota.income_data['released_amount'].as_float() < 0.0,
+                        Nota.income_data['released_amount'].as_float() <= 0.0,
                         (cast(Nota.dh_emissao, Date) <= data)]
             if empresa_id:
                 filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)))
