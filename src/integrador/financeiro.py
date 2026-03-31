@@ -112,6 +112,7 @@ class Receita:
         num_documento:str = str(dadosConta.get('numero'))
         num_nf:str = str(dadosConta.get('numero'))
         self.id_nota = dadosConta.get('id_nota')
+        motivo_ajuste:str = dados_pagamento.get('adjustment_reason') if dados_pagamento.get('adjustment_reason') else ''
         
         if not all([id_cliente,id_categoria_financeiro,vlr_titulo,cod_pedido,dt_nf,dt_venc,num_documento,num_nf,id_forma_recebimento]):
             raise ValueError(f"Dados incompletos. id_cliente: {id_cliente}, id_categoria_financeiro: {id_categoria_financeiro}, vlr_titulo: {vlr_titulo}, cod_pedido: {cod_pedido}, dt_nf: {dt_nf}, dt_venc: {dt_venc}, num_documento: {num_documento}, num_nf: {num_nf}, id_forma_recebimento: {id_forma_recebimento}")
@@ -124,7 +125,8 @@ class Receita:
                                                         codPedido=cod_pedido,
                                                         idCliente=id_cliente,
                                                         idCategoriaFinanceiro=id_categoria_financeiro,
-                                                        idFormaRecebimento=id_forma_recebimento)
+                                                        idFormaRecebimento=id_forma_recebimento,
+                                                        motivoAjuste=motivo_ajuste)
                                     
         if not self.payload_lcto:
             msg = f"Erro montar payload"
@@ -353,7 +355,10 @@ class Despesa:
         return True
 
     def validaDespesaFrete(self,dadosConta:dict):
-        self.eh_frete = True if ('fee_frete' in dadosConta.get('income_data',{})) and (not dadosConta.get('id_financeiro_frete')) and (not dadosConta.get('income_data',{}).get('id_financeiro')) else False
+        self.eh_frete = True if (('fee_frete' in dadosConta.get('income_data',{})) and
+                                 (dadosConta.get('income_data',{}).get('fee_frete')>0) and
+                                 (not dadosConta.get('id_financeiro_frete')) and
+                                 (not dadosConta.get('income_data',{}).get('id_financeiro'))) else False
         return        
 
     @carrega_dados_ecommerce
@@ -387,8 +392,7 @@ class Despesa:
             if not isinstance(dadosTransferencia,dict):
                 raise ValueError("Dados da transferência devem ser um dicionário")        
         
-        if dadosConta:
-            
+        if dadosConta:            
             dados_pagamento:dict=dadosConta.get('income_data')
             vlr_titulo:float=0
             id_categoria_despesa:int=0
@@ -403,11 +407,11 @@ class Despesa:
             elif 'fee_shopee' in dados_pagamento:
                 vlr_titulo = dados_pagamento.get('fee_shopee')
                 id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
-                historico = f"Taxa do e-commerce || Ref. ao Pedido #{cod_pedido}"
+                historico = f"Taxa do e-commerce ref. Pedido #{cod_pedido}"
             elif 'fee_blz' in dados_pagamento:
                 vlr_titulo = dados_pagamento.get('fee_blz')
                 id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
-                historico = f"Taxa do e-commerce || Ref. ao Pedido #{cod_pedido}"
+                historico = f"Taxa do e-commerce ref. Pedido #{cod_pedido}"
             else:
                 vlr_titulo = dados_pagamento.get('amount_paid')
             
