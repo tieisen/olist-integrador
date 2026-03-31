@@ -2,7 +2,7 @@ from database.database import AsyncSessionLocal
 from database.models import Nota, Pedido, Ecommerce
 from database.crud import pedido
 from datetime import datetime
-from sqlalchemy import cast, Date
+from sqlalchemy import cast, Date, DateTime
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
@@ -257,6 +257,7 @@ async def atualizarDadosContaShopee(codPedido:str,dadosConta:dict) -> bool:
             
         nota.income_data['released_amount'] = dadosConta.get('released_amount')
         nota.income_data['fee_shopee'] = round(nota.income_data['amount_paid'] - dadosConta.get('released_amount'),2) if dadosConta.get('released_amount') > 0 else 0.0
+        nota.income_data['payout_time'] = datetime.fromtimestamp(dadosConta.get('actual_payout_time')).strftime('%Y-%m-%d %H:%M:%S')
         await session.commit()
         return True  
 
@@ -340,14 +341,15 @@ async def buscarEstornoPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|No
             raise ValueError("Parâmetro não informado")
         
         data:datetime = datetime.today().date() if not data else datetime.strptime(data, '%Y-%m-%d').date()
-        data_limite_estorno = data - timedelta(days=20)
+        data_limite_estorno = datetime.combine(data - timedelta(days=30), datetime.min.time())
 
         async with AsyncSessionLocal() as session:
             filtros = [ Nota.dh_cancelamento.is_(None),
                         Nota.dh_baixa_financeiro.is_(None),
                         (Nota.id_financeiro.is_(None) | Nota.id_financeiro_taxa.is_(None)),
                         Nota.income_data['released_amount'].as_float() <= 0.0,
-                        (cast(Nota.dh_emissao, Date) >= data_limite_estorno)]
+                        Nota.income_data['payout_time'].isnot(None),
+                        cast(Nota.income_data['payout_time'].astext, DateTime) >= data_limite_estorno ]
             if empresa_id:
                 filtros.append(Nota.pedido_.has(Pedido.ecommerce_.has(Ecommerce.empresa_id == empresa_id)))
             elif ecommerce_id:
@@ -357,7 +359,7 @@ async def buscarEstornoPendenteLcto(empresa_id:int|None=None,ecommerce_id:int|No
             
             query = select(Nota)
             if filtros:
-                query = query.where(*filtros)                           
+                query = query.where(*filtros)
             result = await session.execute(query)           
             notas = result.scalars().all()
         
