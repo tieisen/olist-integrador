@@ -323,6 +323,7 @@ class Despesa:
         vlr_liquido:float = 0.0
         vlr_taxa:float = 0.0
         vlr_frete:float = 0.0
+        motivo_estorno:str = None
 
         pag_shopee = PagamentoShopee(empresaId=self.empresa_id,ecommerceId=ecommerceId or self.dados_ecommerce.get('id'))
         escrow_details = await pag_shopee.getEscrowDetail(orderSn=orderSn)
@@ -334,12 +335,14 @@ class Despesa:
         vlr_liquido = conta.get('escrow_amount_after_adjustment',0)
         vlr_frete = conta.get('actual_shipping_fee',0)
         vlr_taxa = round(vlr_total_pedido - vlr_liquido - vlr_frete,2)
+        motivo_estorno = conta.get('order_adjustment',{}).get('adjustment_reason')
 
         try:
             ack = await crudNota.atualizarDadosContaEstornoShopee(codPedido=orderSn,
                                                                   vlrLiquido=vlr_liquido,
                                                                   vlrFrete=vlr_frete,
-                                                                  vlrTaxa=vlr_taxa)
+                                                                  vlrTaxa=vlr_taxa,
+                                                                  motivoEstorno=motivo_estorno)
             if not ack:
                 logger.error("Erro ao atualizar dados do estorno do pedido %s",conta.get('order_sn'))                    
                 logger.info("dadosConta: %s",conta)
@@ -396,7 +399,7 @@ class Despesa:
             if self.eh_frete:
                 vlr_titulo = dados_pagamento.get('fee_frete')
                 id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_frete_padrao')
-                historico = f"Taxa do frete || Ref. a devolução do Pedido #{cod_pedido}"
+                historico = f"Taxa ref. a devolução do Pedido #{cod_pedido}"
             elif 'fee_shopee' in dados_pagamento:
                 vlr_titulo = dados_pagamento.get('fee_shopee')
                 id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
@@ -406,7 +409,10 @@ class Despesa:
                 id_categoria_despesa = self.dados_empresa.get('olist_id_categoria_taxa_padrao')
                 historico = f"Taxa do e-commerce || Ref. ao Pedido #{cod_pedido}"
             else:
-                vlr_titulo = dados_pagamento.get('amount_paid')                
+                vlr_titulo = dados_pagamento.get('amount_paid')
+            
+            if dados_pagamento.get('adjustment_reason'):
+                historico += f" || Motivo do ajuste: {dados_pagamento.get('adjustment_reason')}"
             
             dt_neg:str = dadosConta.get('dh_emissao').strftime('%Y-%m-%d') if dadosConta.get('dh_emissao') else ''
             dt_venc:str = await self.calcularVcto()
