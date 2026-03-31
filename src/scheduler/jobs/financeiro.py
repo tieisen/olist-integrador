@@ -56,7 +56,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dataFim:str|None=No
                     if lista_estornos:
                         for n, estorno in enumerate(lista_estornos):
                             time.sleep(receita.req_time_sleep)
-                            await despesa.buscarEstornoShopee(orderSn=estorno.get('income_data').get('order_sn'))                            
+                            await despesa.buscarEstornoShopee(orderSn=estorno.get('income_data',{}).get('order_sn'))
 
                 # print(f"Buscando contas pendentes...")
                 lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dataFim)
