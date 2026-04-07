@@ -301,5 +301,6 @@ def tokenOlist(func):
             self.token = token
             return await func(self, *args, **kwargs)
         finally:
-            self.token = None
+            # self.token = None
+            pass
     return wrapper             
