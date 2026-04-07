@@ -160,41 +160,58 @@ class Nota:
             return False
 
     @tokenSnk
-    async def confirmar(self,nunota:int) -> bool:
+    async def confirmar(self,nunota:int) -> dict:
         """
         Confirma uma nota de venda.
             :param nunota: número único da nota de venda
             :return bool: status da operação
         """               
-        
-        url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
-        if not url:
-            logger.error("Erro relacionado à url. %s",url)
-            return False  
 
-        res = requests.get(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json={
-                "serviceName": "ServicosNfeSP.confirmarNota",
-                "requestBody": {
-                    "nota": {
-                        "compensarNotaAutomaticamente": "false",
-                        "NUNOTA": {
-                            "$": f"{nunota}"
+        retorno:dict={
+            "success": False,
+            "nunota_nota": nunota,
+            "exception": None
+        }
+        
+        try:
+        
+            url = os.getenv('SANKHYA_URL_CONFIRMA_PEDIDO')
+            if not url:
+                err = f"Erro relacionado à url. {url}"
+                raise Exception(err)
+
+            res = requests.get(
+                url=url,
+                headers={ 'Authorization':f"Bearer {self.token}" },
+                json={
+                    "serviceName": "ServicosNfeSP.confirmarNota",
+                    "requestBody": {
+                        "nota": {
+                            "compensarNotaAutomaticamente": "false",
+                            "NUNOTA": {
+                                "$": f"{nunota}"
+                            }
                         }
                     }
-                }
-            })
-        
-        if res.status_code in (200,201) and res.json().get('status')=='1':
-            return True
-        else:
-            if 'confirmada' in res.json().get('statusMessage'):
-                print(res.json().get('statusMessage'))
-                return None
-            print(f"Erro ao confirmar nota. Nunota {nunota}. {res.json()}")
-            return False
+                })
+            
+
+            if not (res.status_code in (200,201) and res.json().get('status')=='1'):
+                err:str=''
+                if 'confirmada' in res.json().get('statusMessage'):
+                    retorno['success'] = True
+                    retorno['exception'] = f"Nota {nunota} já estava confirmada. {res.json().get('statusMessage')}"
+                else:
+                    err = f"Erro ao confirmar: {res.json().get('statusMessage')}" if 'statusMessage' in res.json() else f"Erro ao faturar: Nunota {nunota}. {res.text}"
+                raise Exception(err)
+            
+            retorno['success'] = True            
+        except Exception as e:
+            if not retorno.get('success'):
+                retorno['exception'] = f"{e}"
+        finally:
+            pass
+        return retorno            
 
     @tokenSnk
     async def informar_numero_e_chavenfe(self,nunota:int=None,chavenfe:str=None,numero:str=None,id_nota:int=None) -> bool:

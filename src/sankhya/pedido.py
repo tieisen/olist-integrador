@@ -333,70 +333,79 @@ class Pedido:
 
     @tokenSnk
     @carrega_dados_empresa
-    async def faturar(self,nunota:int,dt_fatur:str=None) -> tuple[bool,int]:
+    async def faturar(self,nunota:int,dt_fatur:str=None) -> dict:
         """
         Fatura um pedido de venda.
             :param nunota: número único do pedido de venda
             :param dt_fatur: data de faturamento
             :return bool: status da operação
             :return int: número único da nota de venda gerada
-        """        
+        """
         
-        url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
-        if not url:
-            logger.error("Erro relacionado à url. %s",url)
-            return False, None
-        
-        top_faturamento = self.dados_empresa.get('snk_top_transferencia')
-        serie_nf = self.dados_empresa.get('serie_nfe')
-        if not all([top_faturamento,serie_nf]):
-            erro = f"Parâmetros da TOP de faturamento ou série da NF não encontados"
-            logger.error(erro)
-            return False, None
-
-        data_faturamento = datetime.strptime(dt_fatur,'%Y-%m-%d').strftime('%d/%m/%Y') if dt_fatur else datetime.now().strftime('%d/%m/%Y')
-        if not data_faturamento:
-            logger.error("Data de faturamento não informada.")
-            return False, None
-
-        body = {
-            "serviceName":"SelecaoDocumentoSP.faturar",
-            "requestBody":{
-                "notas":{
-                    "codTipOper":top_faturamento,
-                    "serie":serie_nf,
-                    "dtFaturamento":data_faturamento,
-                    "tipoFaturamento":"FaturamentoNormal",
-                    "dataValidada":"true",
-                    "notasComMoeda":{
-                        
-                    },
-                    "nota":[
-                        {
-                            "$":nunota
-                        }
-                    ],
-                    "codLocalDestino":"",
-                    "faturarTodosItens":"true",
-                    "umaNotaParaCada":"false",
-                    "ehWizardFaturamento":"true",
-                    "dtFixaVenc":"",
-                    "ehPedidoWeb":"false",
-                    "nfeDevolucaoViaRecusa":"false"
-                }                
-            }
+        retorno:dict={
+            "success": False,
+            "nunota_nota": None,
+            "exception": None
         }
-
-        res = requests.post(
-            url=url,
-            headers={ 'Authorization':f"Bearer {self.token}" },
-            json=body)
         
-        if res.status_code in (200,201) and res.json().get('status') in ['1', '2']:
-            return True, int(res.json().get('responseBody').get('notas').get('nota').get('$'))
-        else:
-            logger.error("Erro ao faturar pedido. Nunota %s. %s",nunota,res.text)
-            return False, None
+        try:
+            url = os.getenv('SANKHYA_URL_FATURA_PEDIDO')
+            if not url:
+                err = f"Erro relacionado à url. {url}"
+                raise Exception(err)
+            
+            top_faturamento = self.dados_empresa.get('snk_top_transferencia')
+            serie_nf = self.dados_empresa.get('serie_nfe')
+            if not all([top_faturamento,serie_nf]):
+                err = f"Parâmetros da TOP de faturamento ou série da NF não encontados"
+                raise Exception(err)
+
+            data_faturamento = datetime.strptime(dt_fatur,'%Y-%m-%d').strftime('%d/%m/%Y') if dt_fatur else datetime.now().strftime('%d/%m/%Y')
+
+            body = {
+                "serviceName":"SelecaoDocumentoSP.faturar",
+                "requestBody":{
+                    "notas":{
+                        "codTipOper":top_faturamento,
+                        "serie":serie_nf,
+                        "dtFaturamento":data_faturamento,
+                        "tipoFaturamento":"FaturamentoNormal",
+                        "dataValidada":"true",
+                        "notasComMoeda":{
+                            
+                        },
+                        "nota":[
+                            {
+                                "$":nunota
+                            }
+                        ],
+                        "codLocalDestino":"",
+                        "faturarTodosItens":"true",
+                        "umaNotaParaCada":"false",
+                        "ehWizardFaturamento":"true",
+                        "dtFixaVenc":"",
+                        "ehPedidoWeb":"false",
+                        "nfeDevolucaoViaRecusa":"false"
+                    }                
+                }
+            }
+
+            res = requests.post(
+                url=url,
+                headers={ 'Authorization':f"Bearer {self.token}" },
+                json=body)
+            
+            if not (res.status_code in (200,201) and res.json().get('status') in ['1', '2']):
+                err = f"Erro ao faturar: {res.json().get('statusMessage')}" if 'statusMessage' in res.json() else f"Erro ao faturar: Nunota {nunota}. {res.text}"
+                raise Exception(err)
+            
+            retorno['success'] = True
+            retorno['nunota_nota'] = int(res.json().get('responseBody').get('notas').get('nota').get('$'))
+        except Exception as e:
+            retorno['exception'] = f"{e}"
+        finally:
+            pass        
+        return retorno
 
     @tokenSnk
     @carrega_dados_empresa

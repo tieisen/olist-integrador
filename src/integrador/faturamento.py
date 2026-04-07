@@ -277,27 +277,28 @@ class Faturamento:
                     nunota_nota = status_faturamento[0].get('nunota')
                     # Atualiza base de dados
                     await crudPedido.atualizar(nunota=nunota,
-                                            dh_faturamento=datetime.now())
+                                               dh_faturamento=datetime.now())
                     await crudNota.atualizar(nunota_pedido=nunota,
-                                            nunota=nunota_nota)
+                                             nunota=nunota_nota)
                 else:
                     # Se o pedido não foi faturado...
                     # Fatura no Sankhya
-                    ack, nunota_nota = await pedido_snk.faturar(nunota=nunota)
-                    if not ack:
-                        msg = f"Erro ao faturar pedido {nunota}"
-                        raise Exception(msg)
+                    ack_fat_pedido:dict = {}
+                    ack_fat_pedido = await pedido_snk.faturar(nunota=nunota)
+                    if not ack_fat_pedido.get('success'):
+                        raise Exception(ack_fat_pedido.get('exception'))
+                    nunota_nota = ack_fat_pedido.get('nunota_nota')
                     
                     # Atualiza local
                     dados_nota:dict = await nota_snk.buscar(nunota=nunota_nota,itens=True)
                     if not dados_nota:
-                        msg = f"Erro ao buscar dados da nota {nunota_nota}"
+                        msg = f"Erro ao buscar dados para atualizar o local da nota {nunota_nota}"
                         raise Exception(msg)                
                     sequencias:list = [int(item.get('sequencia')) for item in dados_nota.get('itens')]
                     payload:list[dict] = await parser_pedido.to_sankhya_atualiza_local(nunota=nunota_nota,
                                                                                        lista_sequencias=sequencias)
                     if not payload:
-                        msg = f"Erro ao preparar dados da nota {nunota_nota}"
+                        msg = f"Erro ao preparar dados para atualizar o local da nota {nunota_nota}"
                         raise Exception(msg)                
                     ack = await pedido_snk.atualizar_local(nunota=nunota_nota,payload=payload)
                     if not ack:
@@ -311,10 +312,10 @@ class Faturamento:
                                              nunota=nunota_nota)
 
                 # Confirma nota no Sankhya
-                ack = await nota_snk.confirmar(nunota=nunota_nota)
-                if ack is False:
-                    msg = f"Erro ao confirmar nota {nunota_nota}"
-                    raise Exception(msg)
+                ack_confirma_nota:dict = {}
+                ack_confirma_nota = await nota_snk.confirmar(nunota=nunota_nota)
+                if ack_confirma_nota.get('success') is False:
+                    raise Exception(ack_confirma_nota.get('exception'))
 
                 ack = await crudNota.atualizar(nunota_nota=nunota_nota,dh_confirmacao=datetime.now())
                 if ack is False:
@@ -323,7 +324,7 @@ class Faturamento:
                 
                 dados_transferencia:dict = await nota_snk.buscar(nunota=nunota_nota)
                 if not dados_transferencia:
-                    msg = f"Erro ao buscasr dados da nota de transferência {nunota_nota}"
+                    msg = f"Erro ao buscar dados da nota de transferência {nunota_nota}"
                     raise Exception(msg)
                 
                 # Cria o contas a pagar no Olist
@@ -341,6 +342,7 @@ class Faturamento:
             ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
             if not ack.get('success'):
                 raise Exception(ack.get('__exception__'))
+            
             return {"success": True, "__exception__": None}
         
         except Exception as e:

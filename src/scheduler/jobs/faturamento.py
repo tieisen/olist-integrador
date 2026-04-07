@@ -24,13 +24,14 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
                     pedido = Pedido(id_loja=ecom.get('id_loja'),codemp=emp.get('snk_codemp'))
                     await pedido.consultar_cancelamentos()
                     await faturamento.integrar_olist()
-                    await faturamento.integrar_snk()
+                    status_snk:dict = await faturamento.integrar_snk()
+                    if not status_snk.get('success'):
+                        raise Exception(status_snk.get('__exception__'))                    
             retorno = {
                 "status": True,
                 "exception": None
             }
         except Exception as e:
-            print(f"{e}")
             retorno = {
                 "status": False,
                 "exception": f"{e}"
@@ -43,9 +44,10 @@ async def integrar_faturamento(codemp:int=None, id_loja:int=None) -> dict:
             ecom = ecommerces[0]
             print(f"E-commerce {ecom.get('nome')}".upper())
             faturamento = Faturamento(id_loja=id_loja)
-            await faturamento.integrar_olist()
-            await faturamento.integrar_snk(loja_unica=True)
-            
+            status_snk:dict = await faturamento.integrar_snk(loja_unica=True)
+            if not status_snk.get('success'):
+                raise Exception(status_snk.get('__exception__'))
+            await faturamento.integrar_olist()            
             retorno = {
                 "status": True,
                 "exception": None
@@ -111,7 +113,6 @@ async def integrar_faturamento_olist(codemp:int=None, id_loja:int=None) -> dict:
         finally:
             return retorno
 
-
 async def integrar_faturamento_snk(codemp:int=None) -> dict:
 
     retorno:dict={}
@@ -131,7 +132,9 @@ async def integrar_faturamento_snk(codemp:int=None) -> dict:
             for j, ecom in enumerate(ecommerces):
                 print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 faturamento = Faturamento(id_loja=ecom.get('id_loja'))                
-                await faturamento.integrar_snk()        
+                status_snk:dict = await faturamento.integrar_snk()
+                if not status_snk.get('success'):
+                    raise Exception(status_snk.get('__exception__'))                
         retorno = {
             "status": True,
             "exception": None

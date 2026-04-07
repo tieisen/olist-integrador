@@ -184,10 +184,10 @@ class Devolucao:
                 raise Exception(msg)
             
             # Confirma a devolução
-            ack = await nota_snk.confirmar(nunota=nunota_devolucao)
-            if not ack:
-                msg = "Erro ao confirmar devolução."
-                raise Exception(msg)
+            ack_confirma_devolucao:dict = {}
+            ack_confirma_devolucao = await nota_snk.confirmar(nunota=nunota_devolucao)
+            if ack_confirma_devolucao.get('success') is False:
+                raise Exception(ack_confirma_devolucao.get('exception'))
         
             # Atualiza a nota no banco de dados
             ack = await crudDev.atualizar(id_nota=dados_devolucao.get('id'),
