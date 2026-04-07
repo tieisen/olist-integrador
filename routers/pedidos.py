@@ -67,7 +67,7 @@ async def faturar(body:PedidoEmpresa) -> bool:
     res:dict={}
     res = await integrar_faturamento(codemp=body.codemp)
     if not res.get('status'):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('exception'))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res)
     return True
 
 @router.post("/faturar-loja")
