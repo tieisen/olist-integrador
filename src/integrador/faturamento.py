@@ -582,7 +582,7 @@ class Faturamento:
     @contexto
     @log_execucao
     @carrega_dados_ecommerce
-    async def integrar_snk(self,**kwargs) -> bool:
+    async def integrar_snk(self,**kwargs) -> dict:
         """
         Busca os pedidos pendentes e executa a rotina para faturar os pedidos no Sankhya.
             :return bool: status da operação
@@ -598,7 +598,7 @@ class Faturamento:
         if not pedidos_faturar:
             # Nenhum pedido para faturamento
             await crudLog.atualizar(id=self.log_id)
-            return True
+            return {"success": True, "__exception__": None}
         
         pedidos_faturar = list(set([p.get("nunota") for p in pedidos_faturar]))
         # conf_snk = ConfSnk(codemp=self.codemp,empresa_id=self.dados_ecommerce.get('empresa_id'))
@@ -623,11 +623,13 @@ class Faturamento:
                                     nunota=pedido,
                                     evento='F',
                                     sucesso=ack_pedido.get('success'),
-                                    obs=ack_pedido.get('__exception__',None))               
+                                    obs=ack_pedido.get('__exception__',None)) 
+            if not ack_pedido.get('success'):
+                break
         
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-        return status_log    
+        return ack_pedido    
     
     @contexto
     @log_execucao
