@@ -202,9 +202,11 @@ class Produto:
             with open(os.getenv('OBJECT_PRODUTO',"src/json/produto.json"), "r", encoding="utf-8") as f:
                 modelo_api = json.load(f)
             new_data = self.formatter.limpar_json(new_data,modelo_api.get('put'))
-            # if new_data['fornecedores'][0].get('id') == 0:
-            #     new_data['fornecedores'][0]['id'] = dados_empresa.get('olist_id_fornecedor_padrao')
-            # new_data['fornecedores'][0]['padrao'] = True
+            if len(new_data.get('fornecedores',[])) > 1:
+                new_data['fornecedores'] = [f for f in new_data['fornecedores'] if f.get('id') == dados_empresa.get('olist_id_fornecedor_padrao')]
+            if new_data['fornecedores'][0].get('id') == 0:
+                new_data['fornecedores'][0]['id'] = dados_empresa.get('olist_id_fornecedor_padrao')
+            new_data['fornecedores'][0]['padrao'] = True
             new_data['seo']['keywords']=['produto']
             
         if data_sankhya and not new_data:
