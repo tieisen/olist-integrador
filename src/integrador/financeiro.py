@@ -31,12 +31,12 @@ class Receita:
         self.finOlist = FinReceita(empresa_id=self.empresa_id)
         self.data_vcto:datetime = None
 
-    async def calcularFinanceiroBlzWeb(self,codPedido:str,vlrNota:float) -> dict:
-        vlr_taxa:float = await self.parse.calculaComissaoBlzWeb(vlrPedido=vlrNota)
+    async def calcularFinanceiroBlzWeb(self,codPedido:str,vlrProdutos:float) -> dict:
+        vlr_taxa:float = await self.parse.calculaComissaoBlzWeb(vlrProdutos=vlrProdutos)
         return {
             "order_sn": codPedido,
-            "amount_paid": vlrNota,
-            "released_amount": round(vlrNota - vlr_taxa,2),
+            "amount_paid": vlrProdutos,
+            "released_amount": round(vlrProdutos - vlr_taxa,2),
             "fee_blz": vlr_taxa
         }
     
@@ -242,7 +242,7 @@ class Receita:
                         "fee_shopee": 0.0
                     } 
                 elif ('BELEZA' in ecommerce_nome.upper()):
-                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrNota=vlr_nota)                
+                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrProdutos=nota.get('valorProdutos', 0))
                 else:
                     dados_financeiro = {
                         "order_sn": cod_pedido,
