@@ -228,7 +228,7 @@ class Receita:
                 id_nota:int = nota.get('id')
                 ecommerce_nome:str = nota.get('ecommerce', {}).get('nome')
                 cod_pedido:str = nota.get('ecommerce', {}).get('numeroPedidoEcommerce')
-                vlr_nota:float = round(nota.get('valor', 0) + nota.get('valorDesconto', 0), 2)
+                vlr_nota:float = nota.get('valorProdutos', 0)
                 dados_financeiro:dict = None
                 
                 if not all([id_cliente,id_nota,ecommerce_nome,cod_pedido,vlr_nota]):
@@ -242,7 +242,7 @@ class Receita:
                         "fee_shopee": 0.0
                     } 
                 elif ('BELEZA' in ecommerce_nome.upper()):
-                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrProdutos=nota.get('valorProdutos', 0))
+                    dados_financeiro = await self.calcularFinanceiroBlzWeb(codPedido=cod_pedido,vlrProdutos=vlr_nota)
                 else:
                     dados_financeiro = {
                         "order_sn": cod_pedido,
