@@ -5,7 +5,7 @@ from pydantic import BaseModel
 router = APIRouter()
 
 class FinanceiroModel(BaseModel):
-    codemp:int
+    codemp:int | None = None
     idLoja:int | None = None
     dataFim:str | None = None
     dias:int = 0
