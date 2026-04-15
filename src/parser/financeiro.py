@@ -26,9 +26,12 @@ class Receita:
     def formataVlr(self,vlr:float) -> str:
         return vlr.__format__('.2f').replace('.',',')
     
-    async def calculaComissaoBlzWeb(self,vlrPedido:float) -> float:
-        """ Calcula o valor da comissão do BLZ na Web (taxa fixa de envio + percentual sobre o valor do pedido) """
-        return round(vlrPedido*self.comissao_blz+self.taxa_blz_envios,2)
+    async def calculaComissaoBlzWeb(self,vlrProdutos:float) -> float:
+        """ Calcula o valor da comissão do BLZ na Web (taxa fixa de envio + percentual sobre o valor dos produtos) """
+        vlr_comissao:float = 0.0
+        if vlrProdutos > 0:
+            vlr_comissao = round(vlrProdutos*self.comissao_blz+self.taxa_blz_envios,2)
+        return vlr_comissao
 
     async def lancamento(self,dtNf:str,dtVenc:str,vlrTitulo:float,numDocumento:str,numNf:str,codPedido:str,idCliente:int,idCategoriaFinanceiro:int,idFormaRecebimento:int,motivoAjuste:str=None) -> dict:
         """_summary_
