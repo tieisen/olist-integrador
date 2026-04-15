@@ -117,6 +117,10 @@ class Receita:
         if not all([id_cliente,id_categoria_financeiro,vlr_titulo,cod_pedido,dt_nf,dt_venc,num_documento,num_nf,id_forma_recebimento]):
             raise ValueError(f"Dados incompletos. id_cliente: {id_cliente}, id_categoria_financeiro: {id_categoria_financeiro}, vlr_titulo: {vlr_titulo}, cod_pedido: {cod_pedido}, dt_nf: {dt_nf}, dt_venc: {dt_venc}, num_documento: {num_documento}, num_nf: {num_nf}, id_forma_recebimento: {id_forma_recebimento}")
         
+        if vlr_titulo <= 0:
+            msg = f"Valor do título deve ser maior que zero. Pedido: {cod_pedido}, Valor: {vlr_titulo}"
+            raise ValueError(msg)
+
         self.payload_lcto = await self.parse.lancamento(dtNf=dt_nf,
                                                         dtVenc=dt_venc,
                                                         vlrTitulo=vlr_titulo,
@@ -439,7 +443,11 @@ class Despesa:
         
         if not all([dt_neg,dt_venc,vlr_titulo,num_documento,id_fornecedor,id_categoria_despesa,historico,id_forma_pgto]):
             raise ValueError(f"Dados incompletos. dt_neg: {dt_neg}, dt_venc: {dt_venc}, vlr_titulo: {vlr_titulo}, num_documento: {num_documento}, id_fornecedor: {id_fornecedor}, id_categoria_despesa: {id_categoria_despesa}, historico: {historico}, id_forma_pgto: {id_forma_pgto}")
-        
+
+        if vlr_titulo <= 0:
+            msg = f"Valor do título deve ser maior que zero. Documento: {num_documento}, Valor: {vlr_titulo}"
+            raise ValueError(msg)
+
         self.payload_lcto = await self.parse.lancamento(dtNeg=dt_neg,
                                                         dtVcto=dt_venc,
                                                         valor=vlr_titulo,
