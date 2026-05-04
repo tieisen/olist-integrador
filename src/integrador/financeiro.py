@@ -444,7 +444,7 @@ class Despesa:
         if not all([dt_neg,dt_venc,vlr_titulo,num_documento,id_fornecedor,id_categoria_despesa,historico,id_forma_pgto]):
             raise ValueError(f"Dados incompletos. dt_neg: {dt_neg}, dt_venc: {dt_venc}, vlr_titulo: {vlr_titulo}, num_documento: {num_documento}, id_fornecedor: {id_fornecedor}, id_categoria_despesa: {id_categoria_despesa}, historico: {historico}, id_forma_pgto: {id_forma_pgto}")
 
-        if vlr_titulo <= 0:
+        if float(vlr_titulo) <= 0:
             msg = f"Valor do título deve ser maior que zero. Documento: {num_documento}, Valor: {vlr_titulo}"
             raise ValueError(msg)
 
