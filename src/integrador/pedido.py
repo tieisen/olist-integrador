@@ -120,9 +120,12 @@ class Pedido:
         """
 
         if "ERRO AO RECEBER PEDIDO" in str(dados_pedido.get('observacoes')).upper():
-            await olist.desmarcar_erro(id=dados_pedido.get('id'))
-            time.sleep(self.req_time_sleep)
-            await olist.remover_texto_erro(id=dados_pedido.get('id'))
+            dados_marcadores:list[dict] = await olist.buscar_marcadores(id=dados_pedido.get('id'))            
+            if dados_marcadores:
+                time.sleep(self.req_time_sleep)
+                await olist.desmarcar_erro(id=dados_pedido.get('id'),dados_marcadores=dados_marcadores)
+                time.sleep(self.req_time_sleep)
+                await olist.remover_texto_erro(id=dados_pedido.get('id'))
 
         return True
 
@@ -1081,13 +1084,18 @@ class Pedido:
                     continue
                 
                 time.sleep(self.req_time_sleep)
-                ack = await olist.desmarcar_integrado(id=pedido.get('id_pedido'))
-                if not ack:
+                dados_marcadores:list[dict] = await olist.buscar_marcadores(id=pedido.get('id_pedido'))
+                ack:bool = None
+                if dados_marcadores:
+                    time.sleep(self.req_time_sleep)
+                    ack = await olist.desmarcar_integrado(id=pedido.get('id_pedido'), dados_marcadores=dados_marcadores)
+
+                if not ack or not dados_marcadores:
                     await crudLogPed.criar(log_id=self.log_id,
-                                           pedido_id=pedido.get('id'),
-                                           evento='N',
-                                           sucesso=False,
-                                           obs="Não foi possível remover marcador de integrado")
+                                        pedido_id=pedido.get('id'),
+                                        evento='N',
+                                        sucesso=False,
+                                        obs="Não foi possível remover marcador de integrado")
                     lista_pedidos_com_erro.append(str(pedido.get('num_pedido')))
                     continue
 

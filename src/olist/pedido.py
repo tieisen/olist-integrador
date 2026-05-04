@@ -429,7 +429,7 @@ class Pedido:
         return True
 
     @tokenOlist
-    async def desmarcar_integrado(self,id:int) -> bool:
+    async def desmarcar_integrado(self,id:int,dados_marcadores:list[dict]) -> bool:
         """
         Remove um marcador no pedido integrado.
             :param id: ID do pedido (Olist)
@@ -440,11 +440,6 @@ class Pedido:
         if not url:
             logger.error("Erro relacionado à url. %s",url)
             return False 
-        
-        time.sleep(self.req_time_sleep)
-        dados_marcadores:list[dict] = await self.buscar_marcadores(id=id)
-        if not dados_marcadores:            
-            return True
         
         for marcador in dados_marcadores:
             if str(marcador.get('descricao')).upper() == 'INTEGRADO':
@@ -468,7 +463,7 @@ class Pedido:
         return True
 
     @tokenOlist
-    async def desmarcar_erro(self,id:int) -> bool:
+    async def desmarcar_erro(self,id:int,dados_marcadores:list[dict]) -> bool:
         """
         Remove um marcador no pedido integrado.
             :param id: ID do pedido (Olist)
@@ -478,12 +473,7 @@ class Pedido:
         url = self.endpoint+f"/{id}/marcadores"
         if not url:
             logger.error("Erro relacionado à url. %s",url)
-            return False 
-        
-        time.sleep(self.req_time_sleep)
-        dados_marcadores:list[dict] = await self.buscar_marcadores(id=id)
-        if not dados_marcadores:            
-            return True
+            return False
         
         for marcador in dados_marcadores:
             if str(marcador.get('descricao')).upper() == 'ERRO':
