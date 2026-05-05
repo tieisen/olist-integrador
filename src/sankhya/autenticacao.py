@@ -68,7 +68,7 @@ class Autenticacao:
         token:str = dados_token.get('token')
         request_date:datetime = datetime.now()
         expire_date:datetime = datetime.strptime(dados_token.get('dhExpiracaoToken',''), "%Y-%m-%dT%H:%M:%S.%f")
-        expire_date_ajustado = expire_date - timedelta(seconds=60)
+        expire_date_ajustado = expire_date - timedelta(minutes=1)  # Ajusta a expiração para 1 minuto antes do tempo real
         # logger.info(f"Expiração da API: {expire_date}")
         # logger.info(f"Salvando token com expiração: {expire_date_ajustado}")
         ack = await crud.atualizar(app_id=self.dados_snk.get('app_id'),
@@ -88,7 +88,7 @@ class Autenticacao:
             :return str: token descriptografado.
         """
         
-        agora:datetime = datetime.now().replace(microsecond=0)
+        agora:datetime = datetime.now().replace(microsecond=0, second=0)
         expiracao_token:datetime = None
         token:str = ''
         dados_token = await crud.buscar(app_id=self.app_id)
@@ -97,7 +97,7 @@ class Autenticacao:
             logger.error(f"Dados do token não encontrado")
             return token
 
-        expiracao_token = dados_token.get('dh_expiracao_token').replace(microsecond=0) if dados_token.get('dh_expiracao_token') else None
+        expiracao_token = dados_token.get('dh_expiracao_token').replace(microsecond=0, second=0) if dados_token.get('dh_expiracao_token') else None
         token = dados_token.get('token')
 
         # logger.info(f"Data atual: {agora} | Type: {type(agora)}")
