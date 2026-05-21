@@ -561,7 +561,8 @@ class Pedido:
             if qtd_transferir:
                 qtd_matriz:int = int(estoque.get('saldo_matriz',0))
                 qtd_valcurta:int = int(estoque.get('saldo_valcurta',0))
-                qtd_total_disponivel:int = qtd_matriz + qtd_valcurta
+                qtd_promo:int = int(estoque.get('saldo_promo',0))
+                qtd_total_disponivel:int = qtd_matriz + qtd_valcurta + qtd_promo
                 loop:bool=True
                 local_estoque:int=None
 
@@ -592,6 +593,16 @@ class Pedido:
                         else:
                             qtd_transferida = qtd_transferir
                             qtd_valcurta -= qtd_transferir
+                            qtd_transferir = 0
+                    elif qtd_promo > 0:
+                        local_estoque = 102 # Promo
+                        if qtd_transferir >= qtd_promo:
+                            qtd_transferida = qtd_promo
+                            qtd_transferir -= qtd_promo
+                            qtd_promo = 0
+                        else:
+                            qtd_transferida = qtd_transferir
+                            qtd_promo -= qtd_transferir
                             qtd_transferir = 0
                     else:
                         local_estoque = 101 # Validade normal
