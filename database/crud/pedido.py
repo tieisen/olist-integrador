@@ -137,6 +137,33 @@ async def atualizar(id_pedido:int=None,num_pedido:int=None,nunota:int=None,lista
         await session.commit()
         return True
 
+async def buscar_cliente(id_pedido:int=None,num_pedido:int=None,cod_pedido:str=None) -> int:
+
+    if not any([id_pedido, num_pedido, cod_pedido]):
+        print("Nenhum parâmetro informado")
+        return False
+    
+    criterios = []
+    if id_pedido:
+        criterios.append(Pedido.id_pedido == id_pedido)
+    if num_pedido:
+        criterios.append(Pedido.num_pedido == num_pedido)
+    if cod_pedido:
+        criterios.append(Pedido.cod_pedido == cod_pedido)
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+                select(Pedido)
+                .where(*criterios)
+            )
+        
+        pedidos = result.scalars().all()
+        if not pedidos:
+            return []
+        dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=pedidos)
+        return dados_pedidos[0].get('dados_pedido',{}).get('cliente',{}).get('id')
+
 async def buscar_cancelar(id_pedido:int=None,num_pedido:int=None,cod_pedido:str=None,lista:list[int]=None) -> list[dict]:
 
     if not any([id_pedido, num_pedido, cod_pedido, lista]):
