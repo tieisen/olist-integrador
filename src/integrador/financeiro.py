@@ -1,7 +1,7 @@
 import os, time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from database.crud import nota as crudNota
+from database.crud import nota as crudNota, pedido as crudPedido
 from src.services.shopee import Pagamento as PagamentoShopee
 from src.olist.financeiro import Receita as FinReceita, Despesa as FinDespesa
 from src.parser.financeiro import Receita as ParseReceita, Despesa as ParseDespesa
@@ -97,6 +97,21 @@ class Receita:
             return data_vcto.strftime('%Y-%m-%d')
         else:
             return ''
+    
+    @carrega_dados_ecommerce
+    async def formata_codigo_pedido(self,codigo_pedido:str) -> str:
+        
+        codigo_pedido_tratado:str=''
+        ecommerce:str=self.dados_ecommerce.get('nome').upper()
+                
+        if 'SHOPEE' in str(ecommerce).upper():
+            codigo_pedido_tratado = codigo_pedido
+        elif 'BELEZA' in str(ecommerce).upper():
+            codigo_pedido_tratado = '664ca49e6e32560ce90fe8b5-'+codigo_pedido
+        else:
+            pass
+        
+        return codigo_pedido_tratado
 
     @carrega_dados_ecommerce
     async def formatarPayloadLcto(self, dadosConta:dict) -> bool:
@@ -132,6 +147,35 @@ class Receita:
                                                         idFormaRecebimento=id_forma_recebimento,
                                                         motivoAjuste=motivo_ajuste)
                                     
+        if not self.payload_lcto:
+            msg = f"Erro montar payload"
+            raise Exception(msg)   
+        
+        return True
+
+    @carrega_dados_ecommerce
+    async def formatarPayloadLctoPlan(self, dtVcto:str, dadosConta:dict) -> bool:
+        
+        dados:dict = dadosConta.get('receita')
+        id_cliente:int = await crudPedido.buscar_cliente(cod_pedido=await self.formata_codigo_pedido(dadosConta.get('id_pedido')))
+        id_categoria_financeiro:int = self.dados_ecommerce.get('id_categoria_financeiro')
+        id_forma_recebimento:int = self.dados_ecommerce.get('id_forma_rec_padrao')
+        vlr_titulo:float = dados.get('valor')
+        dt_nf:str = dados.get('data')
+        dt_venc:str = dtVcto
+        historico:str = dados.get('descricao')
+        
+        if not all([id_cliente,id_categoria_financeiro,vlr_titulo,dt_nf,dt_venc,id_forma_recebimento,historico]):
+            raise ValueError(f"Dados incompletos. id_cliente: {id_cliente}, id_categoria_financeiro: {id_categoria_financeiro}, vlr_titulo: {vlr_titulo}, dt_nf: {dt_nf}, dt_venc: {dt_venc}, id_forma_recebimento: {id_forma_recebimento}, historico: {historico}")
+
+        self.payload_lcto = await self.parse.lancamentoPlan(dtNf=dt_nf,
+                                                            dtVenc=dt_venc,
+                                                            vlrTitulo=vlr_titulo,
+                                                            idCliente=id_cliente,
+                                                            idCategoriaFinanceiro=id_categoria_financeiro,
+                                                            idFormaRecebimento=id_forma_recebimento,
+                                                            historico=historico)
+
         if not self.payload_lcto:
             msg = f"Erro montar payload"
             raise Exception(msg)   
@@ -191,6 +235,20 @@ class Receita:
         if not await crudNota.atualizar(id_nota=id_nota,id_financeiro=id_financeiro,dh_baixa_financeiro=self.data_vcto):
             msg = f"Erro ao salvar ID do financeiro"
             raise Exception(msg)            
+        
+        return True
+
+    async def lancarContaPlan(self,payload:dict|None=None) -> bool:
+
+        id_financeiro:int = None
+        payload = self.payload_lcto if not payload else payload  
+        
+        id_financeiro = await self.finOlist.lancar(payload=payload)
+        if not id_financeiro:
+            msg = f"Erro ao lançar título a receber"
+            raise Exception(msg)
+        
+        logger.info(f"Conta lançada com sucesso. ID do financeiro: {id_financeiro}")
         
         return True
 
@@ -286,11 +344,8 @@ class Despesa:
 
     def calcularDataVctoShopee(self,dataBase:datetime) -> datetime:
         nova_data:datetime = None
-        # 0=segunda ... 2=quarta
         alvo = 2
         dias_ate = (alvo - dataBase.weekday() + 7) % 7
-        # if dias_ate == 0:
-        #     dias_ate = 7
         nova_data = dataBase + timedelta(days=dias_ate)
         self.data_vcto = nova_data        
         return nova_data
@@ -367,21 +422,37 @@ class Despesa:
 
     @carrega_dados_ecommerce
     @carrega_dados_empresa
+    async def formatarPayloadLctoPlan(self, dtVcto:str, dadosConta:dict) -> bool:
+        
+        dados:dict = dadosConta.get('despesa')
+        vlr_titulo:float=dados.get('valor')
+        id_categoria_despesa:int=self.dados_empresa.get('olist_id_categoria_taxa_padrao')
+        historico:str=dados.get('descricao')
+        dt_neg:str = dados.get('data')
+        dt_venc:str = dtVcto
+        id_fornecedor:int = self.dados_ecommerce.get('id_fornecedor_olist')
+        id_forma_pgto:int = self.dados_ecommerce.get('id_forma_pgto_padrao')
+            
+        if not all([dt_neg,dt_venc,vlr_titulo,id_fornecedor,id_categoria_despesa,historico,id_forma_pgto]):
+            raise ValueError(f"Dados incompletos. dt_neg: {dt_neg}, dt_venc: {dt_venc}, vlr_titulo: {vlr_titulo}, id_fornecedor: {id_fornecedor}, id_categoria_despesa: {id_categoria_despesa}, historico: {historico}, id_forma_pgto: {id_forma_pgto}")
+
+        self.payload_lcto = await self.parse.lancamentoPlan(dtNeg=dt_neg,
+                                                            dtVcto=dt_venc,
+                                                            valor=vlr_titulo,
+                                                            historico=historico,
+                                                            idFornecedor=id_fornecedor,
+                                                            idCategoriaDespesa=id_categoria_despesa,
+                                                            idFormaPgto=id_forma_pgto)
+                                    
+        if not self.payload_lcto:
+            msg = f"Erro montar payload"
+            raise Exception(msg)   
+        
+        return True
+
+    @carrega_dados_ecommerce
+    @carrega_dados_empresa
     async def formatarPayloadLcto(self, dadosConta:dict|None=None, dadosTransferencia:dict|None=None) -> bool:
-        """_summary_
-
-        Args:
-            dadosConta (dict | None): _description_
-            dadosTransferencia (dict | None): _description_
-
-        Raises:
-            ValueError: _description_
-            ValueError: _description_
-            Exception: _description_
-
-        Returns:
-            bool: _description_
-        """
         
         if not any([dadosConta,dadosTransferencia]):
             raise ValueError("Dados incompletos")
@@ -531,6 +602,24 @@ class Despesa:
         self.payload_lcto = None
         self.id_nota = None
         self.eh_frete = False
+
+        return True
+
+    @carrega_dados_ecommerce
+    async def lancarContaPlan(self,payload:dict|None=None) -> bool:
+
+        id_financeiro:int = None
+        payload = self.payload_lcto if not payload else payload
+        id_financeiro = await self.finDespesa.lancar(payload=payload)
+        if not id_financeiro:
+            msg = f"Erro ao lançar título a pagar"
+            raise Exception(msg)
+
+        self.payload_lcto = None
+        self.id_nota = None
+        self.eh_frete = False
+        
+        logger.info(f"Conta lançada com sucesso. ID do financeiro: {id_financeiro}")
 
         return True
 
