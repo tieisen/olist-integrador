@@ -86,7 +86,7 @@ class Devolucao:
                 dados_item['NUNOTA'] = {}
                 dados_item['CODPROD'] = {"$":item.get('codigo')}
                 dados_item['QTDNEG'] = {"$":item.get('quantidade')}
-                dados_item['VLRUNIT'] = {"$":item.get('valorUnitario')}
+                dados_item['VLRUNIT'] = {"$":item.get('valorUnitario') if bool(item.get('valorUnitario')) else 0.01}
                 dados_item['PERCDESC'] = {"$":'0'}
                 dados_item['IGNOREDESCPROMOQTD'] = {"$": "True"}
                 dados_item['CODVOL'] = {"$":item.get('unidade')}
