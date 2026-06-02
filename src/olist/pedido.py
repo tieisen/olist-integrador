@@ -436,14 +436,16 @@ class Pedido:
             :return bool: status da operação
         """
 
+        marcadores = dados_marcadores.copy() if isinstance(dados_marcadores, list) else []
+
         url = self.endpoint+f"/{id}/marcadores"
         if not url:
             logger.error("Erro relacionado à url. %s",url)
             return False 
         
-        for marcador in dados_marcadores:
+        for marcador in marcadores:
             if str(marcador.get('descricao')).upper() == 'INTEGRADO':
-                dados_marcadores.remove(marcador)
+                marcadores.remove(marcador)
                 break
 
         res = requests.put(
@@ -453,7 +455,7 @@ class Pedido:
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             },
-            json=dados_marcadores     
+            json=marcadores     
         )
 
         if not res.ok:
@@ -470,14 +472,16 @@ class Pedido:
             :return bool: status da operação
         """
 
+        marcadores = dados_marcadores.copy() if isinstance(dados_marcadores, list) else []
+
         url = self.endpoint+f"/{id}/marcadores"
         if not url:
             logger.error("Erro relacionado à url. %s",url)
             return False
         
-        for marcador in dados_marcadores:
+        for marcador in marcadores:
             if str(marcador.get('descricao')).upper() == 'ERRO':
-                dados_marcadores.remove(marcador)
+                marcadores.remove(marcador)
                 break
 
         res = requests.put(
@@ -487,7 +491,7 @@ class Pedido:
                 "Content-Type":"application/json",
                 "Accept":"application/json"
             },
-            json=dados_marcadores     
+            json=marcadores     
         )
 
         if not res.ok:

@@ -1070,8 +1070,7 @@ class Pedido:
                 raise Exception(msg)
 
             # Exclui pedido no Sankhya
-            ack = await snk.excluir(nunota=nunota)
-            if not ack:
+            if not await snk.excluir(nunota=nunota):
                 msg = f"Erro ao excluir pedido {nunota} no Sankhya"
                 raise Exception(msg)
 
@@ -1079,13 +1078,17 @@ class Pedido:
             lista_pedidos = await crudPedido.buscar(nunota=nunota)
             if not lista_pedidos:
                 msg = f"Erro ao buscar pedidos relacionados à nunota {nunota}"
-                raise Exception(msg)
+                raise Exception(msg)               
+
+            # Remove vínculo dos pedidos na base
+            if not await crudPedido.cancelar(nunota=nunota):
+                msg = f"Não foi possível limpar os pedidos na base"                
+                raise Exception(msg) 
 
             lista_pedidos_com_erro:list[str]=[]
             for i, pedido in enumerate(lista_pedidos):
                 time.sleep(self.req_time_sleep)  # Evita rate limit
-                ack = await olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota)
-                if not ack:
+                if not await olist.remover_nunota(id=pedido.get('id_pedido'),nunota=nunota):
                     await crudLogPed.criar(log_id=self.log_id,
                                            pedido_id=pedido.get('id'),
                                            evento='N',
@@ -1095,13 +1098,15 @@ class Pedido:
                     continue
                 
                 time.sleep(self.req_time_sleep)
-                dados_marcadores:list[dict] = await olist.buscar_marcadores(id=pedido.get('id_pedido'))
-                ack:bool = None
-                if dados_marcadores:
-                    time.sleep(self.req_time_sleep)
-                    ack = await olist.desmarcar_integrado(id=pedido.get('id_pedido'), dados_marcadores=dados_marcadores)
+                dados_marcadores:list[dict] = await olist.buscar_marcadores(id=pedido.get('id_pedido'))                
+                ack_desmarcar_integrado:bool=False
+                if not dados_marcadores:
+                    continue
+                time.sleep(self.req_time_sleep)
+                ack_desmarcar_integrado = await olist.desmarcar_integrado(id=pedido.get('id_pedido'), dados_marcadores=dados_marcadores)
 
-                if not ack or not dados_marcadores:
+                if not ack_desmarcar_integrado:
+                    print(f"Não foi possível remover marcador de integrado do pedido {pedido.get('num_pedido')}")
                     await crudLogPed.criar(log_id=self.log_id,
                                         pedido_id=pedido.get('id'),
                                         evento='N',
@@ -1121,17 +1126,12 @@ class Pedido:
                 msg = f"Não foi possível reverter o(s) pedido(s) {', '.join(lista_pedidos_com_erro)} no Olist"
                 status = True
                 raise Exception(msg)
-
-            if not await crudPedido.cancelar(nunota=nunota):
-                msg = f"Não foi possível limpar os pedidos na base"                
-                raise Exception(msg) 
                        
             status = True            
         except Exception as e:
-            if status is True:
-                pass
-            erro = f'ERRO: {e}'
-            status = False            
+            if status is not True:
+                erro = f'ERRO: {e}'
+                status = False            
         finally:        
             # Atualiza log
             status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
