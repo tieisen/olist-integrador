@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from src.scheduler.jobs.financeiro import consultarRecebimentosShopee, integrar
+from src.scheduler.jobs.financeiro import consultarRecebimentosShopee, integrar, processar_titulos_planilha
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -17,6 +17,29 @@ class FinanceiroShopeeModel(BaseModel):
 class FinanceiroResponse(BaseModel):
     status: bool
     exception: str | None = None
+
+class FinanceiroPlanilhaRegistroModel(BaseModel):
+    valor: float
+    descricao: str
+    data: str
+    pendente: bool
+
+class FinanceiroPlanilhaRegistrosModel(BaseModel):
+    id_pedido: str
+    receita: FinanceiroPlanilhaRegistroModel | None = None
+    despesa: FinanceiroPlanilhaRegistroModel | None = None
+
+class FinanceiroPlanilhaModel(BaseModel):
+    codemp: int
+    idLoja: int
+    dtVcto: str
+    registros: list[FinanceiroPlanilhaRegistrosModel]
+
+@router.post("/processar")
+async def processar_titulos_ecommerce(titulos:FinanceiroPlanilhaModel) -> bool:
+    if not await processar_titulos_planilha(titulos.model_dump()):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar títulos")
+    return True
 
 @router.post("/processar-shopee")
 async def processar_shopee(financeiro:FinanceiroShopeeModel) -> bool:    
