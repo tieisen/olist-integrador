@@ -5,6 +5,56 @@ from src.integrador.financeiro import Receita, Despesa
 from src.utils.log import set_logger
 logger = set_logger(__name__)
 
+async def processar_titulos_planilha(dados:dict) -> dict:
+
+    retorno:dict={
+            "status": False,
+            "exception": ""
+        }
+    ecomm:list[dict]=[]
+    ecom:dict={}
+    receita:Receita=None
+    despesa:Despesa=None
+
+    ecomm = await ecommerce.buscar(id_loja=int(dados.get('idLoja')))    
+    try:
+        if not ecomm:
+            raise Exception("E-commerce não encontrado")
+        if isinstance(ecomm, list):
+            ecom = ecomm[0]
+
+        receita = Receita(empresaId=ecom.get('empresa_id'),idLoja=int(dados.get('idLoja')))
+        despesa = Despesa(empresaId=ecom.get('empresa_id'),idLoja=int(dados.get('idLoja')))
+                       
+        receita.dados_ecommerce = None
+        despesa.dados_ecommerce = None
+
+        for n, registro in enumerate(dados.get('registros')):
+            logger.info(f"-> Processando registro {n+1}/{len(dados.get('registros'))}...")
+            logger.info(f"Pedido {registro.get('id_pedido')}")
+            
+            if registro.get('receita'):
+                time.sleep(receita.req_time_sleep)
+                await receita.formatarPayloadLctoPlan(dados.get('dtVcto'),dadosConta=registro)
+                await receita.lancarContaPlan()
+            else:
+                logger.info("Nenhuma conta de receita para processar.")
+
+            if registro.get('despesa'):
+                time.sleep(receita.req_time_sleep)
+                await despesa.formatarPayloadLctoPlan(dados.get('dtVcto'),dadosConta=registro)
+                await despesa.lancarContaPlan()
+            else:
+                logger.info("Nenhuma conta de despesa para processar.")
+        
+        retorno['status'] = True        
+    except Exception as e:        
+        retorno['exception'] = str(e)
+    finally:
+        logger.info(f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}")
+    
+    return retorno
+
 async def integrar(codemp:int|None=None,idLoja:int|None=None,dataFim:str|None=None,dias:int=0,processaShopee:bool=True) -> dict:
 
     retorno:dict={
@@ -42,7 +92,7 @@ async def integrar(codemp:int|None=None,idLoja:int|None=None,dataFim:str|None=No
                 # print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 receita.dados_ecommerce = None
                 receita.id_loja = ecom.get('id_loja')
-                despesa.dados_ecommerce = None                
+                despesa.dados_ecommerce = None
                 despesa.id_loja = ecom.get('id_loja')  
 
                 if processaShopee and ('SHOPEE' in ecom.get('nome').upper()):
