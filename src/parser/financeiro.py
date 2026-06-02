@@ -34,21 +34,6 @@ class Receita:
         return vlr_comissao
 
     async def lancamento(self,dtNf:str,dtVenc:str,vlrTitulo:float,numDocumento:str,numNf:str,codPedido:str,idCliente:int,idCategoriaFinanceiro:int,idFormaRecebimento:int,motivoAjuste:str=None) -> dict:
-        """_summary_
-
-        Args:
-            dtNf (str): _description_
-            dtVenc (str): _description_
-            vlrTitulo (float): _description_
-            numDocumento (str): _description_
-            numNf (str): _description_
-            codPedido (str): _description_
-            idCliente (int): _description_
-            idCategoriaFinanceiro (int): _description_
-
-        Returns:
-            dict: _description_
-        """
         
         return {
             "data": dtNf,
@@ -70,19 +55,29 @@ class Receita:
             "quantidadeParcelas": 0
         }
 
+    async def lancamentoPlan(self,dtNf:str,dtVenc:str,vlrTitulo:float,idCliente:int,idCategoriaFinanceiro:int,idFormaRecebimento:int,historico:str) -> dict:
+        
+        return {
+            "data": dtNf,
+            "dataVencimento": dtVenc,
+            "valor": vlrTitulo,
+            "numeroDocumento": None,
+            "contato": {
+                "id": idCliente
+            },
+            "historico": historico,
+            "categoria": {
+                "id": idCategoriaFinanceiro
+            },
+            "dataCompetencia": None,
+            "formaRecebimento": idFormaRecebimento,
+            "ocorrencia": "U",
+            "diaVencimento": None,
+            "diaSemanaVencimento": None,
+            "quantidadeParcelas": 0
+        }
+
     async def baixa(self,idContaDestino:int,dtRecebimento:str,vlrPago:float,idCategoriaFinanceiro:int,historico:str=None) -> dict:
-        """_summary_
-
-        Args:
-            idContaDestino (int): _description_
-            dtRecebimento (str): _description_
-            vlrPago (float): _description_
-            historico (str): _description_
-            idCategoriaFinanceiro (int): _description_
-
-        Returns:
-            dict: _description_
-        """
 
         return {
             "contaDestino": {
@@ -149,19 +144,38 @@ class Despesa:
             "diaSemanaVencimento": None
         }
     
-    async def baixa(self,idContaDestino:int,dtRecebimento:str,vlrPago:float,idCategoriaDespesa:int,historico:str=None) -> dict:
-        """_summary_
-
-        Args:
-            idContaDestino (int): _description_
-            dtRecebimento (str): _description_
-            vlrPago (float): _description_
-            historico (str): _description_
-            idCategoriaDespesa (int): _description_
-
-        Returns:
-            dict: _description_
+    async def lancamentoPlan(self,dtNeg:str,dtVcto:str,valor:float,idFornecedor:int,idCategoriaDespesa:int,historico:str,idFormaPgto:int) -> dict:
         """
+        Converte os dados no formato da API de Contas a Pagar do Olist.
+            :param dtNeg: data da negociação no formato YYYY-MM-DD            
+            :param dtVcto: data do vencimento no formato YYYY-MM-DD
+            :param valor: valor do título
+            :param numDocumento: número da NF
+            :param historico: texto da observação do título
+            :return dict: dicionário com os dados no padrão Olist
+        """
+
+        return {
+            "data": dtNeg,
+            "dataVencimento": dtVcto,
+            "valor": valor,
+            "numeroDocumento": None,
+            "contato": {
+                "id": idFornecedor
+            },
+            "historico": historico,
+            "categoria": {
+                "id": idCategoriaDespesa
+            },
+            "dataCompetencia": None,
+            "ocorrencia": "U",
+            "formaPagamento": idFormaPgto,
+            "diaVencimento": None,
+            "quantidadeParcelas": 1,
+            "diaSemanaVencimento": None
+        }
+    
+    async def baixa(self,idContaDestino:int,dtRecebimento:str,vlrPago:float,idCategoriaDespesa:int,historico:str=None) -> dict:
             
         return {
             "contaDestino": {
