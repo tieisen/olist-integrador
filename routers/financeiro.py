@@ -37,6 +37,10 @@ class FinanceiroPlanilhaModel(BaseModel):
 
 @router.post("/processar")
 async def processar_titulos_ecommerce(titulos:FinanceiroPlanilhaModel) -> bool:
+    """
+    Processa e lança títulos a receber e taxas no Olist a partir do relatório do e-commerce
+    """
+    
     if not await processar_titulos_planilha(titulos.model_dump()):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro ao processar títulos")
     return True
