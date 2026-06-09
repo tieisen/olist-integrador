@@ -19,3 +19,4 @@ vscode
 *.bat
 *.rar
 .actions_snk/
+.oracle/
