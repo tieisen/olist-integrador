@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from src.integrador.pedido import Pedido
-from src.scheduler.jobs.pedidos import integrar_pedidos, receber_pedido_lote, receber_pedido_unico, integrar_separacoes
+from src.scheduler.jobs.pedidos import integrar_pedidos, receber_pedido_lote, receber_pedido_unico, integrar_separacoes, reprocessar_separacao
 from src.scheduler.jobs.faturamento import integrar_faturamento, integrar_faturamento_olist, integrar_faturamento_snk, integrar_venda_interna
 from pydantic import BaseModel
 
@@ -166,3 +166,14 @@ async def anular_pedidos(body:PedidoAnular) -> bool:
     if not res.get('sucesso'):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get('__exception__'))
     return True
+
+@router.post("/relatorio")
+async def relatorio_separacao(body:PedidoEmpresa) -> bool:
+    """
+    Reimprime o relatório de separação do E-commerce
+    """
+    res:dict={}
+    res = await reprocessar_separacao(codemp=body.codemp)
+    if not res.get('sucesso'):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res)
+    return res.get('sucesso')
