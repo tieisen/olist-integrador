@@ -1183,7 +1183,7 @@ class Pedido:
                 lista_pedidos = await crudPedido.buscar(nunota=i.get("nunota"))
                 ecomm, empre = tuple(s.strip() for s in i.get("nome").split('-'))
                 
-                criteria.append(f"(empresa = '{empre}' and ecommerce = '{ecomm}')")
+                criteria.append(f"(upper(empresa) = upper('{empre}') and upper(ecommerce) = upper('{i.get("nome")}'))")
                 dados_pedidos = [pedido.get('dados_pedido') for pedido in lista_pedidos]
 
                 pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos)
