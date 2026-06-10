@@ -7,6 +7,7 @@ from src.parser.pedido import Pedido as ParserPedido
 from src.olist.produto import Produto as ProdutoOlist
 from src.sankhya.transferencia import Itens as ItemTransfSnk
 from database.crud import pedido as crudPedido
+from database.crud import ecommerce as crudEcom
 from database.crud import log_pedido as crudLogPed
 from database.crud import log as crudLog
 from src.services.viacep import Viacep
@@ -1136,5 +1137,102 @@ class Pedido:
             # Atualiza log
             status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
             await crudLog.atualizar(id=self.log_id,sucesso=status_log)
-            res = {"sucesso":status_log,"__exception__":erro}
+            res = {
+                "sucesso": status_log,
+                "__exception__": erro
+            }
             return res
+
+    @contexto
+    @log_execucao
+    @carrega_dados_empresa
+    async def reprocessar_relatorio_separacao(self,codemp:int,**kwargs) -> dict:
+        """
+        Valida o saldo dos produtos no estoque Ecommerce com base nos últimos pedidos não faturados da empresa selecionada
+            :param codemp: código da empresa
+            :return dict: dicionário com status e erro            
+        """
+
+        msg:str=None
+        status:bool=False
+        erro:str=None
+        ecommerces:list[dict]=[]
+        records:list[dict]=[]
+        criteria:list[str]=[]
+        lista_produtos:list=[]
+        ids_relatorio:list[int]=[]
+        res:dict={"sucesso":status,"__exception__":erro}
+        
+        self.log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
+                                          de='sankhya',
+                                          para='sankhya',
+                                          contexto=kwargs.get('_contexto'))        
+        
+        try:
+            # Busca os pedidos no banco
+            ecommerces = await crudEcom.buscar(codemp=codemp)
+            lista_pedidos = await crudPedido.buscar_reimprimir_relatorio([e.get('id') for e in ecommerces])
+            lista_pedidos_unicos = [{k: v for k, v in p.items() if k in ["nunota","ecommerce_id"]} for p in lista_pedidos]
+            lista_pedidos_unicos = list({(d['ecommerce_id'], d['nunota']): d for d in lista_pedidos_unicos }.values())
+            for item in lista_pedidos_unicos:
+                item.update(next(({k: v for k, v in ecom.items() if k in ["id_loja","nome"]} for ecom in ecommerces if ecom.get('id') == item.get('ecommerce_id')),None))
+
+            # Valida saldos no estoque
+            estoque_snk = EstoqueSnk(codemp=codemp)
+            for i in lista_pedidos_unicos:
+                lista_pedidos = await crudPedido.buscar(nunota=i.get("nunota"))
+                ecomm, empre = tuple(s.strip() for s in i.get("nome").split('-'))
+                
+                criteria.append(f"(empresa = '{empre}' and ecommerce = '{ecomm}')")
+                dados_pedidos = [pedido.get('dados_pedido') for pedido in lista_pedidos]
+
+                pedidos_agrupados, itens_agrupados = self.unificar(lista_pedidos=dados_pedidos)
+                if not all([pedidos_agrupados, itens_agrupados]):
+                    msg = "Erro ao unificar pedidos."
+                    raise Exception(msg)
+                
+                lista_produtos = [item.get('codprod') for item in itens_agrupados]
+                saldo_estoque = await estoque_snk.buscar_saldo_por_local(lista_produtos=lista_produtos)
+                if not saldo_estoque:
+                    msg = "Erro ao buscar saldo de estoque."
+                    raise Exception(msg)
+                
+                itens_venda_interna, itens_ecommerce = self.compara_saldos(saldo_estoque=saldo_estoque,
+                                                                           saldo_pedidos=itens_agrupados)
+
+                records+=[
+                    {
+                        "values":{
+                            "1":ecomm,
+                            "2":i.get('Produto'),
+                            "3":i.get('Descrição'),
+                            "4":i.get('Qtd. solicitada'),
+                            "5":i.get('Unidade'),
+                            "6":i.get('Saldo no E-commerce'),
+                            "7":empre
+                        }
+                    } for i in itens_ecommerce
+                ]
+            
+            # Busca relatório atual
+            ids_relatorio = await estoque_snk.buscar_relatorio_atual(lista_emp_ecom=criteria)            
+            if ids_relatorio:
+                status_limpar_relatorio:bool = await estoque_snk.remover_itens_relatorio(ids_relatorio)
+                if not status_limpar_relatorio:
+                    msg = "Erro ao limpar tabela do relatório."
+                    raise Exception(msg)
+            
+            # Lança relatório atualizado
+            if not await estoque_snk.lancar_relatorio_separacao(lista_registros=records):
+                msg = "Erro ao lançar itens do relatório de separação."
+                raise Exception(msg)
+        
+            res['sucesso'] = True
+
+        except Exception as e:
+            erro = f'ERRO: {e}'
+            logger.error(erro)
+            res['__exception__'] = erro
+        finally:
+            await crudLog.atualizar(id=self.log_id,sucesso=res['sucesso'])
+        return res
