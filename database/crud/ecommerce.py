@@ -1,5 +1,5 @@
 from database.database import AsyncSessionLocal
-from database.models import Ecommerce
+from database.models import Ecommerce, Empresa
 from sqlalchemy.future import select
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
@@ -38,7 +38,7 @@ async def criar(id_loja:int,nome:str,empresa_id:int,**kwargs):
         await session.commit()
         return True
 
-async def buscar(empresa_id:int=None, id_loja:int=None, ecommerce_id:int=None):
+async def buscar(empresa_id:int=None, codemp:int=None, id_loja:int=None, ecommerce_id:int=None):
    
     async with AsyncSessionLocal() as session:
         if empresa_id:
@@ -46,6 +46,11 @@ async def buscar(empresa_id:int=None, id_loja:int=None, ecommerce_id:int=None):
                 select(Ecommerce)
                 .where(Ecommerce.empresa_id == empresa_id,
                        Ecommerce.ativo.is_(True))
+            )
+        elif codemp:
+            result = await session.execute(
+                select(Ecommerce)
+                .where(Ecommerce.empresa_.has(Empresa.snk_codemp == codemp))
             )
         elif id_loja:
             result = await session.execute(
