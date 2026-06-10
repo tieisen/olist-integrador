@@ -284,6 +284,19 @@ async def buscar_faturar(ecommerce_id:int) -> list[dict]:
                                          retorno=pedidos)           
         return dados_pedidos
     
+async def buscar_reimprimir_relatorio(ecommerce_id_list:list[int]) -> list[dict]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Pedido).where(Pedido.dh_confirmacao.isnot(None),
+                                 Pedido.dh_faturamento.is_(None),
+                                 Pedido.dh_cancelamento.is_(None),
+                                 Pedido.ecommerce_id.in_(ecommerce_id_list)).order_by(Pedido.num_pedido)
+        )
+        pedidos = result.scalars().all()
+        dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
+                                         retorno=pedidos)           
+        return dados_pedidos
+    
 async def buscar_baixar_estoque(ecommerce_id:int=None, nunota_nota:int=None) -> list[dict]:
     if not any([ecommerce_id, nunota_nota]):
         return False
