@@ -48,17 +48,14 @@ class Estoque:
         query = script.format_map({"codlocais": self.dados_empresa.get('snk_codlocal_estoque')+','+str(self.dados_empresa.get('snk_codlocal_ecommerce')),
                                    "codparc": self.dados_empresa.get('snk_codparc'),
                                    "codemp_fornecedor": self.dados_empresa.get('snk_codemp_fornecedor'),
-                                   "lista_produtos": filtro_produtos
-                                })
+                                   "lista_produtos": filtro_produtos})
 
         res = requests.get(
             url=url,
             headers={ 'Authorization':f"Bearer {self.token}" },
             json={
                 "serviceName": "DbExplorerSP.executeQuery",
-                "requestBody": {
-                    "sql":query
-                }
+                "requestBody": { "sql":query }
             })
 
         if res.status_code in (200,201) and res.json().get('status')=='1':
@@ -377,4 +374,152 @@ class Estoque:
             erro = f"Erro ao validar estoque do(s) item(ns) de e-commerce na empresa {self.dados_empresa.get('snk_codemp_fornecedor')}. {res.json()}" 
             logger.error(erro)
             return False
+    
+    @interno
+    @carrega_dados_empresa
+    async def formatar_query_busca_relatorio_atual(self,lista_emp_ecom:list[str]) -> str:
+        """
+        Formata a query de busca de itens na tabela do relatório de separação.
+            :param lista_emp_ecom: Lista de critérios de empresa+ecommerce.
+            :return str: query formatada
+        """        
         
+        parametro = 'SANKHYA_PATH_RELATORIO_SEPARACAO'
+        script = buscar_script(parametro=parametro)
+
+        try:
+            query = script.format_map({"params":' or '.join(lista_emp_ecom)})
+        except Exception as e:
+            erro = f"Falha ao formatar query do relatório de separação. {e}"
+            logger.error(erro)
+            return False
+
+        return query
+    
+    @tokenSnk
+    async def buscar_relatorio_atual(self,lista_emp_ecom:list[str]) -> list[int]:
+        """
+        Busca itens do relatório atual, se existir.
+            :param lista_emp_ecom: lista de critérios de empresa+ecommerce.
+            :return list[int]: lista dos IDs
+        """
+
+        url = os.getenv('SANKHYA_URL_DBEXPLORER')
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+        
+        query = await self.formatar_query_busca_relatorio_atual(lista_emp_ecom=lista_emp_ecom)
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json={
+                "serviceName": "DbExplorerSP.executeQuery",
+                "requestBody": {
+                    "sql":query
+                }
+            }
+        )
+        
+        if res.status_code in (200,201) and res.json().get('status')=='1':
+            return [r[0] for r in res.json().get('responseBody',{}).get('rows',[])]
+        else:
+            erro = f"Erro ao buscar itens do relatório atual da empresa {self.dados_empresa.get('snk_codemp_fornecedor')}. {res.json()}" 
+            logger.error(erro)
+            return False
+    
+    @carrega_dados_empresa
+    @tokenSnk
+    async def remover_itens_relatorio(self,lista_ids:list[int]) -> bool:
+        """
+        Limpa o relatório de separação
+            :param lista_produtos: Lista dos IDs da tabela AD_OLISTRELPEDIDOS.
+            :return bool: status da operação
+        """
+       
+        url = os.getenv('SANKHYA_URL_DELETE')
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False
+        
+        tabela = os.getenv('SANKHYA_TABELA_RELATORIO')
+        if not tabela:
+            erro = f"Parâmetro da tabela do relatório de separação não encontrado"
+            logger.error(erro)
+            return False
+        
+        filters:list[dict] = [{"ID":str(i)} for i in lista_ids]
+        
+        payload = {
+            "serviceName": "DatasetSP.removeRecord",
+            "requestBody": {
+                "entityName": tabela,
+                "standAlone": False,
+                "pks": filters
+            }
+        }
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json=payload
+        )
+
+        if res.status_code in (200,201) and res.json().get('status')=='1':
+            return True
+        else:
+            logger.error("Erro ao limpar tabela do relatório. %s",res.json())
+            return False
+
+    @tokenSnk
+    async def lancar_relatorio_separacao(self,lista_registros:list[dict]) -> bool:
+        """
+        Alimenta a tabela do relatório de separação.
+            :param lista_registros: lista de itens para adicionar na tabela
+            :return bool: status da operação
+        """        
+        
+        FIELDS_LIST = [ "ID",
+                        "ECOMMERCE",
+                        "CODPROD",
+                        "DESCRICAO",
+                        "QTD",
+                        "UND",
+                        "QTDSALDO",
+                        "EMPRESA" ]
+        
+        tabela = os.getenv('SANKHYA_TABELA_RELATORIO')
+        if not tabela:
+            erro = f"Parâmetro da tabela do relatório de separação não encontrado"
+            logger.error(erro)
+            return False
+        
+        url = os.getenv('SANKHYA_URL_SAVE')
+        if not url:
+            logger.error("Erro relacionado à url. %s",url)
+            return False        
+
+        payload = {
+            "serviceName":"DatasetSP.save",
+            "requestBody":{
+                "entityName":tabela,
+                "standAlone":False,
+                "fields":FIELDS_LIST,
+                "records":lista_registros
+            }
+        }
+
+        res = requests.get(
+            url=url,
+            headers={ 'Authorization':f"Bearer {self.token}" },
+            json=payload
+        )
+        
+        if res.status_code in (200,201):
+            if res.json().get('status') in ['0', '2']:
+                return False
+            if res.json().get('status')=='1':
+                return True
+        else:
+            logger.error("Erro ao lançar itens do relatório de separação. %s",res.json().get('statusMessage'))
+            return False        
