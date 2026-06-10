@@ -196,6 +196,12 @@ async def anular_importacao(codemp:int, nunota:int) -> dict:
     ack = await pedido.anular_pedido_importado(nunota=nunota)
     return ack
 
+async def reprocessar_separacao(codemp:int) -> dict:
+    print(f"::::::::::::::::::: REPROCESSANDO RELATÓRIO DE SEPARAÇÃO :::::::::::::::::::")    
+    pedido = Pedido(codemp=codemp)
+    ack = await pedido.reprocessar_relatorio_separacao(codemp=codemp)
+    return ack
+
 if __name__=="__main__":
 
     asyncio.run(receber_pedido_lote())
