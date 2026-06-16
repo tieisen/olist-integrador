@@ -159,7 +159,7 @@ class Autenticacao:
             logger.error("Erro na autenticacao: %s", e)
             return ''
 
-def tokenSnk(func):
+async def tokenSnk(func):
     """
     Executa rotina de autenticacao
         :param func: função que recebe o decorador
