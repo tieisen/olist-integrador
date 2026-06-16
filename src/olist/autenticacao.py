@@ -291,7 +291,7 @@ class Autenticacao:
             logger.error("Erro na autenticacao: %s",e)
             return ''
 
-async def tokenOlist(func):
+def tokenOlist(func):
     """
     Executa rotina de autenticacao
         :param func: função que recebe o decorador
