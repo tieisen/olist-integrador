@@ -4,7 +4,7 @@ from datetime import datetime
 from src.utils.load_env import load_env
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from routers import empresas, estoque, pedidos, produtos, notas, devolucoes, financeiro
+from routers import empresas, estoque, pedidos, produtos, notas, devolucoes, financeiro, ecommerce
 from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
 load_env()
 
@@ -42,6 +42,7 @@ app.add_middleware(
     allow_headers=["*"],  # Permite todos os headers
 )
 
+app.include_router(ecommerce.router, prefix="/ecommerces", tags=["E-commerces"])
 app.include_router(empresas.router, prefix="/empresas", tags=["Empresas"])
 app.include_router(estoque.router, prefix="/estoque", tags=["Estoque"])
 app.include_router(produtos.router, prefix="/produtos", tags=["Produtos"])
