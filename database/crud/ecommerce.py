@@ -1,6 +1,7 @@
 from database.database import AsyncSessionLocal
 from database.models import Ecommerce, Empresa
 from sqlalchemy.future import select
+from sqlalchemy import text
 from src.utils.db import validar_dados, formatar_retorno
 from src.utils.log import set_logger
 from src.utils.load_env import load_env
@@ -28,8 +29,9 @@ async def criar(id_loja:int,nome:str,empresa_id:int,**kwargs):
         ecommerce = result.scalar_one_or_none()
 
         if ecommerce:
-            print("Ecommerce já existe")
-            return False
+            logger.error(f"Ecommerce já existe no ID {ecommerce.id}")
+            return None
+        
         novo_ecommerce = Ecommerce(id_loja=id_loja,
                                    nome=nome,
                                    empresa_id=empresa_id,
@@ -106,3 +108,23 @@ async def excluir(ecommerce_id:int):
         await session.delete(ecommerce)
         await session.commit()
         return True
+
+async def buscar_dados_cadastro(empresa_id:int):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            text("""select distinct ecom.id_deposito,
+                                    ecom.id_conta_destino,
+                                    ecom.id_forma_pgto_padrao,
+                                    ecom.id_forma_rec_padrao,
+                                    emp.nome nome_empresa
+                    from ecommerce ecom
+                    inner join empresa emp on ecom.empresa_id = emp.id
+                    where ecom.empresa_id = :empresa_id
+                 """),
+            {"empresa_id":empresa_id}
+        )
+    
+    try:
+        return dict(result.mappings().all()[0])
+    except:
+        return None
