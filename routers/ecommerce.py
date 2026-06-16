@@ -27,7 +27,7 @@ async def buscar_codemp(codemp:int) -> dict:
     return dados
 
 @router.post("")
-async def criar(ecommerce: EcommerceCreate) -> bool:
+async def criar(ecommerce: EcommerceCreate) -> dict:
     """
     Registra e-commerce na base
     """
