@@ -234,7 +234,7 @@ class Autenticacao:
             return [dados_token.get('refresh_token')]
 
         if expiracao_refresh_token < agora:
-            return None     
+            return ""     
 
     @carrega_dados_empresa
     async def primeiro_login(self) -> str:
@@ -251,7 +251,9 @@ class Autenticacao:
         if not token:
             return ''
         
-        ack = await self.salvar_token(token)
+        dados_token = await crud.buscar(self.dados_empresa.get('id'))
+        ack = await self.salvar_token(token) if not dados_token else await self.salvar_token_atualizado(token)
+            
         if not ack:
             return ''
         
@@ -289,7 +291,7 @@ class Autenticacao:
             logger.error("Erro na autenticacao: %s",e)
             return ''
 
-def tokenOlist(func):
+async def tokenOlist(func):
     """
     Executa rotina de autenticacao
         :param func: função que recebe o decorador
