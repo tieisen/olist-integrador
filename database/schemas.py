@@ -51,3 +51,28 @@ class EmpresaDB(EmpresaBase):
 
     class Config:
         orm_mode = True
+
+class EcommerceBase(BaseModel):
+    id_loja: int
+    nome: str
+    id_fornecedor_olist: Optional[int] = None
+    id_conta_destino: Optional[int] = None
+    id_categoria_financeiro: Optional[int] = None
+    id_forma_pgto_padrao: Optional[int] = None
+    id_forma_rec_padrao: Optional[int] = None
+    id_deposito: Optional[int] = None
+    importa_pedido_lote: Optional[bool] = True
+    limite_pedido_lote: Optional[int] = 100
+    ativo: Optional[bool] = True
+    empresa_id: int   
+
+class EcommerceCreate(EcommerceBase):
+    pass
+
+class EcommerceDB(EcommerceBase):
+    id: int
+    dh_criacao: datetime
+    dh_atualizacao: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True
