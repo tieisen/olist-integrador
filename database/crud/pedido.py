@@ -274,9 +274,9 @@ async def buscar_checkout(ecommerce_id:int) -> list[dict]:
 async def buscar_faturar(ecommerce_id:int) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Pedido).where(Pedido.dh_confirmacao.isnot(None),
-                                 Pedido.dh_faturamento.is_(None),
-                                 Pedido.dh_cancelamento.is_(None),
+            select(Pedido).where(Pedido.dh_cancelamento.is_(None),
+                                #  Pedido.dh_confirmacao.isnot(None),
+                                 Pedido.dh_faturamento.is_(None),                                 
                                  Pedido.ecommerce_id == ecommerce_id).order_by(Pedido.num_pedido)
         )
         pedidos = result.scalars().all()
@@ -287,9 +287,9 @@ async def buscar_faturar(ecommerce_id:int) -> list[dict]:
 async def buscar_reimprimir_relatorio(ecommerce_id_list:list[int]) -> list[dict]:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Pedido).where(Pedido.dh_confirmacao.isnot(None),
+            select(Pedido).where(Pedido.dh_cancelamento.is_(None),
                                  Pedido.dh_faturamento.is_(None),
-                                 Pedido.dh_cancelamento.is_(None),
+                                #  Pedido.dh_confirmacao.isnot(None),                                 
                                  Pedido.ecommerce_id.in_(ecommerce_id_list)).order_by(Pedido.num_pedido)
         )
         pedidos = result.scalars().all()
