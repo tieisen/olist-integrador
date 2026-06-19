@@ -18,5 +18,4 @@ vscode
 .pytest_cache
 *.bat
 *.rar
-.actions_snk/
-.oracle/
+.*/
