@@ -48,7 +48,7 @@ async def paginar_olist(token:str,url:str) -> list[dict]:
             logger.error(f"Erro na busca paginada. Status: {status} - Resposta: {res.text}")
         ordena_por_id(itens)
     except Exception as e:
-        logger.error(f"Erro ao realizar busca paginada: {e}")
+        logger.error(f"Erro ao realizar busca paginada na url {url}: {e}")
     finally:
         pass
 
