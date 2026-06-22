@@ -37,14 +37,14 @@ class Autenticacao:
             driver.get(url)
 
             login_input = driver.find_element(By.ID, "username")
-            next_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
+            # next_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             login_input.clear()
             login_input.send_keys(self.dados_empresa.get('olist_admin_email'))
-            next_button.click()
+            # next_button.click()
             
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "password")))
             pass_input = driver.find_element(By.ID, "password")
-            submit_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
+            submit_button = driver.find_element(By.XPATH, "//button[@type='submit']")
             pass_input.clear()
             pass_input.send_keys(self.dados_empresa.get('olist_admin_senha'))
             submit_button.click()
@@ -191,7 +191,7 @@ class Autenticacao:
         
         return True
 
-    @carrega_dados_empresa        
+    @carrega_dados_empresa
     async def atualizar_token(self, refresh_token:str) -> str:
         """
         Atualiza token expirado
@@ -245,19 +245,22 @@ class Autenticacao:
         
         authcode = await self.solicitar_auth_code()
         if not authcode:
+            logger.error(f"Erro ao solicitar código de autorização. Empresa: {self.codemp or self.empresa_id}")
             return ''
         
         token = await self.solicitar_token(authorization_code=authcode)
         if not token:
+            logger.error(f"Erro ao solicitar token de acesso. Empresa: {self.codemp or self.empresa_id}")
             return ''
         
         dados_token = await crud.buscar(self.dados_empresa.get('id'))
         ack = await self.salvar_token(token) if not dados_token else await self.salvar_token_atualizado(token)
             
         if not ack:
+            logger.error(f"Erro ao salvar token no banco de dados. Empresa: {self.codemp or self.empresa_id}")
             return ''
         
-        logger.info("Login success")
+        logger.info(f"Login success. Empresa: {self.codemp or self.empresa_id}")
         return token.get('access_token')
 
     @carrega_dados_empresa
@@ -268,13 +271,13 @@ class Autenticacao:
         """         
         try:
             token = await self.buscar_token_salvo()
-            if isinstance(token,str):
+            if isinstance(token,str) and token:
                 # Token válido salvo na base
                 return token
             
-            async with _lock_autenticacao:            
+            async with _lock_autenticacao:
                 token = await self.buscar_token_salvo()
-                if isinstance(token,str):
+                if isinstance(token,str) and token:
                     # Token válido salvo na base
                     return token
                 
@@ -288,7 +291,7 @@ class Autenticacao:
                     token_login = await self.primeiro_login()
                     return token_login
         except Exception as e:
-            logger.error("Erro na autenticacao: %s",e)
+            logger.error(f"Erro na autenticacao. Empresa: {self.codemp or self.empresa_id}: %s",e)
             return ''
 
 def tokenOlist(func):
