@@ -100,8 +100,7 @@ class Autenticacao:
         expiracao_token = dados_token.get('dh_expiracao_token').replace(microsecond=0, second=0) if dados_token.get('dh_expiracao_token') else None
         token = dados_token.get('token')
 
-        # logger.info(f"Data atual: {agora} | Type: {type(agora)}")
-        # logger.info(f"Data expiração: {expiracao_token} | Type: {type(expiracao_token)}")
+        logger.info(f"Data atual: {agora} | Data expiração: {expiracao_token}")
 
         if (not token) or (not expiracao_token):
             logger.error(f"Token não encontrado")
@@ -130,28 +129,26 @@ class Autenticacao:
         
     async def autenticar(self) -> str:
 
-        # import os
-        # logger.info(f"PID: {os.getpid()}")
+        import os
+        logger.info(f"PID: {os.getpid()}")
 
         try:
             token = await self.buscar_token_salvo()
-            # logger.info(f"Token encontrado: {bool(token)}")            
+            logger.info(f"Token encontrado: {bool(token)}")
             if token:
-                # logger.info("Token válido (fora do lock)")
+                logger.info("Token válido (fora do lock)")
                 return token
-
-            # logger.info("Entrando no lock...")
 
             async with _lock_autenticacao:
 
-                # logger.info("Dentro do lock")
+                logger.info("Dentro do lock")
                 token = await self.buscar_token_salvo()
-                # logger.info(f"Token encontrado: {bool(token)}")                
+                logger.info(f"Token encontrado: {bool(token)}")                
                 if token:
-                    # logger.info("Token válido (dentro do lock)")
+                    logger.info("Token válido (dentro do lock)")
                     return token
 
-                # logger.info("Gerando novo token...")
+                logger.info("Gerando novo token...")
                 token_login = await self.login()
                 return token_login
 
@@ -166,6 +163,7 @@ def tokenSnk(func):
     """        
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
+        logger.info(f"tokenSnk@{func.__module__}.{func.__qualname__}")
         try:        
             token = await Autenticacao().autenticar()                
             self.token = token
