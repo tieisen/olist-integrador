@@ -34,6 +34,7 @@ async def processar_titulos_planilha(dados:dict) -> dict:
             logger.info(f"Pedido {registro.get('id_pedido')}")
             
             if registro.get('receita'):
+                logger.info('Processando conta de receita %s', registro)
                 time.sleep(receita.req_time_sleep)
                 await receita.formatarPayloadLctoPlan(dados.get('dtVcto'),dadosConta=registro)
                 await receita.lancarContaPlan()
@@ -41,6 +42,7 @@ async def processar_titulos_planilha(dados:dict) -> dict:
                 logger.info("Nenhuma conta de receita para processar.")
 
             if registro.get('despesa'):
+                logger.info('Processando conta de despesa %s', registro)
                 time.sleep(receita.req_time_sleep)
                 await despesa.formatarPayloadLctoPlan(dados.get('dtVcto'),dadosConta=registro)
                 await despesa.lancarContaPlan()

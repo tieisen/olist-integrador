@@ -297,6 +297,8 @@ class Despesa:
             :return payload: dicionário com os dados
             :return bool: status da operação            
         """
+        logger.info("Payload para lançamento de despesa: %s", payload)
+        logger.info("Lançando despesa referente à nota %s", payload.get('numeroDocumento'))
         id:int=None
 
         url = self.endpoint
@@ -316,10 +318,11 @@ class Despesa:
         
         if not res.ok:
             logger.error("Erro %s: %s", res.status_code, res.text)
-            logger.error("payload: %s", payload)
+            logger.error("Erro - payload: %s", payload)
             return id
         
         id = res.json().get('id')
+        print('Despesa lançada com sucesso. ID do lançamento: ', id)
 
         return id
 

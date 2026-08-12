@@ -1,4 +1,4 @@
-import os, re, time
+import os, re, time, json
 from datetime import datetime
 from src.olist.pedido import Pedido as PedidoOlist
 from src.sankhya.pedido import Pedido as PedidoSnk
@@ -172,7 +172,16 @@ class Pedido:
             dados_pedido['itens'] = itens_validados
             id_loja:int = dados_pedido['ecommerce'].get('id') if dados_pedido['ecommerce'].get('id') != 0 else dados_pedido['vendedor'].get('id')
             cod_pedido = dados_pedido['ecommerce'].get('numeroPedidoEcommerce') if dados_pedido['ecommerce'].get('id') != 0 else f"{id_loja}-{dados_pedido.get('numeroPedido')}"
-            # Adiciona pedido na base            
+            # Adiciona pedido na base
+            pedido_recebido = {
+                "id_loja": id_loja,
+                "id_pedido": dados_pedido.get('id'),
+                "cod_pedido": cod_pedido,
+                "num_pedido": dados_pedido.get('numeroPedido'),
+                "dados_pedido": dados_pedido
+            }
+            pedido_recebido_str = json.dumps(pedido_recebido, ensure_ascii=False)
+            logger.info(f"Recebendo os dados {pedido_recebido_str}")  
             id = await crudPedido.criar(id_loja=id_loja,
                                         id_pedido=dados_pedido.get('id'),
                                         cod_pedido=cod_pedido,
@@ -468,7 +477,6 @@ class Pedido:
             if not itens_pedido:
                 msg = f"Não foi possível unificar o pedido {pedido.get('numeroPedido')}. Sem itens."
                 logger.error(msg)
-                print(msg)
                 continue            
             for item_pedido in itens_pedido:
                 # Valida o formato do código do produto

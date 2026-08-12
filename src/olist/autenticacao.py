@@ -31,7 +31,10 @@ class Autenticacao:
         Realiza login com usuário Admin e solicita o código de autorização
             :return str: código de autorização
         """
+        print(f"Solicitando código de autorização para a empresa {self.codemp or self.empresa_id}")
+        print(f"Redirect URI: {self.redirect_uri}")
         url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}'
+        driver = None
         try:
             driver = webdriver.Firefox()
             driver.get(url)
@@ -54,9 +57,11 @@ class Autenticacao:
             auth_code = parse_qs(parsed_url.query).get('code', [''])[0]
             return auth_code
         except Exception as e:
+            print(e)
             logger.error("Erro durante a autenticação via navegador: %s", e)
         finally:
-            driver.quit()
+            if driver:
+                driver.quit()
 
     @carrega_dados_empresa
     async def solicitar_token(self,authorization_code:str) -> dict:
@@ -291,6 +296,7 @@ class Autenticacao:
                     token_login = await self.primeiro_login()
                     return token_login
         except Exception as e:
+            print(e)
             logger.error(f"Erro na autenticacao. Empresa: {self.codemp or self.empresa_id}: %s",e)
             return ''
 

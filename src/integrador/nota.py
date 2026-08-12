@@ -42,6 +42,7 @@ class Nota:
             # Gera NF no Olist
             dados_nota_olist = await pedido_olist.gerar_nf(id=dados_pedido.get('id_pedido'))
             if not dados_nota_olist:
+                print(f"Erro ao gerar nota para o pedido {dados_pedido.get('id_pedido')}")
                 raise Exception(dados_nota_olist)
             
             if dados_nota_olist.get('mensagem'):
@@ -61,6 +62,7 @@ class Nota:
                 raise Exception(msg)            
             return {"success": True, "dados_nota":dados_nota_olist, "__exception__": None}
         except Exception as e:
+            print(e)
             logger.error(f"Erro: {e}")
             return {"success": False, "dados_nota": None, "__exception__": str(e)}
 
@@ -83,6 +85,7 @@ class Nota:
             # Emite a nota
             dados_emissao = await nota_olist.emitir(id=dados_nota.get('id'))
             if not dados_emissao:
+                print(f"Erro ao emitir nota para o pedido {dados_nota.get('id')}")
                 msg = f"Erro ao emitir nota"
                 raise Exception(msg)
             

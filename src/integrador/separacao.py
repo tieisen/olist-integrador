@@ -99,6 +99,7 @@ class Separacao:
                                           evento='R')
             except Exception as e:
                 logger.error(str(e))
+                print(e)
                 await crudLogPedido.criar(log_id=log_id,
                                           pedido_id=pedido.get('id'),
                                           evento='R',

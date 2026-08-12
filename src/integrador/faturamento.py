@@ -275,6 +275,7 @@ class Faturamento:
                 status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
                 if status_faturamento:
                     nunota_nota = status_faturamento[0].get('nunota')
+                    logger.info("Pedido já faturado. Nunota da nota de venda: %s", str(nunota_nota))
                     # Atualiza base de dados
                     await crudPedido.atualizar(nunota=nunota,
                                                dh_faturamento=datetime.now())
@@ -283,8 +284,10 @@ class Faturamento:
                 else:
                     # Se o pedido não foi faturado...
                     # Fatura no Sankhya
+                    logger.info("Faturando pedido no Sankhya. Nunota do pedido: %s", nunota)
                     ack_fat_pedido:dict = {}
                     ack_fat_pedido = await pedido_snk.faturar(nunota=nunota)
+                    print("ack_fat_pedido %s", ack_fat_pedido) # DELETAR DEPOIS
                     if not ack_fat_pedido.get('success'):
                         raise Exception(ack_fat_pedido.get('exception'))
                     nunota_nota = ack_fat_pedido.get('nunota_nota')
@@ -295,6 +298,7 @@ class Faturamento:
                         msg = f"Erro ao buscar dados para atualizar o local da nota {nunota_nota}"
                         raise Exception(msg)                
                     sequencias:list = [int(item.get('sequencia')) for item in dados_nota.get('itens')]
+                    logger.info("sequencias %s", sequencias) # DELETAR DEPOIS
                     payload:list[dict] = await parser_pedido.to_sankhya_atualiza_local(nunota=nunota_nota,
                                                                                        lista_sequencias=sequencias)
                     if not payload:
@@ -314,6 +318,7 @@ class Faturamento:
                 # Confirma nota no Sankhya
                 ack_confirma_nota:dict = {}
                 ack_confirma_nota = await nota_snk.confirmar(nunota=nunota_nota)
+                logger.info("ack_confirma_nota %s", ack_confirma_nota) # DELETAR DEPOIS
                 if ack_confirma_nota.get('success') is False:
                     raise Exception(ack_confirma_nota.get('exception'))
 
@@ -328,8 +333,10 @@ class Faturamento:
                     raise Exception(msg)
                 
                 # Cria o contas a pagar no Olist
-                await integra_des.formatarPayloadLcto(dadosTransferencia=dados_transferencia)
-                if not await integra_des.lancarConta():
+                contas_a_pagar_olist = await integra_des.formatarPayloadLcto(dadosTransferencia=dados_transferencia)
+                # print("contas_a_pagar_olist", contas_a_pagar_olist) # DELETAR DEPOIS
+                conta_lancada = await integra_des.lancarConta()
+                if not conta_lancada:
                     msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
                     raise Exception(msg)
             else:
@@ -340,9 +347,10 @@ class Faturamento:
 
             # Realiza baixa de estoque do local e-commerce
             ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
+            logger.info("ack_baixa_ecommerce %s", str(ack)) # DELETAR DEPOIS
             if not ack.get('success'):
                 raise Exception(ack.get('__exception__'))
-            
+                
             return {"success": True, "__exception__": None}
         
         except Exception as e:
@@ -462,7 +470,7 @@ class Faturamento:
         try:
             estoque_baixar:list[dict] = await crudPedido.buscar_baixar_estoque(nunota_nota=nunota_nota)
             if not estoque_baixar:
-                return True
+                return {"success": True, "__exception__": None}
 
             # Unifica os itens dos pedidos
             dados_pedidos_olist:list[dict] = [pedido.get('dados_pedido') for pedido in estoque_baixar]

@@ -1,3 +1,4 @@
+import json
 from database.database import AsyncSessionLocal
 from database.models import Pedido, Ecommerce, Nota
 from sqlalchemy.future import select
@@ -9,7 +10,8 @@ logger = set_logger(__name__)
 
 COLUNAS_CRIPTOGRAFADAS = None
 
-async def criar(id_loja:int,id_pedido:int,cod_pedido:str,num_pedido:int,**kwargs) -> bool:    
+async def criar(id_loja:int,id_pedido:int,cod_pedido:str,num_pedido:int,**kwargs) -> bool:
+    logger.info(f"Criando pedido {id_pedido} na loja {id_loja}")    
     if kwargs:
         kwargs = validar_dados(modelo=Pedido,
                                kwargs=kwargs,
@@ -42,7 +44,9 @@ async def criar(id_loja:int,id_pedido:int,cod_pedido:str,num_pedido:int,**kwargs
                                  **kwargs)
             session.add(novo_pedido)
             await session.commit()
-            await session.refresh(novo_pedido)            
+            await session.refresh(novo_pedido)
+            logger.info(f"Pedido {id_pedido} criado com sucesso na loja {id_loja}")
+            logger.info(json.dumps(novo_pedido.__dict__, default=str, ensure_ascii=False))            
             return novo_pedido.id
         except Exception as e:
             print(f"Erro ao criar pedido {id_pedido}: {e}")

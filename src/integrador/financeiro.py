@@ -575,10 +575,14 @@ class Despesa:
 
     @carrega_dados_ecommerce
     async def lancarConta(self,id_nota:int|None=None,payload:dict|None=None) -> bool:
+        logger.info("Payload recebido: %s", payload)
+        logger.info("Payload da classe: %s", self.payload_lcto)
 
         id_financeiro:int = None
         payload = self.payload_lcto if not payload else payload
         id_nota = self.id_nota if not id_nota else id_nota
+
+        logger.info("Payload final a ser usado: %s", payload)
 
         if not all([payload,id_nota]):
             raise ValueError("Dados incompletos")
