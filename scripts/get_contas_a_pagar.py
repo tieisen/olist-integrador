@@ -16,12 +16,12 @@ async def get_contas_a_pagar() -> dict:
         load_env()
 
         # url = f"{os.getenv('OLIST_API_URL')}{os.getenv('OLIST_ENDPOINT_FINANCEIRO_PAGAR')}?numeroDocumento=179450"
-        url = f"{os.getenv('OLIST_API_URL')}{os.getenv('OLIST_ENDPOINT_FINANCEIRO_PAGAR')}/393839533"
+        url = f"{os.getenv('OLIST_API_URL')}{os.getenv('OLIST_ENDPOINT_FINANCEIRO_PAGAR')}/774253868" #753053887
         print("url", url)
 
         autentication = Autenticacao(
-            codemp=1,
-            empresa_id=1
+            codemp=4,
+            empresa_id=5
         )
         auth_code = await autentication.solicitar_auth_code()
         token = await autentication.solicitar_token(auth_code)

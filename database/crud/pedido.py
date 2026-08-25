@@ -296,6 +296,7 @@ async def buscar_reimprimir_relatorio(ecommerce_id_list:list[int]) -> list[dict]
                                  Pedido.nunota.isnot(None),
                                  Pedido.ecommerce_id.in_(ecommerce_id_list)).order_by(Pedido.num_pedido)
         )
+        
         pedidos = result.scalars().all()
         dados_pedidos = formatar_retorno(colunas_criptografadas=COLUNAS_CRIPTOGRAFADAS,
                                          retorno=pedidos)           

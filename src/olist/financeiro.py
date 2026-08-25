@@ -298,7 +298,7 @@ class Despesa:
             :return bool: status da operação            
         """
         logger.info("Payload para lançamento de despesa: %s", payload)
-        logger.info("Lançando despesa referente à nota %s", payload.get('numeroDocumento'))
+        logger.info("Lançando despesa referente à nota %s", payload['numeroDocumento'])
         id:int=None
 
         url = self.endpoint
@@ -322,7 +322,7 @@ class Despesa:
             return id
         
         id = res.json().get('id')
-        print('Despesa lançada com sucesso. ID do lançamento: ', id)
+        logger.info('Despesa lançada com sucesso. ID do lançamento: ', id)
 
         return id
 
