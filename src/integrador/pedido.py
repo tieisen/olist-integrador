@@ -653,6 +653,7 @@ class Pedido:
         if not lista_pedidos:
             lista_pedidos = await crudPedido.buscar_importar(ecommerce_id=self.dados_ecommerce.get('id'))            
 
+        # print(f"Lista de pedidos a importar: {lista_pedidos}")
         try:
             aux_lista_pedidos = lista_pedidos.copy()
             for i, pedido in enumerate(aux_lista_pedidos):

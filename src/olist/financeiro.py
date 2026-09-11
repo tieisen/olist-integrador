@@ -322,7 +322,7 @@ class Despesa:
             return id
         
         id = res.json().get('id')
-        logger.info('Despesa lançada com sucesso. ID do lançamento: ', id)
+        logger.info('Despesa lançada com sucesso. ID do lançamento: %s', id if id else 'Não localizado')
 
         return id
 

@@ -102,8 +102,11 @@ class Estoque:
         Rotina de atualização de estoque no Olist
             :return bool: status da operação
         """
+
+        print("::::::::::::::::::: ATUALIZAÇÃO DE ESTOQUE :::::::::::::::::::")    
         
         def buscar_produto(codprod:int,lista_produtos:list[dict]) -> dict:
+            print("buscando produto: %s", codprod)
             dict_res:dict={}
             for produto in lista_produtos:
                 if produto.get('codprod') == int(codprod):
@@ -114,7 +117,7 @@ class Estoque:
         estoque_snk = EstoqueSnk(codemp=self.codemp)
         estoque_olist = EstoqueOlist(codemp=self.codemp)
         parser = Parser()
-        
+
         log_id = await crudLog.criar(empresa_id=self.dados_empresa.get('id'),
                                      de='sankhya',
                                      para='olist',
@@ -126,10 +129,10 @@ class Estoque:
             await crudLog.atualizar(id=log_id,sucesso=True)
             return True
 
+
         # Extrai lista dos produtos
         lista_codprod = [int(produto.get('codprod')) for produto in alteracoes_pendentes]
-        # print(f"{len(lista_codprod)} produtos a atualizar no Olist:")
-        # print(lista_codprod)
+        print(f"{len(lista_codprod)} produtos a atualizar no Olist:")
 
         produtos_buscar:list[int]=[]
         limite_lista:int=300        
@@ -193,7 +196,7 @@ class Estoque:
                 if not all([id_produto,dicionario_mvto_estoque]):
                     msg = f"Erro ao converter para o formato da API.\nid_produto: {id_produto}\ndicionario_mvto_estoque:{dicionario_mvto_estoque}"
                     raise Exception(msg)                
-                # print(f"Dados para envio ao Olist: {dicionario_mvto_estoque}")
+                print(f"Dados para envio ao Olist: {dicionario_mvto_estoque}")
 
                 # Envia modificações para Olist
                 res_estoque = await estoque_olist.enviar_saldo(id=id_produto,data=dicionario_mvto_estoque)
@@ -230,4 +233,5 @@ class Estoque:
             # Registro no log
             status_log = False if await crudLogEst.buscar_falhas(log_id) else True
             await crudLog.atualizar(id=log_id,sucesso=status_log)
+            print(":::::::::::: FINALIZADO ATUALIZAÇÃO DE ESTOQUE ::::::::::::::")    
             return status_log            

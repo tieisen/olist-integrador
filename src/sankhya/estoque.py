@@ -72,6 +72,8 @@ class Estoque:
             :return list[dict]: lista de alterações
         """
 
+        print("::::: BUSCANDO ALTERAÇÕES NO SANKHYA :::::::")
+
         url = os.getenv('SANKHYA_URL_LOAD_RECORDS')
         if not url:
             logger.error("Erro relacionado à url. %s",url)
@@ -110,7 +112,9 @@ class Estoque:
                 }
             }
 
+
         res = await paginar_snk(token=self.token,url=url,payload=payload)
+        # print(f"retorno da busca: {res}")
         return res
     
     @carrega_dados_empresa
@@ -263,10 +267,22 @@ class Estoque:
             :param lista_produtos: Lista de códigos de produto no Sankhya.
             :return str: query formatada
         """        
-            
+        print(f"Dados recebidos -lista de produtos: {lista_produtos}, codprod: {codprod}")    
         if not any([lista_produtos,codprod]):
             return False
-        
+
+        if codprod is not None:
+            codprod = ''.join(filter(str.isdigit, str(codprod))) or None
+
+        if lista_produtos:
+            lista_produtos = [
+                ''.join(filter(str.isdigit, str(produto)))
+                for produto in lista_produtos
+                if ''.join(filter(str.isdigit, str(produto)))
+            ]
+
+        print(f"Dados tratados - Lista de produtos: {lista_produtos}, codprod: {codprod}")
+
         parametro = 'SANKHYA_PATH_SCRIPT_ESTOQUE_LOCAL'
         script = buscar_script(parametro=parametro)
 
@@ -275,7 +291,7 @@ class Estoque:
                                 "codemp_fornecedor":self.dados_empresa.get('snk_codemp_fornecedor'),
                                 # "local_matriz":self.dados_empresa.get('snk_codlocal_venda'),
                                 # "local_ecommerce":self.dados_empresa.get('snk_codlocal_ecommerce'),
-                                "produtos": codprod or ','.join(map(str,lista_produtos))
+                                "produtos": codprod or ','.join(lista_produtos)
                             })
         except Exception as e:
             erro = f"Falha ao formatar query do saldo de estoque por local. {e}"
@@ -300,6 +316,7 @@ class Estoque:
         
         query = await self.formatar_query_busca_saldo_local(codprod=codprod,
                                                             lista_produtos=lista_produtos)
+        print(f"query formatada: {query}")
 
         res = requests.get(
             url=url,
