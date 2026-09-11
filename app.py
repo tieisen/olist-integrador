@@ -5,7 +5,7 @@ from src.utils.load_env import load_env
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from routers import empresas, estoque, pedidos, produtos, notas, devolucoes, financeiro, ecommerce
-from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
+from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador, scheduler
 load_env()
 
 api_title:str = os.getenv('API_TITLE')
@@ -15,10 +15,14 @@ if not any([api_title,api_description,api_version]):
     raise ValueError("API config not found.")
 
 async def startup_event():
-    await iniciar_agendador()
+    if os.getenv('SCHEDULER_ENABLE', 'true').lower() == 'true':
+        await iniciar_agendador()
+    else:
+        return
 
 async def shutdown_event():
-    await encerrar_agendador()
+    if scheduler.running:
+        await encerrar_agendador()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

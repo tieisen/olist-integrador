@@ -152,6 +152,8 @@ class Pedido(Base):
     dh_importacao = Column(DateTime(timezone=True), nullable=True)
     dh_confirmacao = Column(DateTime(timezone=True), nullable=True)
     dh_faturamento = Column(DateTime(timezone=True), nullable=True)
+    erro = Column(Boolean, default=False)
+    erro_descricao = Column(String, nullable=True)
     ecommerce_id = Column(Integer, ForeignKey("ecommerce.id", ondelete="CASCADE"), nullable=False)
 
     ecommerce_ = relationship("Ecommerce", back_populates="pedido_")

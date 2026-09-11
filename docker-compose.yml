@@ -1,0 +1,21 @@
+services:
+  postgres-homolog:
+    image: postgres:16-alpine
+    container_name: olist-integrador-postgres-homolog
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: olist
+      POSTGRES_PASSWORD: olist
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - olist_homolog_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U olist -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  olist_homolog_data:
