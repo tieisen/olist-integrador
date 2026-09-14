@@ -18,3 +18,6 @@ vscode
 *.bat
 *.rar
 .*/
+
+# Dados de homologação do populate_db
+/database/dev/data/*
