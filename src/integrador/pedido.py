@@ -327,7 +327,7 @@ class Pedido:
             :param atual: Se True, busca pedidos a partir da última data registrada. Se False, busca pedidos a partir de uma data fixa.
             :param num_pedido: número do pedido no Olist
             :return bool: status da operação
-        """  # noqa: E501
+        """
 
         self.log_id = await crudLog.criar(
             empresa_id=self.dados_ecommerce.get("empresa_id"),
@@ -406,7 +406,12 @@ class Pedido:
         for item in itens:
             time.sleep(self.req_time_sleep)  # Evita rate limit
             # Kits estão marcados com #K no final do código
-            if item["produto"].get("sku") and "#K" not in item["produto"].get("sku"):
+            # Agora temos casos onde o SKU vem com um "K" junto, necessário tratar | Samuel - 16/09/2026
+            # TODO: Revisar implementação de desmembramento de kit, pois tem padrões onde é (SKU)K - Sem o #
+
+            if item["produto"].get("sku") and (
+                "#K" not in item["produto"].get("sku") or "K" not in item["produto"].get("sku")
+            ):
                 item = await self.validar_unidade(dados_item=item)
                 if item:
                     itens_validados.append(item)
@@ -733,7 +738,6 @@ class Pedido:
             :return list[dict]: lista de dicionários com id, numero, status e erro
         """
 
-        # TODO: Revisar importação de itens
         print(f"lista_pedidos passada como parametro: {lista_pedidos}")  # TODO: Apagar depois
 
         if not self.log_id:
@@ -999,7 +1003,6 @@ class Pedido:
         print(f"{len(pedidos_importar)} pedidos para importar")
 
         # Verifica o tipo de importação do ecommerce
-        print(f"dados_ecommerce: {self.dados_ecommerce}")
         if self.dados_ecommerce.get("importa_pedido_lote"):
             ack_importacao, retorno_itens = await self.importar_agrupado(
                 lista_pedidos=pedidos_importar

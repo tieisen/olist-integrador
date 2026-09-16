@@ -2,6 +2,7 @@
 
 import os
 import time
+import re
 from datetime import datetime, timedelta
 
 import requests
@@ -628,10 +629,16 @@ class Pedido:
                     logger.error("Produto %s ID %s não encontrado.", dados_kit.get("descricao"), id)
                     return False, {}
 
+                # TODO: implementar regex limpador de não-digitos - Aguardar validação
+                sku = k["produto"].get("sku")
+                sku_str = str(sku)
+                sku_limpo = re.sub(r"\D", "", sku_str)
+                sku_final = int(sku_limpo) if sku_limpo else sku
+
                 kit_item = {
                     "produto": {
                         "id": k["produto"].get("id"),
-                        "sku": k["produto"].get("sku"),
+                        "sku": sku_final,
                         "descricao": k["produto"].get("descricao"),
                     },
                     "unidade": dados_produto.get("unidade"),
