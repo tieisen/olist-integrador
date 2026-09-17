@@ -27,6 +27,7 @@ from src.utils.decorador import (
 )
 from src.utils.load_env import load_env
 from src.utils.log import set_logger
+from src.utils.notificar_erros import notificar_erros
 
 load_env()
 logger = set_logger(__name__)
@@ -672,7 +673,6 @@ class Faturamento:
 
         for i, pedido in enumerate(pedidos_faturar):
             print(f"Faturando pedido {pedido} ({i + 1}/{len(pedidos_faturar)})")
-            # TODO: Revisar faturamento de pedido do Sankhya para continuar faturando os demais pedidos em caso de problema
             ack_pedido = await self.faturar_sankhya(nunota=pedido, loja_unica=loja_unica)
             await crudLogPed.criar(
                 log_id=self.log_id,
@@ -683,7 +683,11 @@ class Faturamento:
             )
             if not ack_pedido.get("success"):
                 logger.error("Erro ao faturar o pedido no Sankhya! Dados: %s", ack_pedido)
-                # TODO: Implementar notificação/aviso no Sankhya
+                await notificar_erros(
+                    topic="Erro de faturamento no Sankhya",
+                    msg=f"Foi gerado um erro ao tentar faturar o pedido: {pedido} no Sankhya!",
+                )
+
                 # TODO: Implementar notificação/aviso no Bitrix
                 continue
 

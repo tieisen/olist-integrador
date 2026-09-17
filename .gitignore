@@ -18,6 +18,7 @@ vscode
 *.bat
 *.rar
 .*/
+emails.json
 
 # Dados de homologação do populate_db
 /database/dev/data/*
