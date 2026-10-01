@@ -351,8 +351,6 @@ class Itens(Transferencia):
             :return list[dict]: lista com os valores dos itens na tabela de preços de transferência
         """
 
-        print(f"Lista de itens a transferir: {lista_itens}")  # TODO: Apagar depois
-
         if not any([codprod, lista_itens]):
             print("Produto não informado.")
             logger.error("Produto não informado.")

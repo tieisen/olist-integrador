@@ -304,11 +304,17 @@ class Faturamento:
             if nunota != -1:
                 # Verifica se o pedido foi faturado ou trancou
                 status_faturamento = await pedido_snk.buscar_nunota_nota(nunota=nunota)
+                # TODO: Validar se foi realizada a baixa do estoque no Sankhya
                 if status_faturamento:
                     nunota_nota = status_faturamento[0].get("nunota")
                     logger.info("Pedido já faturado. Nunota da nota de venda: %s", str(nunota_nota))
                     # Atualiza base de dados
-                    await crudPedido.atualizar(nunota=nunota, dh_faturamento=datetime.now())
+                    await crudPedido.atualizar(
+                        nunota=nunota,
+                        dh_faturamento=datetime.now(),
+                        erro=False,
+                        erro_descricao=None,
+                    )
                     await crudNota.atualizar(nunota_pedido=nunota, nunota=nunota_nota)
                 else:
                     # Se o pedido não foi faturado...
@@ -342,7 +348,12 @@ class Faturamento:
                         raise Exception(msg)
 
                     # Atualiza base de dados
-                    await crudPedido.atualizar(nunota=nunota, dh_faturamento=datetime.now())
+                    await crudPedido.atualizar(
+                        nunota=nunota,
+                        dh_faturamento=datetime.now(),
+                        erro=False,
+                        erro_descricao=None,
+                    )
                     await crudNota.atualizar(nunota_pedido=nunota, nunota=nunota_nota)
 
                 # Confirma nota no Sankhya
@@ -650,7 +661,7 @@ class Faturamento:
     async def integrar_snk(self, **kwargs) -> dict:
         """
         Busca os pedidos pendentes e executa a rotina para faturar os pedidos no Sankhya.
-            :return bool: status da operação
+            :return dict: {"success": bool, "__exception__": str | None}
         """
         loja_unica: bool = kwargs.get("loja_unica", False)
         self.log_id = await crudLog.criar(
@@ -659,6 +670,8 @@ class Faturamento:
             para="sankhya",
             contexto=kwargs.get("_contexto"),
         )
+
+        pedidos_com_problema = []
 
         # Busca os pedidos pendentes de faturamento
         pedidos_faturar = await crudPedido.buscar_faturar(
@@ -669,10 +682,10 @@ class Faturamento:
             await crudLog.atualizar(id=self.log_id)
             return {"success": True, "__exception__": None}
 
-        pedidos_faturar = list(set([p.get("nunota") for p in pedidos_faturar]))
+        pedidos_snk_faturar = list(dict.fromkeys([p.get("nunota") for p in pedidos_faturar]))
 
-        for i, pedido in enumerate(pedidos_faturar):
-            print(f"Faturando pedido {pedido} ({i + 1}/{len(pedidos_faturar)})")
+        for i, pedido in enumerate(pedidos_snk_faturar):
+            print(f"Faturando pedido {pedido} ({i + 1}/{len(pedidos_snk_faturar)})")
             ack_pedido = await self.faturar_sankhya(nunota=pedido, loja_unica=loja_unica)
             await crudLogPed.criar(
                 log_id=self.log_id,
@@ -682,6 +695,10 @@ class Faturamento:
                 obs=ack_pedido.get("__exception__", None),
             )
             if not ack_pedido.get("success"):
+                pedidos_com_problema.append(pedido)
+                await crudPedido.informar_erro(
+                    nunota=pedido, erro=ack_pedido.get("__exception__", None)
+                )
                 logger.error("Erro ao faturar o pedido no Sankhya! Dados: %s", ack_pedido)
                 await notificar_erros(
                     topic="Erro de faturamento no Sankhya",
@@ -693,7 +710,13 @@ class Faturamento:
 
         status_log = False if await crudLogPed.buscar_falhas(self.log_id) else True
         await crudLog.atualizar(id=self.log_id, sucesso=status_log)
-        return ack_pedido
+        if len(pedidos_com_problema) == 0:
+            return {"success": True, "__exception__": None}
+        else:
+            return {
+                "success": False,
+                "__exception__": f"Erro no faturamento dos pedidos: {pedidos_com_problema}",
+            }
 
     @contexto
     @log_execucao

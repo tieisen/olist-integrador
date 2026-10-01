@@ -130,7 +130,6 @@ async def integrar_pedidos(codemp: int = None, id_loja: int = None) -> dict:
         finally:
             pass
 
-    print(f"retorno: {retorno}")
     return retorno
 
 

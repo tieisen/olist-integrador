@@ -629,7 +629,7 @@ class Pedido:
                     logger.error("Produto %s ID %s não encontrado.", dados_kit.get("descricao"), id)
                     return False, {}
 
-                # TODO: implementar regex limpador de não-digitos - Aguardar validação
+                # ?: implementação regex limpador de não-digitos - Aguardar validação
                 sku = k["produto"].get("sku")
                 sku_str = str(sku)
                 sku_limpo = re.sub(r"\D", "", sku_str)
