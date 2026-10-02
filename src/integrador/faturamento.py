@@ -283,7 +283,7 @@ class Faturamento:
             :param nunota: número único do pedido (Sankhya)
             :return dict: dicionário com status e erro
         """
-
+        print(f"[faturar_sankhya] faturando pedido {nunota}...")
         # loja_unica: bool = kwargs.get("loja_unica", False)
         pedido_snk = PedidoSnk(empresa_id=self.dados_ecommerce.get("empresa_id"))
         nota_snk = NotaSnk(empresa_id=self.dados_ecommerce.get("empresa_id"))
@@ -322,7 +322,7 @@ class Faturamento:
                     logger.info("Faturando pedido no Sankhya. Nunota do pedido: %s", nunota)
                     ack_fat_pedido: dict = {}
                     ack_fat_pedido = await pedido_snk.faturar(nunota=nunota)
-                    print("ack_fat_pedido %s", ack_fat_pedido)  # DELETAR DEPOIS
+                    print(f"[faturar_sankhya] ack_fat_pedido {ack_fat_pedido}")  # DELETAR DEPOIS
                     if not ack_fat_pedido.get("success"):
                         raise Exception(ack_fat_pedido.get("exception"))
                     nunota_nota = ack_fat_pedido.get("nunota_nota")
@@ -335,7 +335,6 @@ class Faturamento:
                     sequencias: list = [
                         int(item.get("sequencia")) for item in dados_nota.get("itens")
                     ]
-                    logger.info("sequencias %s", sequencias)  # DELETAR DEPOIS
                     payload: list[dict] = await parser_pedido.to_sankhya_atualiza_local(
                         nunota=nunota_nota, lista_sequencias=sequencias
                     )
@@ -359,28 +358,32 @@ class Faturamento:
                 # Confirma nota no Sankhya
                 ack_confirma_nota: dict = {}
                 ack_confirma_nota = await nota_snk.confirmar(nunota=nunota_nota)
-                logger.info("ack_confirma_nota %s", ack_confirma_nota)  # DELETAR DEPOIS
+                print(f"[faturar_sankhya] ack_confirma_nota {ack_confirma_nota}")  # DELETAR DEPOIS
                 if ack_confirma_nota.get("success") is False:
                     raise Exception(ack_confirma_nota.get("exception"))
 
                 ack = await crudNota.atualizar(
                     nunota_nota=nunota_nota, dh_confirmacao=datetime.now()
                 )
+                print(f"[faturar_sankhya] ack atualiza dh_confirmacao {ack}") # deletar depois
                 if ack is False:
                     msg = f"Erro ao atualizar hora da confirmação na base. {nunota_nota}"
                     raise Exception(msg)
 
                 dados_transferencia: dict = await nota_snk.buscar(nunota=nunota_nota)
+                print(f"[faturar_sankhya] dados_transferencia {dados_transferencia}") # deletar depois
                 if not dados_transferencia:
                     msg = f"Erro ao buscar dados da nota de transferência {nunota_nota}"
                     raise Exception(msg)
 
                 # Cria o contas a pagar no Olist
-                # contas_a_pagar_olist = await integra_des.formatarPayloadLcto(
-                #     dadosTransferencia=dados_transferencia
-                # ) # ? Variavel não usada ...
+                contas_a_pagar_olist = await integra_des.formatarPayloadLcto(
+                    dadosTransferencia=dados_transferencia
+                ) # ? Variavel não usada ...
+                print(f"[faturar_sankhya] contas_a_pagar_olist {contas_a_pagar_olist}") # deletar depois
 
-                conta_lancada = await integra_des.lancarConta()
+                conta_lancada = await integra_des.lancarConta(id_nota=nunota_nota, payload=contas_a_pagar_olist)
+                print(f"[faturar_sankhya] conta_lancada {conta_lancada}") # deletar depois
                 if not conta_lancada:
                     msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
                     raise Exception(msg)
@@ -391,7 +394,9 @@ class Faturamento:
                 nunota_nota = nunota
 
             # Realiza baixa de estoque do local e-commerce
+            print(f"[faturar_sankhya] baixando estoque para a nota {nunota_nota}...")
             ack = await self.baixar_ecommerce(nunota_nota=nunota_nota)
+            print(f"[faturar_sankhya] ack baixar_ecommerce {ack}")
             if not ack.get("success"):
                 raise Exception(ack.get("__exception__"))
 
