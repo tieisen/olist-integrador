@@ -103,6 +103,7 @@ class Receita:
     async def calcularVcto(self, dataBase: datetime = None) -> str:
 
         ecommerce: str = self.dados_ecommerce.get("nome").upper()
+        print(f"[calcularVcto] Ecommerce: {ecommerce}")
         data_vcto: datetime = None
 
         if not dataBase:
@@ -111,24 +112,23 @@ class Receita:
         if "SHOPEE" in str(ecommerce).upper():
             data_vcto = self.calcularDataVctoShopee(dataBase=dataBase)
             return data_vcto.strftime("%Y-%m-%d")
-        elif "BELEZA" in str(ecommerce).upper():
+        else:
+        # "BELEZA" in str(ecommerce).upper():
             data_vcto = self.calcularDataVctoBlz(dataBase=dataBase)
             return data_vcto.strftime("%Y-%m-%d")
-        else:
-            return ""
 
     @carrega_dados_ecommerce
     async def formata_codigo_pedido(self, codigo_pedido: str) -> str:
-
+        
         codigo_pedido_tratado: str = ""
         ecommerce: str = self.dados_ecommerce.get("nome").upper()
 
-        if "SHOPEE" in str(ecommerce).upper():
-            codigo_pedido_tratado = codigo_pedido
-        elif "BELEZA" in str(ecommerce).upper():
-            codigo_pedido_tratado = "664ca49e6e32560ce90fe8b5-" + codigo_pedido
+        if "BELEZA" in str(ecommerce).upper():
+            codigo_pedido_tratado = f"664ca49e6e32560ce90fe8b5-{codigo_pedido}" 
+            print(f"[formata_codigo_pedido] Pedido Beleza na Web: {codigo_pedido_tratado}")
         else:
-            pass
+            codigo_pedido_tratado = codigo_pedido
+            print(f"[formata_codigo_pedido] Pedido Blz ou ML: {codigo_pedido_tratado}")
 
         return codigo_pedido_tratado
 
