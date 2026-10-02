@@ -379,11 +379,9 @@ class Faturamento:
                 # Cria o contas a pagar no Olist
                 contas_a_pagar_olist = await integra_des.formatarPayloadLcto(
                     dadosTransferencia=dados_transferencia
-                ) # ? Variavel não usada ...
-                print(f"[faturar_sankhya] contas_a_pagar_olist {contas_a_pagar_olist}") # deletar depois
+                )
 
-                conta_lancada = await integra_des.lancarConta(id_nota=nunota_nota, payload=contas_a_pagar_olist)
-                print(f"[faturar_sankhya] conta_lancada {conta_lancada}") # deletar depois
+                conta_lancada = await integra_des.lancarConta()
                 if not conta_lancada:
                     msg = f"Erro ao lançar conta a pagar da nota {nunota_nota} no Olist"
                     raise Exception(msg)

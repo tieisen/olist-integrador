@@ -709,7 +709,7 @@ class Despesa:
         logger.info("Payload final a ser usado: %s", payload)
 
         if not all([payload, id_nota]):
-            raise ValueError("Dados incompletos")
+            raise ValueError(f"[lancarConta] Dados incompletos => payload: {payload}, id_nota: {id_nota}")
 
         id_financeiro = await self.finDespesa.lancar(payload=payload)
         if not id_financeiro:
@@ -717,12 +717,12 @@ class Despesa:
             raise Exception(msg)
 
         if self.eh_frete:
-            # logger.info(f"Salvando ID do financeiro do frete: {id_financeiro}")
+            logger.info(f"Salvando ID do financeiro do frete: {id_financeiro}")
             if not await crudNota.atualizar(id_nota=id_nota, id_financeiro_frete=id_financeiro):
                 msg = "Erro ao salvar ID do financeiro do frete"
                 raise Exception(msg)
         elif id_nota != -1:
-            # logger.info(f"Salvando ID do financeiro da taxa: {id_financeiro}")
+            logger.info(f"Salvando ID do financeiro da taxa: {id_financeiro}")
             if not await crudNota.atualizar(
                 id_nota=id_nota,
                 id_financeiro_taxa=id_financeiro,
@@ -734,6 +734,8 @@ class Despesa:
         self.payload_lcto = None
         self.id_nota = None
         self.eh_frete = False
+
+        print(f"Conta lançada com sucesso. ID do financeiro: {id_financeiro}")
 
         return True
 
