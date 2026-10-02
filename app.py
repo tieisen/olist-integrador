@@ -1,24 +1,34 @@
 import os
-from fastapi import FastAPI
-from datetime import datetime
-from src.utils.load_env import load_env
 from contextlib import asynccontextmanager
+from datetime import datetime
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import empresas, estoque, pedidos, produtos, notas, devolucoes, financeiro, ecommerce
-from src.scheduler.scheduler import iniciar_agendador, encerrar_agendador
+
+from routers import devolucoes, ecommerce, empresas, estoque, financeiro, notas, pedidos, produtos
+from src.scheduler.scheduler import encerrar_agendador, iniciar_agendador, scheduler
+from src.utils.load_env import load_env
+
 load_env()
 
-api_title:str = os.getenv('API_TITLE')
-api_description:str = os.getenv('API_DESCRIPTION')
-api_version:str = os.getenv('API_VERSION')
-if not any([api_title,api_description,api_version]):
+api_title: str = os.getenv("API_TITLE")
+api_description: str = os.getenv("API_DESCRIPTION")
+api_version: str = os.getenv("API_VERSION")
+if not any([api_title, api_description, api_version]):
     raise ValueError("API config not found.")
 
+
 async def startup_event():
-    await iniciar_agendador()
+    if os.getenv("SCHEDULER_ENABLE", "true").lower() == "true":
+        await iniciar_agendador()
+    else:
+        return
+
 
 async def shutdown_event():
-    await encerrar_agendador()
+    if scheduler.running:
+        await encerrar_agendador()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,10 +38,8 @@ async def lifespan(app: FastAPI):
     # Shutdown code
     await shutdown_event()
 
-app = FastAPI(title=api_title,
-              description=api_description,
-              version=api_version,
-              lifespan=lifespan)    
+
+app = FastAPI(title=api_title, description=api_description, version=api_version, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,10 +59,12 @@ app.include_router(notas.router, prefix="/notas", tags=["Notas"])
 app.include_router(financeiro.router, prefix="/financeiro", tags=["Financeiro"])
 app.include_router(devolucoes.router, prefix="/devolucoes", tags=["Devoluções"])
 
-@app.get("/",include_in_schema=False)
+
+@app.get("/", include_in_schema=False)
 def read_root():
     return {"message": f"{api_title}. Version {api_version}."}
 
-print(f"\n====================================")
-print(f"===> START AT: {datetime.now().strftime("%d/%m/%Y, %H:%M:%S")}")
-print(f"====================================\n")
+
+print("\n====================================")
+print(f"===> START AT: {datetime.now().strftime('%d/%m/%Y, %H:%M:%S')}")
+print("====================================\n")
