@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from src.olist.nota import Nota as NotaOlist
 from src.olist.financeiro import Receita as FinOlist
@@ -30,7 +31,9 @@ class Nota:
             :param dados_pedido: dicionário com os dados do pedido no Olist
             :return dict: dicionário com status, dados da NF gerada e erro
         """
-        
+
+        print(f"[gerar]: dados do pedido: {dados_pedido}")
+        print(f"[gerar]: Gerando a nota para o pedido {dados_pedido.get('numero')}...")
         if not self.log_id:
             self.log_id = await crudLog.criar(empresa_id=self.dados_ecommerce.get('empresa_id'),
                                               de='olist',
@@ -41,12 +44,14 @@ class Nota:
         try:
             # Gera NF no Olist
             dados_nota_olist = await pedido_olist.gerar_nf(id=dados_pedido.get('id_pedido'))
+            print(f"[gerar]: dados_nota_olist: {dados_nota_olist}")
             if not dados_nota_olist:
                 print(f"Erro ao gerar nota para o pedido {dados_pedido.get('id_pedido')}")
                 raise Exception(dados_nota_olist)
             
             if dados_nota_olist.get('mensagem'):
                 nota_olist = NotaOlist(id_loja=self.id_loja,empresa_id=self.dados_ecommerce.get('empresa_id'))
+                print(f"[gerar]: nota_olist: {nota_olist}")
                 dados_nota_olist = await nota_olist.buscar(cod_pedido=dados_pedido.get('cod_pedido'))
 
             eh_parcelado:bool = True if len(dados_pedido['dados_pedido']['pagamento'].get('parcelas',[])) > 1 else False

@@ -240,6 +240,7 @@ class Faturamento:
             :param pedido: dicionário com os dados do pedido (Olist)
             :return dict: dicionário com status e erro
         """
+        print(f"[faturar_olist] faturando pedido: {pedido}")
 
         integra_nota = IntegradorNota(id_loja=self.dados_ecommerce.get("id_loja"))
         separacao = SeparacaoOlist(codemp=self.codemp)

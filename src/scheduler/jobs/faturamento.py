@@ -19,6 +19,7 @@ def _retorno(erros: list[str]) -> dict:
 
 async def _executar_rotina(ecom: dict, codemp: int | None, rotina: Rotina) -> str | None:
     """Isola a falha de um e-commerce para que não interrompa os demais."""
+    print(f"[_executar_rotina] ecom: {ecom.get('nome')} - rotina: {rotina.__name__} - Executando...")
     try:
         erro = await rotina(ecom, codemp)
     except Exception as e:
@@ -49,6 +50,7 @@ async def _por_empresa(codemp: int | None, titulo: str, rotina: Rotina) -> dict:
 async def _por_loja(id_loja: int, titulo: str, rotina: Rotina) -> dict:
     """Executa a rotina em um único e-commerce, identificado pelo id_loja."""
     print(titulo)
+    print(f"[_por_loja] id_loja: {id_loja} - rotina: {rotina.__name__} - Executando...")
     try:
         ecommerces = await ecommerce.buscar(id_loja=id_loja)
         if not ecommerces:
@@ -116,7 +118,9 @@ async def integrar_faturamento(codemp: int = None, id_loja: int = None) -> dict:
 async def integrar_faturamento_olist(codemp: int = None, id_loja: int = None) -> dict:
     titulo = ":::::::::::::::::::: FATURAMENTO DE PEDIDOS NO OLIST ::::::::::::::::::::"
     if id_loja:
+        print(f"[integrar_faturamento_olist] id_loja: {id_loja}")
         return await _por_loja(id_loja, titulo, _faturar_olist)
+    print(f"[integrar_faturamento_olist] codemp: {codemp}")
     return await _por_empresa(codemp, titulo, _faturar_olist)
 
 

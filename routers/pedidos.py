@@ -16,6 +16,9 @@ from src.scheduler.jobs.pedidos import (
     reprocessar_separacao,
 )
 
+from src.utils.log import set_logger
+logger = set_logger(__name__)
+
 router = APIRouter()
 
 
@@ -44,7 +47,9 @@ async def integrar(body: PedidoEmpresa) -> list[dict]:
     Importa os pedidos pendentes do Olist.
     Confirma o pedido no Sankhya.
     """
+
     res: dict = {}
+    logger.info("Iniciando integração de pedidos para a empresa %s", body.codemp)
     res = await receber_pedido_lote(codemp=body.codemp)
     if not res:
         raise HTTPException(
@@ -142,6 +147,7 @@ async def faturar_olist_loja(body: PedidoLoja) -> bool:
     """
     res: dict = {}
     res = await integrar_faturamento_olist(id_loja=body.id_loja)
+    print(f"[router/pedido/faturar-loja/olist] res: {res}")
     if not res.get("status"):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.get("exception")
