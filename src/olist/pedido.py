@@ -61,6 +61,7 @@ class Pedido:
             logger.error("Erro relacionado à url. %s", url)
             return False
 
+        logger.info(f"[olist.pedido.buscar] GET {url}")
         res = requests.get(
             url=url,
             headers={
@@ -69,6 +70,7 @@ class Pedido:
                 "Accept": "application/json",
             },
         )
+        logger.info(f"[olist.pedido.buscar] Resposta status={res.status_code}")
 
         if res.status_code == 200:
             if id:

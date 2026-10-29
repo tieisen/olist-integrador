@@ -3,6 +3,9 @@ import asyncio
 from database.crud import ecommerce, empresa
 from src.integrador.pedido import Pedido
 from src.integrador.separacao import Separacao
+from src.utils.log import set_logger
+
+logger = set_logger(__name__)
 
 
 async def receber_pedido_lote(codemp: int = None, id_loja: int = None) -> dict:
@@ -14,28 +17,50 @@ async def receber_pedido_lote(codemp: int = None, id_loja: int = None) -> dict:
     ecom: dict = {}
 
     print("::::::::::::::::::: RECEBIMENTO DE PEDIDOS :::::::::::::::::::")
+    logger.info(f"[lote] Início do recebimento de pedidos (codemp={codemp}, id_loja={id_loja})")
     if not id_loja:
         empresas = await empresa.buscar(codemp=codemp)
+        logger.info(f"[lote] {len(empresas or [])} empresa(s) encontrada(s)")
         try:
             if not empresas:
                 retorno = {"status": True, "exception": None}
             else:
                 for i, emp in enumerate(empresas):
                     print(f"\nEmpresa {emp.get('nome')} ({i + 1}/{len(empresas)})".upper())
+                    logger.info(f"[lote] Empresa {emp.get('nome')} ({i + 1}/{len(empresas)})")
                     ecommerces = await ecommerce.buscar(empresa_id=emp.get("id"))
                     if not ecommerces:
                         print("Nenhum e-commerce vinculado à empresa")
+                        logger.info(f"[lote] Empresa {emp.get('nome')} sem e-commerce vinculado")
                         continue
                     for j, ecom in enumerate(ecommerces):
                         print(f"E-commerce {ecom.get('nome')} ({j + 1}/{len(ecommerces)})".upper())
+                        logger.info(
+                            f"[lote] E-commerce {ecom.get('nome')} "
+                            f"id_loja={ecom.get('id_loja')} ({j + 1}/{len(ecommerces)})"
+                        )
                         pedido = Pedido(id_loja=ecom.get("id_loja"), codemp=emp.get("snk_codemp"))
                         separacao = Separacao(id_loja=ecom.get("id_loja"))
+                        logger.info(
+                            f"[lote] id_loja={ecom.get('id_loja')}: iniciando receber_novos"
+                        )
                         await pedido.receber_novos()
+                        logger.info(
+                            f"[lote] id_loja={ecom.get('id_loja')}: receber_novos concluído"
+                        )
+                        logger.info(
+                            f"[lote] id_loja={ecom.get('id_loja')}: iniciando separacao.receber"
+                        )
                         await separacao.receber()
+                        logger.info(
+                            f"[lote] id_loja={ecom.get('id_loja')}: separacao.receber concluído"
+                        )
                 retorno = {"status": True, "exception": None}
         except Exception as e:
+            logger.exception(f"[lote] Exceção no recebimento de pedidos: {e}")
             retorno = {"status": False, "exception": e}
 
+        logger.info(f"[lote] Fim do recebimento de pedidos. Status: {retorno.get('status')}")
         return retorno
 
     else:
@@ -43,13 +68,21 @@ async def receber_pedido_lote(codemp: int = None, id_loja: int = None) -> dict:
             ecommerces = await ecommerce.buscar(id_loja=id_loja)
             ecom = ecommerces[0]
             print(f"E-commerce {ecom.get('nome')}".upper())  # Print original
+            logger.info(f"[lote] E-commerce {ecom.get('nome')} id_loja={id_loja}")
             pedido = Pedido(id_loja=id_loja)
             separacao = Separacao(id_loja=id_loja)
+            logger.info(f"[lote] id_loja={id_loja}: iniciando receber_novos")
             await pedido.receber_novos()
+            logger.info(f"[lote] id_loja={id_loja}: receber_novos concluído")
+            logger.info(f"[lote] id_loja={id_loja}: iniciando separacao.receber")
             await separacao.receber()
+            logger.info(f"[lote] id_loja={id_loja}: separacao.receber concluído")
             retorno = {"status": True, "exception": None}
         except Exception as e:
+            logger.exception(f"[lote] Exceção no recebimento de pedidos (id_loja={id_loja}): {e}")
             retorno = {"status": False, "exception": e}
+
+        logger.info(f"[lote] Fim do recebimento de pedidos. Status: {retorno.get('status')}")
 
         return retorno
 

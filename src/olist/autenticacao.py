@@ -1,30 +1,35 @@
-import os, requests, asyncio
+import asyncio
+import os
+from datetime import datetime, timedelta
 from functools import wraps
-from datetime import datetime,timedelta
+from urllib.parse import parse_qs, urlparse
+
+import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from urllib.parse import urlparse, parse_qs
+from selenium.webdriver.support.ui import WebDriverWait
+
 from database.crud import olist as crud
 from src.utils.decorador import carrega_dados_empresa
-from src.utils.log import set_logger
 from src.utils.load_env import load_env
+from src.utils.log import set_logger
+
 load_env()
 logger = set_logger(__name__)
 _lock_autenticacao = asyncio.Lock()
 
-class Autenticacao:
 
-    def __init__(self,codemp:int=None,empresa_id:int=None):
+class Autenticacao:
+    def __init__(self, codemp: int = None, empresa_id: int = None):
         self.codemp = codemp
         self.empresa_id = empresa_id
-        self.auth_url = os.getenv('OLIST_AUTH_URL')
-        self.endpoint_token = os.getenv('OLIST_ENDPOINT_TOKEN')
-        self.redirect_uri = os.getenv('OLIST_REDIRECT_URI')
-        self.path_token = os.getenv('OLIST_PATH_TOKENS')
+        self.auth_url = os.getenv("OLIST_AUTH_URL")
+        self.endpoint_token = os.getenv("OLIST_ENDPOINT_TOKEN")
+        self.redirect_uri = os.getenv("OLIST_REDIRECT_URI")
+        self.path_token = os.getenv("OLIST_PATH_TOKENS")
         self.dados_empresa = None
-        
+
     @carrega_dados_empresa
     async def solicitar_auth_code(self) -> str:
         """
@@ -33,28 +38,38 @@ class Autenticacao:
         """
         print(f"Solicitando código de autorização para a empresa {self.codemp or self.empresa_id}")
         print(f"Redirect URI: {self.redirect_uri}")
-        url = self.auth_url+f'/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}'
+        url = (
+            self.auth_url
+            + f"/auth?scope=openid&response_type=code&client_id={self.dados_empresa.get('client_id')}&redirect_uri={self.redirect_uri}"
+        )
         driver = None
         try:
+            logger.info("[solicitar_auth_code] Abrindo Firefox")
             driver = webdriver.Firefox()
+            logger.info("[solicitar_auth_code] Firefox aberto, carregando página de login")
             driver.get(url)
+            logger.info("[solicitar_auth_code] Página de login carregada")
 
             login_input = driver.find_element(By.ID, "username")
             # next_button = driver.find_element(By.XPATH, "//button[@class='sc-dAlyuH biayZs sc-dAbbOL ddEnAE']")
             login_input.clear()
-            login_input.send_keys(self.dados_empresa.get('olist_admin_email'))
+            login_input.send_keys(self.dados_empresa.get("olist_admin_email"))
             # next_button.click()
-            
+
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "password")))
             pass_input = driver.find_element(By.ID, "password")
             submit_button = driver.find_element(By.XPATH, "//button[@type='submit']")
             pass_input.clear()
-            pass_input.send_keys(self.dados_empresa.get('olist_admin_senha'))
+            pass_input.send_keys(self.dados_empresa.get("olist_admin_senha"))
             submit_button.click()
-            
+            logger.info("[solicitar_auth_code] Login submetido")
+
             res_url = driver.current_url
             parsed_url = urlparse(res_url)
-            auth_code = parse_qs(parsed_url.query).get('code', [''])[0]
+            auth_code = parse_qs(parsed_url.query).get("code", [""])[0]
+            logger.info(
+                f"[solicitar_auth_code] Código de autorização {'obtido' if auth_code else 'NÃO obtido'}"
+            )
             return auth_code
         except Exception as e:
             print(e)
@@ -64,74 +79,66 @@ class Autenticacao:
                 driver.quit()
 
     @carrega_dados_empresa
-    async def solicitar_token(self,authorization_code:str) -> dict:
+    async def solicitar_token(self, authorization_code: str) -> dict:
         """
         Solicita token de acesso
             :param authorization_code: código de autorização
             :return dict: dicionário com os dados do token vigente
         """
-        header = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+        header = {"Content-Type": "application/x-www-form-urlencoded"}
 
         payload = {
             "grant_type": "authorization_code",
-            "client_id": self.dados_empresa.get('client_id'),
-            "client_secret": self.dados_empresa.get('client_secret'),
+            "client_id": self.dados_empresa.get("client_id"),
+            "client_secret": self.dados_empresa.get("client_secret"),
             "redirect_uri": self.redirect_uri,
-            "code": authorization_code
+            "code": authorization_code,
         }
 
         try:
             res = requests.post(
-                url=self.auth_url + self.endpoint_token,
-                headers=header,
-                data=payload
+                url=self.auth_url + self.endpoint_token, headers=header, data=payload
             )
             if res.status_code == 200:
                 return res.json()
             else:
                 error = res.json().get("error_description", "Erro desconhecido")
-                logger.error("Erro ao obter token: %s",error)
+                logger.error("Erro ao obter token: %s", error)
                 return False
         except requests.exceptions.RequestException as e:
-            logger.error("Erro de conexão: %s",e)
+            logger.error("Erro de conexão: %s", e)
             return False
 
     @carrega_dados_empresa
-    async def solicitar_atualizacao_token(self,refresh_token:str) -> dict:
+    async def solicitar_atualizacao_token(self, refresh_token: str) -> dict:
         """
         Solicita novo token de acesso, se expirado
             :param refresh_token: refresh token adquirido na solicitação anterior
             :return dict: dicionário com os dados do novo token vigente
-        """        
-        header = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+        """
+        header = {"Content-Type": "application/x-www-form-urlencoded"}
 
         payload = {
             "grant_type": "refresh_token",
-            "client_id": self.dados_empresa.get('client_id'),
-            "client_secret": self.dados_empresa.get('client_secret'),            
-            "refresh_token": refresh_token
+            "client_id": self.dados_empresa.get("client_id"),
+            "client_secret": self.dados_empresa.get("client_secret"),
+            "refresh_token": refresh_token,
         }
 
         try:
             res = requests.post(
-                url=self.auth_url + self.endpoint_token,
-                headers=header,
-                data=payload
+                url=self.auth_url + self.endpoint_token, headers=header, data=payload
             )
             if res.status_code == 200:
                 return res.json()
             else:
                 error = res.json().get("error_description", "Erro desconhecido")
-                logger.error("Erro ao obter token: %s",error)
+                logger.error("Erro ao obter token: %s", error)
                 return False
         except requests.exceptions.RequestException as e:
-            logger.error("Erro de conexão: %s",e)
+            logger.error("Erro de conexão: %s", e)
             return False
-    
+
     @carrega_dados_empresa
     async def salvar_token(self, dados_token: dict) -> bool:
         """
@@ -140,28 +147,30 @@ class Autenticacao:
             :return bool: status da operação
         """
         try:
-            access_token = dados_token['access_token']
-            refresh_token = dados_token['refresh_token']
-            id_token = dados_token['id_token']
-            expire_date = datetime.now()+timedelta(0,dados_token['expires_in'])
-            expire_date_refresh = datetime.now()+timedelta(0,dados_token['refresh_expires_in'])
+            access_token = dados_token["access_token"]
+            refresh_token = dados_token["refresh_token"]
+            id_token = dados_token["id_token"]
+            expire_date = datetime.now() + timedelta(0, dados_token["expires_in"])
+            expire_date_refresh = datetime.now() + timedelta(0, dados_token["refresh_expires_in"])
         except Exception as e:
-            logger.error("Erro ao formatar dados do token: %s",e)
+            logger.error("Erro ao formatar dados do token: %s", e)
             return False
-        
-        ack = await crud.criar(empresa_id=self.dados_empresa.get('id'),
-                               token=access_token,
-                               dh_expiracao_token=expire_date,
-                               refresh_token=refresh_token,
-                               dh_expiracao_refresh_token=expire_date_refresh,
-                               id_token=id_token)
-        
+
+        ack = await crud.criar(
+            empresa_id=self.dados_empresa.get("id"),
+            token=access_token,
+            dh_expiracao_token=expire_date,
+            refresh_token=refresh_token,
+            dh_expiracao_refresh_token=expire_date_refresh,
+            id_token=id_token,
+        )
+
         if not ack:
             logger.error("Erro ao salvar token")
             return False
-        
+
         return True
-    
+
     @carrega_dados_empresa
     async def salvar_token_atualizado(self, dados_token: dict) -> bool:
         """
@@ -169,149 +178,196 @@ class Autenticacao:
             :param dados_token: dicionário com os dados do token
             :return bool: status da operação
         """
-        dados_atualizados:dict={}
+        dados_atualizados: dict = {}
         try:
             agora = datetime.now()
-            dados_atualizados['token'] = dados_token['access_token']
-            dados_atualizados['refresh_token'] = dados_token['refresh_token']
-            dados_atualizados['id_token'] = dados_token['id_token']
-            dados_atualizados['dh_solicitacao'] = agora
-            dados_atualizados['dh_expiracao_token'] = agora + timedelta(0,dados_token['expires_in'])
-            dados_atualizados['dh_expiracao_refresh_token'] = agora + timedelta(0,dados_token['refresh_expires_in'])            
+            dados_atualizados["token"] = dados_token["access_token"]
+            dados_atualizados["refresh_token"] = dados_token["refresh_token"]
+            dados_atualizados["id_token"] = dados_token["id_token"]
+            dados_atualizados["dh_solicitacao"] = agora
+            dados_atualizados["dh_expiracao_token"] = agora + timedelta(
+                0, dados_token["expires_in"]
+            )
+            dados_atualizados["dh_expiracao_refresh_token"] = agora + timedelta(
+                0, dados_token["refresh_expires_in"]
+            )
         except Exception as e:
-            logger.error("Erro ao formatar dados do token: %s",e)
+            logger.error("Erro ao formatar dados do token: %s", e)
             return False
-        
+
         if not dados_atualizados:
             return False
-        if not all([True for v in dados_atualizados.keys() if v in ['token','refresh_token','id_token','dh_solicitacao','dh_expiracao_token','dh_expiracao_refresh_token']]):
+        if not all(
+            [
+                True
+                for v in dados_atualizados.keys()
+                if v
+                in [
+                    "token",
+                    "refresh_token",
+                    "id_token",
+                    "dh_solicitacao",
+                    "dh_expiracao_token",
+                    "dh_expiracao_refresh_token",
+                ]
+            ]
+        ):
             return False
-        
-        ack = await crud.atualizar(empresa_id=self.dados_empresa.get('id'),
-                                   **dados_atualizados)
-        
+
+        ack = await crud.atualizar(empresa_id=self.dados_empresa.get("id"), **dados_atualizados)
+
         if not ack:
             logger.error("Erro ao salvar token")
             return False
-        
+
         return True
 
     @carrega_dados_empresa
-    async def atualizar_token(self, refresh_token:str) -> str:
+    async def atualizar_token(self, refresh_token: str) -> str:
         """
         Atualiza token expirado
             :param refresh_token: refresh token
             :return str: token de acesso vigente
         """
-        
+
         novo_token = await self.solicitar_atualizacao_token(refresh_token=refresh_token)
         if not novo_token:
             return False
-        
+
         ack = await self.salvar_token_atualizado(novo_token)
         if not ack:
             return False
-        
-        return novo_token.get('access_token')        
-         
-    @carrega_dados_empresa        
+
+        return novo_token.get("access_token")
+
+    @carrega_dados_empresa
     async def buscar_token_salvo(self) -> str:
         """
         Busca último token salvo no banco de dados
             :return str: último token de acesso
-        """        
-        
+        """
+
         # Busca o token mais recente na base
-        dados_token = await crud.buscar(self.dados_empresa.get('id'))
+        dados_token = await crud.buscar(self.dados_empresa.get("id"))
 
         if not dados_token:
             logger.error(f"Token não encontrado para a empresa {self.codemp or self.empresa_id}")
             return None
 
         agora = datetime.now().replace(microsecond=0, second=0)
-        expiracao_token = dados_token.get('dh_expiracao_token').replace(microsecond=0, second=0)
-        expiracao_refresh_token = dados_token.get('dh_expiracao_refresh_token').replace(microsecond=0, second=0)
+        expiracao_token = dados_token.get("dh_expiracao_token").replace(microsecond=0, second=0)
+        expiracao_refresh_token = dados_token.get("dh_expiracao_refresh_token").replace(
+            microsecond=0, second=0
+        )
 
-        if expiracao_token > agora:            
-            return dados_token.get('token')
-        
+        if expiracao_token > agora:
+            return dados_token.get("token")
+
         if expiracao_refresh_token > agora:
-            return [dados_token.get('refresh_token')]
+            return [dados_token.get("refresh_token")]
 
         if expiracao_refresh_token < agora:
-            return ""     
+            return ""
 
     @carrega_dados_empresa
     async def primeiro_login(self) -> str:
         """
         Realiza o fluxo de primeiro login
             :return str: token de acesso válido
-        """         
-        
+        """
+
         authcode = await self.solicitar_auth_code()
         if not authcode:
-            logger.error(f"Erro ao solicitar código de autorização. Empresa: {self.codemp or self.empresa_id}")
-            return ''
-        
+            logger.error(
+                f"Erro ao solicitar código de autorização. Empresa: {self.codemp or self.empresa_id}"
+            )
+            return ""
+
         token = await self.solicitar_token(authorization_code=authcode)
         if not token:
-            logger.error(f"Erro ao solicitar token de acesso. Empresa: {self.codemp or self.empresa_id}")
-            return ''
-        
-        dados_token = await crud.buscar(self.dados_empresa.get('id'))
-        ack = await self.salvar_token(token) if not dados_token else await self.salvar_token_atualizado(token)
-            
+            logger.error(
+                f"Erro ao solicitar token de acesso. Empresa: {self.codemp or self.empresa_id}"
+            )
+            return ""
+
+        dados_token = await crud.buscar(self.dados_empresa.get("id"))
+        ack = (
+            await self.salvar_token(token)
+            if not dados_token
+            else await self.salvar_token_atualizado(token)
+        )
+
         if not ack:
-            logger.error(f"Erro ao salvar token no banco de dados. Empresa: {self.codemp or self.empresa_id}")
-            return ''
-        
+            logger.error(
+                f"Erro ao salvar token no banco de dados. Empresa: {self.codemp or self.empresa_id}"
+            )
+            return ""
+
         logger.info(f"Login success. Empresa: {self.codemp or self.empresa_id}")
-        return token.get('access_token')
+        return token.get("access_token")
 
     @carrega_dados_empresa
     async def autenticar(self) -> str:
         """
         Executa rotina de autenticação
             :return str: token de acesso válido
-        """         
+        """
         try:
             token = await self.buscar_token_salvo()
-            if isinstance(token,str) and token:
+            if isinstance(token, str) and token:
                 # Token válido salvo na base
                 return token
-            
+
+            logger.info(
+                f"[autenticar] Empresa {self.codemp or self.empresa_id}: token salvo inválido/expirado, aguardando lock"
+            )
             async with _lock_autenticacao:
                 token = await self.buscar_token_salvo()
-                if isinstance(token,str) and token:
+                if isinstance(token, str) and token:
                     # Token válido salvo na base
                     return token
-                
-                if isinstance(token,list):
+
+                if isinstance(token, list):
                     # Token expirado. Solicita novo token
+                    logger.info(
+                        f"[autenticar] Empresa {self.codemp or self.empresa_id}: renovando token via refresh_token"
+                    )
                     novo_token = await self.atualizar_token(refresh_token=token[0])
+                    logger.info(
+                        f"[autenticar] Empresa {self.codemp or self.empresa_id}: renovação {'ok' if novo_token else 'FALHOU'}"
+                    )
                     return novo_token
 
                 if not token:
                     # Token não existe ou expirou o refresh token
+                    logger.info(
+                        f"[autenticar] Empresa {self.codemp or self.empresa_id}: refresh token expirado, iniciando login via navegador"
+                    )
                     token_login = await self.primeiro_login()
+                    logger.info(
+                        f"[autenticar] Empresa {self.codemp or self.empresa_id}: login via navegador {'ok' if token_login else 'FALHOU'}"
+                    )
                     return token_login
         except Exception as e:
             print(e)
-            logger.error(f"Erro na autenticacao. Empresa: {self.codemp or self.empresa_id}: %s",e)
-            return ''
+            logger.error(f"Erro na autenticacao. Empresa: {self.codemp or self.empresa_id}: %s", e)
+            return ""
+
 
 def tokenOlist(func):
     """
     Executa rotina de autenticacao
         :param func: função que recebe o decorador
-    """        
+    """
+
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
         try:
-            token = await Autenticacao(codemp=self.codemp,empresa_id=self.empresa_id).autenticar()                
+            token = await Autenticacao(codemp=self.codemp, empresa_id=self.empresa_id).autenticar()
             self.token = token
             return await func(self, *args, **kwargs)
         finally:
             self.token = None
             pass
-    return wrapper             
+
+    return wrapper

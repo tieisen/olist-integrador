@@ -193,10 +193,17 @@ class Pedido:
             if not dados_pedido:
                 pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get("empresa_id"))
                 # Busca dados do pedido no Olist
+                logger.info(
+                    f"[receber] Buscando pedido no Olist (num={num_pedido}, id={id_pedido})"
+                )
                 if num_pedido:
                     dados_pedido = await pedido_olist.buscar(numero=num_pedido)
                 if id_pedido:
                     dados_pedido = await pedido_olist.buscar(id=id_pedido)
+                logger.info(
+                    f"[receber] Busca no Olist concluída (num={num_pedido}, id={id_pedido}, "
+                    f"encontrado={bool(dados_pedido)})"
+                )
                 if not dados_pedido:
                     msg = f"Erro ao buscar dados do pedido {num_pedido or id_pedido} no Olist"
                     raise Exception(msg)
@@ -205,9 +212,14 @@ class Pedido:
                     msg = f"Pedido {num_pedido or id_pedido} cancelado ou com dados incompletos"
                     raise Exception(msg)
             # Valida itens e desmembra kits
+            logger.info(
+                f"[receber] Pedido {num_pedido or id_pedido}: validando "
+                f"{len(dados_pedido.get('itens') or [])} item(ns)"
+            )
             itens_validados = await self.validar_item_desmembrar_kit(
                 itens=dados_pedido.get("itens"), olist=pedido_olist
             )
+            logger.info(f"[receber] Pedido {num_pedido or id_pedido}: itens validados")
             if not itens_validados:
                 msg = "Erro ao validar itens/desmembrar kits"
                 raise Exception(msg)
@@ -245,7 +257,9 @@ class Pedido:
                 )
                 raise Exception(msg)
 
+            logger.info(f"[receber] Pedido {cod_pedido} gravado na base (id={id})")
             await self.remover_erro_recebimento(dados_pedido=dados_pedido, olist=pedido_olist)
+            logger.info(f"[receber] Pedido {cod_pedido}: recebimento concluído")
 
             return {"success": True, "id": id, "__exception__": None}
         except Exception as e:
@@ -267,7 +281,11 @@ class Pedido:
 
         pedido_olist = PedidoOlist(empresa_id=self.dados_ecommerce.get("empresa_id"))
         # Busca pedidos novos
+        logger.info(f"[consultar_pedidos_novos] id_loja={self.id_loja}: buscando no Olist")
         ack, lista = await pedido_olist.buscar_novos(atual=atual)
+        logger.info(
+            f"[consultar_pedidos_novos] id_loja={self.id_loja}: ack={ack}, {len(lista or [])} pedido(s)"
+        )
         if not ack:
             # Erro na busca
             return False
@@ -348,17 +366,36 @@ class Pedido:
             )
         else:
             # Valida cancelamentos
+            logger.info(f"[receber_novos] id_loja={self.id_loja}: consultando cancelamentos")
             if not await self.consultar_cancelamentos():
                 logger.error("Erro ao validar cancelamentos")
                 await crudLog.atualizar(id=self.log_id, sucesso=False)
+            logger.info(f"[receber_novos] id_loja={self.id_loja}: cancelamentos consultados")
 
             # Consulta pedidos novos
+            logger.info(f"[receber_novos] id_loja={self.id_loja}: consultando pedidos novos")
             pedidos_novos = await self.consultar_pedidos_novos(atual=atual)
+            logger.info(
+                f"[receber_novos] id_loja={self.id_loja}: consulta de pedidos novos retornou "
+                f"{len(pedidos_novos) if isinstance(pedidos_novos, list) else pedidos_novos}"
+            )
             if isinstance(pedidos_novos, list):
                 pedidos_novos = self.validar_loja(lista_pedidos=pedidos_novos)
-                for pedido in pedidos_novos:
+                logger.info(
+                    f"[receber_novos] id_loja={self.id_loja}: "
+                    f"{len(pedidos_novos)} pedido(s) da loja para receber"
+                )
+                for k, pedido in enumerate(pedidos_novos):
                     time.sleep(self.req_time_sleep)
+                    logger.info(
+                        f"[receber_novos] id_loja={self.id_loja}: recebendo pedido "
+                        f"id={pedido.get('id')} ({k + 1}/{len(pedidos_novos)})"
+                    )
                     ack = await self.receber(id_pedido=pedido.get("id"))
+                    logger.info(
+                        f"[receber_novos] id_loja={self.id_loja}: pedido id={pedido.get('id')} "
+                        f"success={ack.get('success')} erro={ack.get('__exception__')}"
+                    )
                     # Registra sucesso no log
                     await crudLogPed.criar(
                         log_id=self.log_id,
@@ -405,6 +442,10 @@ class Pedido:
         itens_validados: list = []
         for item in itens:
             time.sleep(self.req_time_sleep)  # Evita rate limit
+            logger.info(
+                f"[itens] Validando item sku={item['produto'].get('sku')} "
+                f"id={item['produto'].get('id')}"
+            )
             # Kits estão marcados com #K no final do código
             # Agora temos casos onde o SKU vem com um "K" junto, necessário tratar | Samuel - 16/09/2026
             # TODO: Revisar implementação de desmembramento de kit, pois tem padrões onde é (SKU)K - Sem o #
