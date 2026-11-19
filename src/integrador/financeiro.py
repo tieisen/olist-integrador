@@ -113,18 +113,18 @@ class Receita:
             data_vcto = self.calcularDataVctoShopee(dataBase=dataBase)
             return data_vcto.strftime("%Y-%m-%d")
         else:
-        # "BELEZA" in str(ecommerce).upper():
+            # "BELEZA" in str(ecommerce).upper():
             data_vcto = self.calcularDataVctoBlz(dataBase=dataBase)
             return data_vcto.strftime("%Y-%m-%d")
 
     @carrega_dados_ecommerce
     async def formata_codigo_pedido(self, codigo_pedido: str) -> str:
-        
+
         codigo_pedido_tratado: str = ""
         ecommerce: str = self.dados_ecommerce.get("nome").upper()
 
         if "BELEZA" in str(ecommerce).upper():
-            codigo_pedido_tratado = f"664ca49e6e32560ce90fe8b5-{codigo_pedido}" 
+            codigo_pedido_tratado = f"664ca49e6e32560ce90fe8b5-{codigo_pedido}"
             print(f"[formata_codigo_pedido] Pedido Beleza na Web: {codigo_pedido_tratado}")
         else:
             codigo_pedido_tratado = codigo_pedido
@@ -198,11 +198,16 @@ class Receita:
 
     @carrega_dados_ecommerce
     async def formatarPayloadLctoPlan(self, dtVcto: str, dadosConta: dict) -> bool:
+        print(f"[formatarPayloadLctoPlan]: cod_pedido: {dadosConta.get('id_pedido')}")
+
+        cod_pedido_formatado = await self.formata_codigo_pedido(dadosConta.get("id_pedido"))
+        print(f"[formatarPayloadLctoPlan]: cod_pedido_formatado: {cod_pedido_formatado}")
 
         dados: dict = dadosConta.get("receita")
-        id_cliente: int = await crudPedido.buscar_cliente(
-            cod_pedido=await self.formata_codigo_pedido(dadosConta.get("id_pedido"))
-        )
+        id_cliente: int = await crudPedido.buscar_cliente(cod_pedido=cod_pedido_formatado)
+
+        print(f"[formatarPayloadLctoPlan]: id_cliente: {id_cliente}")
+
         id_categoria_financeiro: int = self.dados_ecommerce.get("id_categoria_financeiro")
         id_forma_recebimento: int = self.dados_ecommerce.get("id_forma_rec_padrao")
         vlr_titulo: float = dados.get("valor")
@@ -709,7 +714,9 @@ class Despesa:
         logger.info("Payload final a ser usado: %s", payload)
 
         if not all([payload, id_nota]):
-            raise ValueError(f"[lancarConta] Dados incompletos => payload: {payload}, id_nota: {id_nota}")
+            raise ValueError(
+                f"[lancarConta] Dados incompletos => payload: {payload}, id_nota: {id_nota}"
+            )
 
         id_financeiro = await self.finDespesa.lancar(payload=payload)
         if not id_financeiro:

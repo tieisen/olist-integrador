@@ -1,187 +1,204 @@
 import time
-from database.crud import empresa, ecommerce, shopee, nota
+
+from database.crud import ecommerce, empresa, nota, shopee
+from src.integrador.financeiro import Despesa, Receita
 from src.olist.nota import Nota as NotaOlist
-from src.integrador.financeiro import Receita, Despesa
 from src.utils.log import set_logger
+
 logger = set_logger(__name__)
 
-async def processar_titulos_planilha(dados:dict) -> dict:
 
-    retorno:dict={
-            "status": False,
-            "exception": ""
-        }
-    ecomm:list[dict]=[]
-    ecom:dict={}
-    receita:Receita=None
-    despesa:Despesa=None
+async def processar_titulos_planilha(dados: dict) -> dict:
 
-    ecomm = await ecommerce.buscar(id_loja=int(dados.get('idLoja')))    
+    retorno: dict = {"status": False, "exception": ""}
+    ecomm: list[dict] = []
+    ecom: dict = {}
+    receita: Receita = None
+    despesa: Despesa = None
+
+    ecomm = await ecommerce.buscar(id_loja=int(dados.get("idLoja")))
     try:
         if not ecomm:
             raise Exception("E-commerce não encontrado")
         if isinstance(ecomm, list):
             ecom = ecomm[0]
 
-        receita = Receita(empresaId=ecom.get('empresa_id'),idLoja=int(dados.get('idLoja')))
-        despesa = Despesa(empresaId=ecom.get('empresa_id'),idLoja=int(dados.get('idLoja')))
-                       
+        receita = Receita(empresaId=ecom.get("empresa_id"), idLoja=int(dados.get("idLoja")))
+        despesa = Despesa(empresaId=ecom.get("empresa_id"), idLoja=int(dados.get("idLoja")))
+
         receita.dados_ecommerce = None
         despesa.dados_ecommerce = None
 
-        for n, registro in enumerate(dados.get('registros')):
-            logger.info(f"-> Processando registro {n+1}/{len(dados.get('registros'))}...")
+        for n, registro in enumerate(dados.get("registros")):
+            logger.info(f"-> Processando registro {n + 1}/{len(dados.get('registros'))}...")
             logger.info(f"Pedido {registro.get('id_pedido')}")
-            
-            if registro.get('receita'):
-                logger.info('Processando conta de receita %s', registro)
+
+            if registro.get("receita"):
+                logger.info("Processando conta de receita %s", registro)
                 time.sleep(receita.req_time_sleep)
-                await receita.formatarPayloadLctoPlan(dados.get('dtVcto'),dadosConta=registro)
+                await receita.formatarPayloadLctoPlan(dados.get("dtVcto"), dadosConta=registro)
                 await receita.lancarContaPlan()
             else:
                 logger.info("Nenhuma conta de receita para processar.")
 
-            if registro.get('despesa'):
-                logger.info('Processando conta de despesa %s', registro)
+            if registro.get("despesa"):
+                logger.info("Processando conta de despesa %s", registro)
                 time.sleep(receita.req_time_sleep)
-                await despesa.formatarPayloadLctoPlan(dados.get('dtVcto'),dadosConta=registro)
+                await despesa.formatarPayloadLctoPlan(dados.get("dtVcto"), dadosConta=registro)
                 await despesa.lancarContaPlan()
             else:
                 logger.info("Nenhuma conta de despesa para processar.")
-        
-        retorno['status'] = True        
-    except Exception as e:        
-        retorno['exception'] = str(e)
+
+        retorno["status"] = True
+    except Exception as e:
+        retorno["exception"] = str(e)
     finally:
-        logger.info(f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}")
-    
+        logger.info(
+            f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}"
+        )
+
     return retorno
 
-async def integrar(codemp:int|None=None,idLoja:int|None=None,dataFim:str|None=None,dias:int=0,processaShopee:bool=True) -> dict:
 
-    retorno:dict={
-            "status": False,
-            "exception": ""
-        }
-    empresas:list[dict]=[]
-    ecommerces:list[dict]=[]
-    emp:dict={}
-    ecom:dict={}
-    lista_notas_emitidas:list[dict]=[]
-    lista_nota_lcto:list[dict]=[]
-    lista_estornos:list[dict]=[]
-    receita:Receita=None
-    despesa:Despesa=None
+async def integrar(
+    codemp: int | None = None,
+    idLoja: int | None = None,
+    dataFim: str | None = None,
+    dias: int = 0,
+    processaShopee: bool = True,
+) -> dict:
+
+    retorno: dict = {"status": False, "exception": ""}
+    empresas: list[dict] = []
+    ecommerces: list[dict] = []
+    emp: dict = {}
+    ecom: dict = {}
+    lista_notas_emitidas: list[dict] = []
+    lista_nota_lcto: list[dict] = []
+    lista_estornos: list[dict] = []
+    receita: Receita = None
+    despesa: Despesa = None
 
     empresas = await empresa.buscar(codemp=codemp)
     try:
         for i, emp in enumerate(empresas):
             # print(f"Empresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
-            receita = Receita(empresaId=emp.get('id'))
-            despesa = Despesa(empresaId=emp.get('id'))            
-            notas = NotaOlist(empresa_id=emp.get('id'))
-            
-            lista_notas_emitidas = await notas.buscarData(data=dataFim,dias=dias)
+            receita = Receita(empresaId=emp.get("id"))
+            despesa = Despesa(empresaId=emp.get("id"))
+            notas = NotaOlist(empresa_id=emp.get("id"))
+
+            lista_notas_emitidas = await notas.buscarData(data=dataFim, dias=dias)
             # print("Processando notas emitidas...")
             await receita.processarNotas(listaNotas=lista_notas_emitidas)
 
             if idLoja:
                 ecommerces = await ecommerce.buscar(id_loja=idLoja)
             else:
-                ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
-                
+                ecommerces = await ecommerce.buscar(empresa_id=emp.get("id"))
+
             for j, ecom in enumerate(ecommerces):
                 # print(f"E-commerce {ecom.get('nome')} ({j+1}/{len(ecommerces)})".upper())
                 receita.dados_ecommerce = None
-                receita.id_loja = ecom.get('id_loja')
+                receita.id_loja = ecom.get("id_loja")
                 despesa.dados_ecommerce = None
-                despesa.id_loja = ecom.get('id_loja')  
+                despesa.id_loja = ecom.get("id_loja")
 
-                if processaShopee and ('SHOPEE' in ecom.get('nome').upper()):
+                if processaShopee and ("SHOPEE" in ecom.get("nome").upper()):
                     # print("Processando recebimentos Shopee...")
-                    await consultarRecebimentosShopee(codemp=emp.get('snk_codemp'),dataFim=dataFim,dias=dias)
-                    
+                    await consultarRecebimentosShopee(
+                        codemp=emp.get("snk_codemp"), dataFim=dataFim, dias=dias
+                    )
+
                     # print("Validando estornos...")
-                    lista_estornos = await nota.buscarEstornoPendenteLcto(ecommerce_id=ecom.get('id'),data=dataFim)
+                    lista_estornos = await nota.buscarEstornoPendenteLcto(
+                        ecommerce_id=ecom.get("id"), data=dataFim
+                    )
                     logger.info(f"Estornos pendentes: {len(lista_estornos)}")
                     # print(f"Estornos pendentes: {len(lista_estornos)}")
                     if lista_estornos:
                         for n, estorno in enumerate(lista_estornos):
                             time.sleep(receita.req_time_sleep)
-                            await despesa.buscarEstornoShopee(orderSn=estorno.get('income_data',{}).get('order_sn'))
+                            await despesa.buscarEstornoShopee(
+                                orderSn=estorno.get("income_data", {}).get("order_sn")
+                            )
 
                 # print(f"Buscando contas pendentes...")
-                lista_nota_lcto = await nota.buscarPendenteLcto(ecommerce_id=ecom.get('id'),data=dataFim)
+                lista_nota_lcto = await nota.buscarPendenteLcto(
+                    ecommerce_id=ecom.get("id"), data=dataFim
+                )
                 logger.info(f"Contas pendentes: {len(lista_nota_lcto)}")
                 # print(f"Contas pendentes: {len(lista_nota_lcto)}")
                 if not lista_nota_lcto:
                     continue
-                
-                for n, nota_lcto in enumerate(lista_nota_lcto):                    
-                    if ('SHOPEE' in ecom.get('nome').upper()):
-                        if nota_lcto['income_data'].get('fee_shopee',0)==0:
+
+                for n, nota_lcto in enumerate(lista_nota_lcto):
+                    if "SHOPEE" in ecom.get("nome").upper():
+                        if nota_lcto["income_data"].get("fee_shopee", 0) == 0:
                             continue
-                        
+
                     time.sleep(receita.req_time_sleep)
                     # print(f"->> Nota {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}: ({n+1}/{len(lista_nota_lcto)})".upper())
-                    if not nota_lcto.get('id_financeiro'):
+                    if not nota_lcto.get("id_financeiro"):
                         await receita.formatarPayloadLcto(dadosConta=nota_lcto)
                         await receita.lancarConta()
                         # print(f"Conta lançada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
-                    
-                    if len(str(ecom.get('id_loja'))) >= 8:
+
+                    if len(str(ecom.get("id_loja"))) >= 8:
                         # Funcionários ou Parfum
-                        await despesa.ignorarTaxa(id_nota=nota_lcto.get('id'))
+                        await despesa.ignorarTaxa(id_nota=nota_lcto.get("id"))
                         # print(f"Taxa ignorada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
                         continue
-                    
+
                     time.sleep(receita.req_time_sleep)
-                    if not nota_lcto.get('id_financeiro_taxa'):
+                    if not nota_lcto.get("id_financeiro_taxa"):
                         await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
                         await despesa.lancarConta()
                         # print(f"Conta de despesa lançada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
 
                     time.sleep(receita.req_time_sleep)
-                    if 'fee_frete' in nota_lcto.get('income_data',{}) and not nota_lcto.get('id_financeiro_frete'):
+                    if "fee_frete" in nota_lcto.get("income_data", {}) and not nota_lcto.get(
+                        "id_financeiro_frete"
+                    ):
                         await despesa.formatarPayloadLcto(dadosConta=nota_lcto)
                         await despesa.lancarConta()
                         # print(f"Conta de frete lançada: {nota_lcto.get('numero')}/{nota_lcto.get('id_nota')}")
-        
-        retorno['status'] = True        
-    except Exception as e:        
-        retorno['exception'] = str(e)
+
+        retorno["status"] = True
+    except Exception as e:
+        retorno["exception"] = str(e)
     finally:
-        logger.info(f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}")
+        logger.info(
+            f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}"
+        )
         # print(f"Processamento finalizado. Status: {retorno.get('status')}. Exception: {retorno.get('exception')}")
         pass
-    
+
     return retorno
 
-async def consultarRecebimentosShopee(codemp:int=None,dataFim:str=None,dias:int=0) -> dict:
 
-    retorno:dict={}
-    empresas:list[dict]=[]
-    emp:dict={}
+async def consultarRecebimentosShopee(
+    codemp: int = None, dataFim: str = None, dias: int = 0
+) -> dict:
+
+    retorno: dict = {}
+    empresas: list[dict] = []
+    emp: dict = {}
     empresas = await empresa.buscar(codemp=codemp)
     try:
         for i, emp in enumerate(empresas):
-            print(f"\nEmpresa {emp.get('nome')} ({i+1}/{len(empresas)})".upper())
-            receita = Receita(empresaId=emp.get('id'))
-            ecommerces = await ecommerce.buscar(empresa_id=emp.get('id'))
+            print(f"\nEmpresa {emp.get('nome')} ({i + 1}/{len(empresas)})".upper())
+            receita = Receita(empresaId=emp.get("id"))
+            ecommerces = await ecommerce.buscar(empresa_id=emp.get("id"))
             for j, ecom in enumerate(ecommerces):
-                if 'SHOPEE' in ecom.get('nome').upper():
-                    loja_shopee = await shopee.buscar(ecommerce_id=ecom.get('id'))
+                if "SHOPEE" in ecom.get("nome").upper():
+                    loja_shopee = await shopee.buscar(ecommerce_id=ecom.get("id"))
                     if loja_shopee:
-                        await receita.buscarContasShopee(ecommerceId=ecom.get('id'),dtFim=dataFim,dias=dias)
-            retorno = {
-                "status": True,
-                "exception": None
-            }
+                        await receita.buscarContasShopee(
+                            ecommerceId=ecom.get("id"), dtFim=dataFim, dias=dias
+                        )
+            retorno = {"status": True, "exception": None}
     except Exception as e:
         print(f"{e}")
-        retorno = {
-            "status": False,
-            "exception": f"{e}"
-        }
+        retorno = {"status": False, "exception": f"{e}"}
     finally:
         return retorno
