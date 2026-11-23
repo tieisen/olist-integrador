@@ -14,6 +14,7 @@ from src.services.shopee import Pagamento as PagamentoShopee
 from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
 from src.utils.load_env import load_env
 from src.utils.log import set_logger
+from src.olist.pedido import Pedido as PedidoOlist
 
 load_env()
 logger = set_logger(__name__)
@@ -37,6 +38,7 @@ class Receita:
         self.parse = ParseReceita()
         self.finOlist = FinReceita(empresa_id=self.empresa_id)
         self.data_vcto: datetime = None
+        self.pedidoOlist = PedidoOlist(empresa_id=self.empresa_id)
 
     async def calcularFinanceiroBlzWeb(self, codPedido: str, vlrProdutos: float) -> dict:
         vlr_taxa: float = await self.parse.calculaComissaoBlzWeb(vlrProdutos=vlrProdutos)
@@ -113,18 +115,18 @@ class Receita:
             data_vcto = self.calcularDataVctoShopee(dataBase=dataBase)
             return data_vcto.strftime("%Y-%m-%d")
         else:
-        # "BELEZA" in str(ecommerce).upper():
+            # "BELEZA" in str(ecommerce).upper():
             data_vcto = self.calcularDataVctoBlz(dataBase=dataBase)
             return data_vcto.strftime("%Y-%m-%d")
 
     @carrega_dados_ecommerce
     async def formata_codigo_pedido(self, codigo_pedido: str) -> str:
-        
+
         codigo_pedido_tratado: str = ""
         ecommerce: str = self.dados_ecommerce.get("nome").upper()
 
         if "BELEZA" in str(ecommerce).upper():
-            codigo_pedido_tratado = f"664ca49e6e32560ce90fe8b5-{codigo_pedido}" 
+            codigo_pedido_tratado = f"664ca49e6e32560ce90fe8b5-{codigo_pedido}"
             print(f"[formata_codigo_pedido] Pedido Beleza na Web: {codigo_pedido_tratado}")
         else:
             codigo_pedido_tratado = codigo_pedido
@@ -198,11 +200,28 @@ class Receita:
 
     @carrega_dados_ecommerce
     async def formatarPayloadLctoPlan(self, dtVcto: str, dadosConta: dict) -> bool:
+        print(f"[formatarPayloadLctoPlan]: cod_pedido: {dadosConta.get('id_pedido')}")
+
+        cod_pedido_formatado = await self.formata_codigo_pedido(dadosConta.get("id_pedido"))
+        print(f"[formatarPayloadLctoPlan]: cod_pedido_formatado: {cod_pedido_formatado}")
 
         dados: dict = dadosConta.get("receita")
-        id_cliente: int = await crudPedido.buscar_cliente(
-            cod_pedido=await self.formata_codigo_pedido(dadosConta.get("id_pedido"))
-        )
+        id_cliente: int = await crudPedido.buscar_cliente(cod_pedido=cod_pedido_formatado)
+
+        self.empresa_id
+
+        if not id_cliente:
+            pedido = await self.pedidoOlist.buscar(codigo=cod_pedido_formatado)
+
+            if not pedido:
+                raise ValueError(f"Pedido não encontrado no Olist. cod_pedido: {cod_pedido_formatado}")
+            
+            id_cliente = pedido.get("cliente").get("id")
+
+            print("Response do pedido do Olist: ", pedido)
+        
+        print(f"[formatarPayloadLctoPlan]: id_cliente: {id_cliente}")
+
         id_categoria_financeiro: int = self.dados_ecommerce.get("id_categoria_financeiro")
         id_forma_recebimento: int = self.dados_ecommerce.get("id_forma_rec_padrao")
         vlr_titulo: float = dados.get("valor")
@@ -709,7 +728,9 @@ class Despesa:
         logger.info("Payload final a ser usado: %s", payload)
 
         if not all([payload, id_nota]):
-            raise ValueError(f"[lancarConta] Dados incompletos => payload: {payload}, id_nota: {id_nota}")
+            raise ValueError(
+                f"[lancarConta] Dados incompletos => payload: {payload}, id_nota: {id_nota}"
+            )
 
         id_financeiro = await self.finDespesa.lancar(payload=payload)
         if not id_financeiro:
