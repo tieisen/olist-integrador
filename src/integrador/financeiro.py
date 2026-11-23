@@ -14,6 +14,7 @@ from src.services.shopee import Pagamento as PagamentoShopee
 from src.utils.decorador import carrega_dados_ecommerce, carrega_dados_empresa
 from src.utils.load_env import load_env
 from src.utils.log import set_logger
+from src.olist.pedido import Pedido as PedidoOlist
 
 load_env()
 logger = set_logger(__name__)
@@ -37,6 +38,7 @@ class Receita:
         self.parse = ParseReceita()
         self.finOlist = FinReceita(empresa_id=self.empresa_id)
         self.data_vcto: datetime = None
+        self.pedidoOlist = PedidoOlist(empresa_id=self.empresa_id)
 
     async def calcularFinanceiroBlzWeb(self, codPedido: str, vlrProdutos: float) -> dict:
         vlr_taxa: float = await self.parse.calculaComissaoBlzWeb(vlrProdutos=vlrProdutos)
@@ -206,6 +208,18 @@ class Receita:
         dados: dict = dadosConta.get("receita")
         id_cliente: int = await crudPedido.buscar_cliente(cod_pedido=cod_pedido_formatado)
 
+        self.empresa_id
+
+        if not id_cliente:
+            pedido = await self.pedidoOlist.buscar(codigo=cod_pedido_formatado)
+
+            if not pedido:
+                raise ValueError(f"Pedido não encontrado no Olist. cod_pedido: {cod_pedido_formatado}")
+            
+            id_cliente = pedido.get("cliente").get("id")
+
+            print("Response do pedido do Olist: ", pedido)
+        
         print(f"[formatarPayloadLctoPlan]: id_cliente: {id_cliente}")
 
         id_categoria_financeiro: int = self.dados_ecommerce.get("id_categoria_financeiro")
