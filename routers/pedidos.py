@@ -15,8 +15,8 @@ from src.scheduler.jobs.pedidos import (
     receber_pedido_unico,
     reprocessar_separacao,
 )
-
 from src.utils.log import set_logger
+
 logger = set_logger(__name__)
 
 router = APIRouter()

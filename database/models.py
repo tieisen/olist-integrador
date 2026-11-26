@@ -1,17 +1,22 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, CheckConstraint, JSON
-from sqlalchemy.sql import text
-from sqlalchemy.orm import relationship, mapped_column
-from database.database import Base
-from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.orm import mapped_column, relationship
+from sqlalchemy.sql import text
+
+from database.database import Base
+
 
 class Empresa(Base):
-
     __tablename__ = "empresa"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))
+    dh_criacao = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    dh_atualizacao = Column(
+        DateTime(timezone=True), nullable=True, onupdate=text("CURRENT_TIMESTAMP")
+    )
     ativo = Column(Boolean, default=True)
     snk_codemp = Column(Integer, nullable=False)
     nome = Column(String, nullable=False)
@@ -40,7 +45,7 @@ class Empresa(Base):
     snk_top_venda = Column(Integer, nullable=True)
     snk_top_transferencia = Column(Integer, nullable=True)
     snk_top_devolucao = Column(Integer, nullable=True)
-    snk_top_baixa_estoque = Column(Integer, nullable=True)    
+    snk_top_baixa_estoque = Column(Integer, nullable=True)
     snk_codvend = Column(Integer, nullable=True)
     snk_codcencus = Column(Integer, nullable=True)
     snk_codnat = Column(Integer, nullable=True)
@@ -52,33 +57,47 @@ class Empresa(Base):
     snk_codlocal_venda = Column(Integer, nullable=True)
     snk_codlocal_ecommerce = Column(String, nullable=True)
     snk_codparc = Column(Integer, nullable=True)
-    snk_codemp_fornecedor = Column(Integer, nullable=False)    
+    snk_codemp_fornecedor = Column(Integer, nullable=False)
     snk_obs_transferencia = Column(String, nullable=True)
-    
-    log_ = relationship("Log", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
-    produto_ = relationship("Produto", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
-    olist_ = relationship("Olist", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
-    ecommerce_ = relationship("Ecommerce", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True)
+
+    log_ = relationship(
+        "Log", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    produto_ = relationship(
+        "Produto", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    olist_ = relationship(
+        "Olist", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    ecommerce_ = relationship(
+        "Ecommerce", back_populates="empresa_", cascade="all, delete-orphan", passive_deletes=True
+    )
+
 
 class Produto(Base):
     __tablename__ = "produto"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    codprod = Column(Integer, nullable=False) 
+    codprod = Column(Integer, nullable=False)
     idprod = Column(Integer, nullable=True)
-    dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))    
+    dh_criacao = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
     dh_atualizacao = Column(DateTime(timezone=True), nullable=True)
     pendencia = Column(Boolean, default=False)
     empresa_id = Column(Integer, ForeignKey("empresa.id", ondelete="CASCADE"), nullable=False)
 
-    empresa_ = relationship("Empresa", back_populates="produto_")    
+    empresa_ = relationship("Empresa", back_populates="produto_")
     log_produto_ = relationship("LogProduto", back_populates="produto_")
+
 
 class Olist(Base):
     __tablename__ = "olist"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    dh_solicitacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    dh_solicitacao = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
     token = Column(String, nullable=False)
     dh_expiracao_token = Column(DateTime(timezone=True), nullable=False)
     refresh_token = Column(String, nullable=False)
@@ -88,15 +107,16 @@ class Olist(Base):
 
     empresa_ = relationship("Empresa", back_populates="olist_")
 
+
 class Sankhya(Base):
     __tablename__ = "sankhya"
 
     app_id = Column(Integer, primary_key=True, index=True)
     x_token = Column(String, nullable=False)
-    dh_solicitacao = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
+    dh_solicitacao = Column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"))
     token = Column(String, nullable=True)
     dh_expiracao_token = Column(DateTime(timezone=True), nullable=True)
-    
+
 
 class Shopee(Base):
     __tablename__ = "shopee"
@@ -105,7 +125,9 @@ class Shopee(Base):
     partner_id = Column(Integer, nullable=False)
     partner_key = Column(String, nullable=False)
     shop_id = Column(Integer, nullable=False)
-    dh_solicitacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    dh_solicitacao = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
     access_token = Column(String, nullable=False)
     dh_expiracao_token = Column(DateTime(timezone=True), nullable=False)
     refresh_token = Column(String, nullable=False)
@@ -113,6 +135,7 @@ class Shopee(Base):
     ecommerce_id = Column(Integer, ForeignKey("ecommerce.id", ondelete="CASCADE"), nullable=False)
 
     ecommerce_ = relationship("Ecommerce", back_populates="shopee_")
+
 
 class Ecommerce(Base):
     __tablename__ = "ecommerce"
@@ -124,25 +147,36 @@ class Ecommerce(Base):
     id_conta_destino = Column(Integer, default=0, nullable=False)
     id_categoria_financeiro = Column(Integer, default=0, nullable=False)
     id_forma_pgto_padrao = Column(Integer, nullable=True)
-    id_forma_rec_padrao = Column(Integer, nullable=True)    
+    id_forma_rec_padrao = Column(Integer, nullable=True)
     id_deposito = Column(Integer, nullable=True)
-    dh_criacao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    dh_atualizacao = Column(DateTime(timezone=True), nullable=True, onupdate=text('CURRENT_TIMESTAMP'))    
+    dh_criacao = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    dh_atualizacao = Column(
+        DateTime(timezone=True), nullable=True, onupdate=text("CURRENT_TIMESTAMP")
+    )
     importa_pedido_lote = Column(Boolean, default=True)
     limite_pedido_lote = Column(Integer, nullable=True)
     ativo = Column(Boolean, default=True)
     empresa_id = Column(Integer, ForeignKey("empresa.id", ondelete="CASCADE"), nullable=False)
 
     empresa_ = relationship("Empresa", back_populates="ecommerce_")
-    pedido_ = relationship("Pedido", back_populates="ecommerce_", cascade="all, delete-orphan", passive_deletes=True)
-    shopee_ = relationship("Shopee", back_populates="ecommerce_", cascade="all, delete-orphan", passive_deletes=True)
+    pedido_ = relationship(
+        "Pedido", back_populates="ecommerce_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    shopee_ = relationship(
+        "Shopee", back_populates="ecommerce_", cascade="all, delete-orphan", passive_deletes=True
+    )
+
 
 class Pedido(Base):
     __tablename__ = "pedido"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     id_pedido = Column(Integer, nullable=False, unique=True)
-    dh_pedido = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    dh_pedido = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
     cod_pedido = Column(String, nullable=False)
     num_pedido = Column(Integer, nullable=False)
     dados_pedido = Column(JSON, nullable=True)
@@ -157,8 +191,13 @@ class Pedido(Base):
     ecommerce_id = Column(Integer, ForeignKey("ecommerce.id", ondelete="CASCADE"), nullable=False)
 
     ecommerce_ = relationship("Ecommerce", back_populates="pedido_")
-    nota_ = relationship("Nota", back_populates="pedido_", cascade="all, delete-orphan", passive_deletes=True)
-    log_pedido_ = relationship("LogPedido", back_populates="pedido_", cascade="all, delete-orphan", passive_deletes=True)
+    nota_ = relationship(
+        "Nota", back_populates="pedido_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    log_pedido_ = relationship(
+        "LogPedido", back_populates="pedido_", cascade="all, delete-orphan", passive_deletes=True
+    )
+
 
 class Nota(Base):
     __tablename__ = "nota"
@@ -184,7 +223,10 @@ class Nota(Base):
     pedido_id = Column(Integer, ForeignKey("pedido.id", ondelete="CASCADE"), nullable=False)
 
     pedido_ = relationship("Pedido", back_populates="nota_")
-    devolucao_ = relationship("Devolucao", back_populates="nota_", cascade="all, delete-orphan", passive_deletes=True)
+    devolucao_ = relationship(
+        "Devolucao", back_populates="nota_", cascade="all, delete-orphan", passive_deletes=True
+    )
+
 
 class Devolucao(Base):
     __tablename__ = "devolucao"
@@ -202,6 +244,7 @@ class Devolucao(Base):
 
     nota_ = relationship("Nota", back_populates="devolucao_")
 
+
 class LogEstoque(Base):
     __tablename__ = "log_estoque"
 
@@ -216,12 +259,13 @@ class LogEstoque(Base):
 
     log_ = relationship("Log", back_populates="log_estoque_")
 
+
 class LogPedido(Base):
     __tablename__ = "log_pedido"
 
     __table_args__ = (
         # Recebimento, Inclusão, Confirmação, Faturamento, caNcelamento, Devolução
-        CheckConstraint("evento IN ('R', 'I', 'C', 'F', 'N', 'D')", name='ck_log_pedido_evento'),
+        CheckConstraint("evento IN ('R', 'I', 'C', 'F', 'N', 'D')", name="ck_log_pedido_evento"),
     )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -229,10 +273,11 @@ class LogPedido(Base):
     sucesso = Column(Boolean, default=True)
     obs = Column(String, nullable=True)
     log_id = Column(Integer, ForeignKey("log.id", ondelete="CASCADE"))
-    pedido_id = Column(Integer, ForeignKey("pedido.id", ondelete="CASCADE"))    
+    pedido_id = Column(Integer, ForeignKey("pedido.id", ondelete="CASCADE"))
 
     log_ = relationship("Log", back_populates="log_pedido_")
     pedido_ = relationship("Pedido", back_populates="log_pedido_")
+
 
 class LogProduto(Base):
     __tablename__ = "log_produto"
@@ -251,18 +296,27 @@ class LogProduto(Base):
     log_ = relationship("Log", back_populates="log_produto_")
     produto_ = relationship("Produto", back_populates="log_produto_")
 
+
 class Log(Base):
     __tablename__ = "log"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    dh_execucao = Column(DateTime(timezone=True), nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    dh_execucao = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
     contexto = Column(String, nullable=False)
     de = Column(String, nullable=False)
     para = Column(String, nullable=False)
     sucesso = Column(Boolean)
     empresa_id = Column(Integer, ForeignKey("empresa.id", ondelete="CASCADE"), nullable=False)
 
-    log_produto_ = relationship("LogProduto", back_populates="log_", cascade="all, delete-orphan", passive_deletes=True)
-    log_estoque_ = relationship("LogEstoque", back_populates="log_", cascade="all, delete-orphan", passive_deletes=True)
-    log_pedido_ = relationship("LogPedido", back_populates="log_", cascade="all, delete-orphan", passive_deletes=True)
+    log_produto_ = relationship(
+        "LogProduto", back_populates="log_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    log_estoque_ = relationship(
+        "LogEstoque", back_populates="log_", cascade="all, delete-orphan", passive_deletes=True
+    )
+    log_pedido_ = relationship(
+        "LogPedido", back_populates="log_", cascade="all, delete-orphan", passive_deletes=True
+    )
     empresa_ = relationship("Empresa", back_populates="log_")
