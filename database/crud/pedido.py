@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import update
 from sqlalchemy.future import select
@@ -322,6 +323,7 @@ async def buscar_faturar(ecommerce_id: int) -> list[dict]:
 
 
 async def buscar_reimprimir_relatorio(ecommerce_id_list: list[int]) -> list[dict]:
+    limite_importacao = datetime.now(UTC) - timedelta(days=5)
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(Pedido)
@@ -330,6 +332,7 @@ async def buscar_reimprimir_relatorio(ecommerce_id_list: list[int]) -> list[dict
                 Pedido.dh_faturamento.is_(None),
                 Pedido.nunota.isnot(None),
                 Pedido.ecommerce_id.in_(ecommerce_id_list),
+                Pedido.dh_importacao >= limite_importacao,
             )
             .order_by(Pedido.num_pedido)
         )
